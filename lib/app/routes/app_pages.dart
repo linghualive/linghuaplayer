@@ -27,6 +27,10 @@ import '../../modules/audio_playlist_detail/audio_playlist_detail_page.dart';
 import '../../modules/audio_playlist_detail/audio_playlist_detail_controller.dart';
 import '../../modules/music_ranking/music_ranking_page.dart';
 import '../../modules/music_ranking/music_ranking_controller.dart';
+import '../../modules/hot_playlists/hot_playlists_page.dart';
+import '../../modules/hot_playlists/hot_playlists_controller.dart';
+import '../../modules/mv_list/mv_list_page.dart';
+import '../../modules/mv_list/mv_list_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -124,6 +128,20 @@ class AppPages {
       page: () => const MusicRankingPage(),
       binding: BindingsBuilder(() {
         Get.put(MusicRankingController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.hotPlaylists,
+      page: () => const HotPlaylistsPage(),
+      binding: BindingsBuilder(() {
+        Get.put(HotPlaylistsController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.mvList,
+      page: () => const MvListPage(),
+      binding: BindingsBuilder(() {
+        Get.put(MvListController());
       }),
     ),
   ];

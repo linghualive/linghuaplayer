@@ -90,7 +90,7 @@ class MusicDiscoveryPage extends StatelessWidget {
               if (controller.hotPlaylists.isNotEmpty) ...[
                 SectionHeader(
                   title: '热门歌单',
-                  onViewAll: () {}, // Future: full playlist browser
+                  onViewAll: () => Get.toNamed(AppRoutes.hotPlaylists),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -124,7 +124,7 @@ class MusicDiscoveryPage extends StatelessWidget {
               if (controller.mvList.isNotEmpty) ...[
                 SectionHeader(
                   title: '音乐视频',
-                  onViewAll: () {}, // Future: full MV browser
+                  onViewAll: () => Get.toNamed(AppRoutes.mvList),
                 ),
                 SizedBox(
                   height: 160,

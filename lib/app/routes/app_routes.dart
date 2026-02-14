@@ -14,4 +14,6 @@ abstract class AppRoutes {
   static const settings = '/settings';
   static const audioPlaylistDetail = '/audio-playlist-detail';
   static const musicRanking = '/music-ranking';
+  static const hotPlaylists = '/hot-playlists';
+  static const mvList = '/mv-list';
 }
