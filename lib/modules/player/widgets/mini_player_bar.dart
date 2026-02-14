@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../shared/widgets/cached_image.dart';
 import '../player_controller.dart';
+import 'play_queue_sheet.dart';
 
 class MiniPlayerBar extends GetView<PlayerController> {
   const MiniPlayerBar({super.key});
@@ -110,6 +111,11 @@ class MiniPlayerBar extends GetView<PlayerController> {
                     IconButton(
                       icon: const Icon(Icons.skip_next_rounded, size: 24),
                       onPressed: controller.skipNext,
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.queue_music, size: 22),
+                      onPressed: PlayQueueSheet.show,
                       visualDensity: VisualDensity.compact,
                     ),
                   ],

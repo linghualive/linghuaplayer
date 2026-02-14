@@ -202,20 +202,6 @@ class ProfilePage extends StatelessWidget {
               ),
               const Divider(height: 1, indent: 56),
               ListTile(
-                leading: const Icon(Icons.subscriptions_outlined),
-                title: const Text('我的订阅'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppRoutes.subscriptions),
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: const Icon(Icons.watch_later_outlined),
-                title: const Text('稍后再看'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppRoutes.watchLater),
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
                 leading: const Icon(Icons.history),
                 title: const Text('观看历史'),
                 trailing: const Icon(Icons.chevron_right),

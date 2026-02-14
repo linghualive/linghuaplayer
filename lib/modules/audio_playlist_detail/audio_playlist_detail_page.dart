@@ -2,7 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/storage/storage_service.dart';
 import '../../shared/utils/duration_formatter.dart';
+import '../../shared/widgets/fav_panel.dart';
+import '../player/player_controller.dart';
 import 'audio_playlist_detail_controller.dart';
 
 class AudioPlaylistDetailPage extends StatelessWidget {
@@ -40,15 +43,25 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                   child: _buildHeader(context, controller, theme),
                 ),
 
-              // Play all button
+              // Play all + Add all buttons
               SliverToBoxAdapter(
                 child: Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: FilledButton.icon(
-                    onPressed: controller.playAll,
-                    icon: const Icon(Icons.play_arrow),
-                    label: Text('播放全部 (${controller.songs.length})'),
+                  child: Row(
+                    children: [
+                      FilledButton.icon(
+                        onPressed: controller.playAll,
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text('播放全部 (${controller.songs.length})'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: controller.addAllToQueue,
+                        icon: const Icon(Icons.playlist_add),
+                        label: const Text('全部添加'),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -97,11 +110,44 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: theme.colorScheme.outline),
                         ),
-                        trailing: Text(
-                          DurationFormatter.format(song.duration),
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.playlist_add, size: 20),
+                              visualDensity: VisualDensity.compact,
+                              onPressed: () {
+                                final playerCtrl =
+                                    Get.find<PlayerController>();
+                                playerCtrl
+                                    .addToQueue(song.toSearchVideoModel());
+                              },
+                            ),
+                            if (song.aid > 0)
+                              IconButton(
+                                icon: const Icon(Icons.favorite_border,
+                                    size: 20),
+                                visualDensity: VisualDensity.compact,
+                                tooltip: '收藏',
+                                onPressed: () {
+                                  final storage =
+                                      Get.find<StorageService>();
+                                  if (!storage.isLoggedIn) {
+                                    Get.snackbar('提示', '请先登录',
+                                        snackPosition:
+                                            SnackPosition.BOTTOM);
+                                    return;
+                                  }
+                                  FavPanel.show(context, song.aid);
+                                },
+                              ),
+                            Text(
+                              DurationFormatter.format(song.duration),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                          ],
                         ),
                         onTap: () => controller.playSong(song),
                       );

@@ -9,6 +9,7 @@ class MusicRankSongModel {
   final String bvid;
   final int duration;
   final int playCount;
+  final int aid;
 
   MusicRankSongModel({
     required this.rank,
@@ -18,6 +19,7 @@ class MusicRankSongModel {
     required this.bvid,
     required this.duration,
     required this.playCount,
+    required this.aid,
   });
 
   factory MusicRankSongModel.fromJson(Map<String, dynamic> json) {
@@ -31,12 +33,13 @@ class MusicRankSongModel {
           : json['mv_bvid'] as String? ?? '',
       duration: json['creation_duration'] as int? ?? 0,
       playCount: json['creation_play'] as int? ?? json['heat'] as int? ?? 0,
+      aid: json['creation_aid'] as int? ?? json['mv_aid'] as int? ?? 0,
     );
   }
 
   SearchVideoModel toSearchVideoModel() {
     return SearchVideoModel(
-      id: 0,
+      id: aid,
       author: artist,
       mid: 0,
       title: title,

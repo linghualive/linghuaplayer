@@ -2,7 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/storage/storage_service.dart';
 import '../../shared/utils/duration_formatter.dart';
+import '../../shared/widgets/fav_panel.dart';
+import '../player/player_controller.dart';
 import 'mv_list_controller.dart';
 
 class MvListPage extends StatelessWidget {
@@ -122,6 +125,50 @@ class MvListPage extends StatelessWidget {
                                   style: theme.textTheme.bodySmall
                                       ?.copyWith(
                                     color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.playlist_add, size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        visualDensity: VisualDensity.compact,
+                                        onPressed: () {
+                                          final playerCtrl =
+                                              Get.find<PlayerController>();
+                                          playerCtrl.addToQueue(
+                                              mv.toSearchVideoModel());
+                                        },
+                                      ),
+                                      if (mv.id > 0)
+                                        IconButton(
+                                          icon: const Icon(
+                                              Icons.favorite_border,
+                                              size: 20),
+                                          padding: EdgeInsets.zero,
+                                          constraints:
+                                              const BoxConstraints(),
+                                          visualDensity:
+                                              VisualDensity.compact,
+                                          tooltip: '收藏',
+                                          onPressed: () {
+                                            final storage =
+                                                Get.find<StorageService>();
+                                            if (!storage.isLoggedIn) {
+                                              Get.snackbar('提示', '请先登录',
+                                                  snackPosition:
+                                                      SnackPosition.BOTTOM);
+                                              return;
+                                            }
+                                            FavPanel.show(context, mv.id);
+                                          },
+                                        ),
+                                    ],
                                   ),
                                 ),
                               ],

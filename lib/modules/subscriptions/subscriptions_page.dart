@@ -56,7 +56,41 @@ class SubscriptionsPage extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Text('${folder.mediaCount} 个内容'),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.heart_broken,
+                            size: 20,
+                            color: Theme.of(context).colorScheme.error),
+                        tooltip: '取消订阅',
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('取消订阅'),
+                              content: Text(
+                                  '确定要取消订阅「${folder.title}」吗？'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(ctx),
+                                  child: const Text('取消'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    controller.cancelSub(folder);
+                                  },
+                                  child: const Text('确定'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                   onTap: () => controller.openFolder(folder),
                 );
               },

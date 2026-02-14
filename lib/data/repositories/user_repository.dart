@@ -164,6 +164,12 @@ class UserRepository {
     return (items: <SubResourceModel>[], hasMore: false);
   }
 
+  Future<bool> cancelSub(int seasonId) async {
+    final csrf = await HttpClient.instance.getCsrf();
+    final res = await _provider.cancelSub(seasonId: seasonId, csrf: csrf);
+    return res.data['code'] == 0;
+  }
+
   // ── Watch Later ──
 
   Future<List<WatchLaterModel>> getWatchLaterList() async {
@@ -175,6 +181,16 @@ class UserRepository {
           .toList();
     }
     return [];
+  }
+
+  Future<bool> addWatchLater({String? bvid, int? aid}) async {
+    final csrf = await HttpClient.instance.getCsrf();
+    final res = await _provider.addWatchLater(
+      bvid: bvid,
+      aid: aid,
+      csrf: csrf,
+    );
+    return res.data['code'] == 0;
   }
 
   Future<bool> deleteWatchLater(int aid) async {

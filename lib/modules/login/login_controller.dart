@@ -1,15 +1,23 @@
 import 'dart:async';
+import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:gt3_flutter_plugin/gt3_flutter_plugin.dart';
 
+import '../../app/routes/app_routes.dart';
 import '../../data/models/login/captcha_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../modules/home/home_controller.dart';
+import '../../modules/playlist/playlist_controller.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
   late final TabController tabController;
   final _authRepo = Get.find<AuthRepository>();
+
+  // GeeTest plugin instance
+  final Gt3FlutterPlugin _captcha = Gt3FlutterPlugin();
 
   // QR Login
   final qrcodeUrl = ''.obs;
@@ -25,7 +33,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   final smsCountdown = 0.obs;
   final captchaKey = ''.obs;
   Timer? _smsTimer;
-  CaptchaModel? _captchaData;
 
   // Password Login
   final usernameController = TextEditingController();
@@ -108,19 +115,92 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     _generateQrcode();
   }
 
-  // ── SMS Login ───────────────────────────────────────
+  // ── GeeTest Captcha ──────────────────────────────────
 
-  Future<void> requestCaptcha() async {
-    _captchaData = await _authRepo.getCaptcha();
-  }
+  /// Request GeeTest captcha and show the native verification UI.
+  /// On success, [onComplete] is called with the validated [CaptchaModel].
+  Future<void> _getCaptchaAndDo(
+      Future<void> Function(CaptchaModel) onComplete) async {
+    isLoading.value = true;
 
-  void onCaptchaComplete(String validate, String seccode, String challenge) {
-    if (_captchaData != null) {
-      _captchaData!.validate = validate;
-      _captchaData!.seccode = seccode;
-      _captchaData!.challenge = challenge;
+    final captchaData = await _authRepo.getCaptcha();
+    if (captchaData == null) {
+      isLoading.value = false;
+      Get.snackbar('错误', '获取验证码失败',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
     }
+
+    final registerData = Gt3RegisterData(
+      challenge: captchaData.geetest?.challenge,
+      gt: captchaData.geetest?.gt ?? '',
+      success: true,
+    );
+
+    _captcha.addEventHandler(
+      onShow: (Map<String, dynamic> message) async {
+        isLoading.value = false;
+      },
+      onClose: (Map<String, dynamic> message) async {
+        isLoading.value = false;
+      },
+      onResult: (Map<String, dynamic> message) async {
+        final code = message['code'] as String?;
+        if (code == '1') {
+          // Verification succeeded
+          captchaData.validate =
+              message['result']['geetest_validate'] as String?;
+          captchaData.seccode =
+              message['result']['geetest_seccode'] as String?;
+          captchaData.challenge =
+              message['result']['geetest_challenge'] as String?;
+          await onComplete(captchaData);
+        }
+      },
+      onError: (Map<String, dynamic> message) async {
+        isLoading.value = false;
+        final code = message['code']?.toString() ?? '';
+        log('GeeTest error: code=$code');
+        _handleGeeTestError(code);
+      },
+    );
+
+    _captcha.startCaptcha(registerData);
   }
+
+  void _handleGeeTestError(String code) {
+    String msg;
+    if (Platform.isAndroid) {
+      switch (code) {
+        case '201':
+          msg = '网络无法访问';
+        case '204':
+          msg = '验证加载超时';
+        case '204_1':
+          msg = '验证页面加载错误';
+        case '204_2':
+          msg = 'SSL 错误';
+        default:
+          msg = '验证失败 ($code)';
+      }
+    } else if (Platform.isIOS) {
+      switch (code) {
+        case '-1009':
+          msg = '网络无法访问';
+        case '-1001':
+          msg = '网络超时';
+        case '-999':
+          msg = '验证已取消';
+        default:
+          msg = '验证失败 ($code)';
+      }
+    } else {
+      msg = '验证失败 ($code)';
+    }
+    Get.snackbar('验证错误', msg, snackPosition: SnackPosition.BOTTOM);
+  }
+
+  // ── SMS Login ───────────────────────────────────────
 
   Future<void> sendSmsCode() async {
     if (phoneController.text.isEmpty) {
@@ -129,18 +209,23 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       return;
     }
 
-    await requestCaptcha();
-    if (_captchaData == null) {
-      Get.snackbar('错误', '获取验证码失败',
-          snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
+    await _getCaptchaAndDo((captchaData) async {
+      final key = await _authRepo.sendSmsCode(
+        cid: countryCode.value,
+        tel: int.parse(phoneController.text),
+        captcha: captchaData,
+      );
 
-    // In production, show GeeTest WebView here and get validate/seccode
-    // For now, we'll show a placeholder message
-    Get.snackbar('需要验证',
-        '需要极验验证，GT: ${_captchaData?.geetest?.gt}',
-        snackPosition: SnackPosition.BOTTOM);
+      if (key != null) {
+        captchaKey.value = key;
+        _startSmsCountdown();
+        Get.snackbar('成功', '验证码已发送',
+            snackPosition: SnackPosition.BOTTOM);
+      } else {
+        Get.snackbar('错误', '验证码发送失败',
+            snackPosition: SnackPosition.BOTTOM);
+      }
+    });
   }
 
   void _startSmsCountdown() {
@@ -171,27 +256,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     }
   }
 
-  // Called after GeeTest captcha completes for SMS flow
-  Future<void> sendSmsAfterCaptcha() async {
-    if (_captchaData == null) return;
-
-    final key = await _authRepo.sendSmsCode(
-      cid: countryCode.value,
-      tel: int.parse(phoneController.text),
-      captcha: _captchaData!,
-    );
-
-    if (key != null) {
-      captchaKey.value = key;
-      _startSmsCountdown();
-      Get.snackbar('成功', '验证码已发送',
-          snackPosition: SnackPosition.BOTTOM);
-    } else {
-      Get.snackbar('错误', '验证码发送失败',
-          snackPosition: SnackPosition.BOTTOM);
-    }
-  }
-
   // ── Password Login ──────────────────────────────────
 
   Future<void> loginByPassword() async {
@@ -201,50 +265,45 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       return;
     }
 
-    await requestCaptcha();
-    if (_captchaData == null) {
-      Get.snackbar('错误', '获取验证码失败',
-          snackPosition: SnackPosition.BOTTOM);
-      return;
-    }
+    await _getCaptchaAndDo((captchaData) async {
+      isLoading.value = true;
 
-    // In production, show GeeTest WebView here
-    Get.snackbar('需要验证',
-        '需要极验验证，GT: ${_captchaData?.geetest?.gt}',
-        snackPosition: SnackPosition.BOTTOM);
-  }
+      final result = await _authRepo.loginByPassword(
+        username: usernameController.text,
+        password: passwordController.text,
+        captcha: captchaData,
+      );
 
-  // Called after GeeTest captcha completes for password flow
-  Future<void> submitPasswordAfterCaptcha() async {
-    if (_captchaData == null) return;
-    isLoading.value = true;
+      isLoading.value = false;
 
-    final success = await _authRepo.loginByPassword(
-      username: usernameController.text,
-      password: passwordController.text,
-      captcha: _captchaData!,
-    );
-
-    isLoading.value = false;
-    if (success) {
-      _onLoginSuccess();
-    } else {
-      Get.snackbar('错误', '密码登录失败',
-          snackPosition: SnackPosition.BOTTOM);
-    }
+      if (result.success) {
+        await _onLoginSuccess();
+      } else if (result.needsVerification && result.verifyUrl != null) {
+        // Open WebView for additional device verification
+        Get.toNamed(AppRoutes.webview, arguments: {
+          'url': result.verifyUrl!,
+          'title': '登录验证',
+          'type': 'login',
+        });
+      } else {
+        Get.snackbar('错误', result.message ?? '密码登录失败',
+            snackPosition: SnackPosition.BOTTOM);
+      }
+    });
   }
 
   // ── Common ──────────────────────────────────────────
 
   Future<void> _onLoginSuccess() async {
-    // Sync cookies and fetch user info (like pilipala's confirmLogin)
     final success = await _authRepo.confirmLogin();
     if (Get.isRegistered<HomeController>()) {
       Get.find<HomeController>().refreshLoginStatus();
     }
+    if (Get.isRegistered<PlaylistController>()) {
+      Get.find<PlaylistController>().loadFolders();
+    }
     Get.back();
-    Get.snackbar('成功',
-        success ? '登录成功' : '登录成功，但获取用户信息失败',
+    Get.snackbar('成功', success ? '登录成功' : '登录成功，但获取用户信息失败',
         snackPosition: SnackPosition.BOTTOM);
   }
 }

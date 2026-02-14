@@ -49,6 +49,18 @@ class PlayQueueSheet extends GetView<PlayerController> {
                             fontWeight: FontWeight.bold,
                           ),
                     )),
+                const SizedBox(width: 8),
+                Obx(() => IconButton(
+                      icon: Icon(
+                        _playModeIcon(controller.playMode.value),
+                        size: 20,
+                        color: controller.playMode.value == PlayMode.sequential
+                            ? Theme.of(context).colorScheme.outline
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                      onPressed: controller.togglePlayMode,
+                      tooltip: _playModeLabel(controller.playMode.value),
+                    )),
                 const Spacer(),
                 TextButton(
                   onPressed: () {
@@ -70,13 +82,15 @@ class PlayQueueSheet extends GetView<PlayerController> {
                   child: Text('播放队列为空'),
                 );
               }
-              return ListView.builder(
+              return ReorderableListView.builder(
                 shrinkWrap: true,
                 itemCount: controller.queue.length,
+                onReorder: controller.reorderQueue,
                 itemBuilder: (context, index) {
                   final item = controller.queue[index];
                   final isCurrent = index == controller.currentIndex.value;
                   return ListTile(
+                    key: ValueKey(item.video.bvid),
                     leading: isCurrent
                         ? Icon(
                             Icons.music_note,
@@ -102,13 +116,22 @@ class PlayQueueSheet extends GetView<PlayerController> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    trailing: isCurrent
-                        ? null
-                        : IconButton(
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!isCurrent)
+                          IconButton(
                             icon: const Icon(Icons.close, size: 18),
                             onPressed: () =>
                                 controller.removeFromQueue(index),
                           ),
+                        ReorderableDragStartListener(
+                          index: index,
+                          child: const Icon(Icons.drag_handle),
+                        ),
+                      ],
+                    ),
+                    onTap: () => controller.playAt(index),
                   );
                 },
               );
@@ -117,5 +140,27 @@ class PlayQueueSheet extends GetView<PlayerController> {
         ],
       ),
     );
+  }
+
+  IconData _playModeIcon(PlayMode mode) {
+    switch (mode) {
+      case PlayMode.sequential:
+        return Icons.repeat;
+      case PlayMode.shuffle:
+        return Icons.shuffle;
+      case PlayMode.repeatOne:
+        return Icons.repeat_one;
+    }
+  }
+
+  String _playModeLabel(PlayMode mode) {
+    switch (mode) {
+      case PlayMode.sequential:
+        return '顺序播放';
+      case PlayMode.shuffle:
+        return '随机播放';
+      case PlayMode.repeatOne:
+        return '单曲循环';
+    }
   }
 }

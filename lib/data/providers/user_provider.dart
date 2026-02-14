@@ -116,9 +116,34 @@ class UserProvider {
     );
   }
 
+  // Subscriptions – cancel
+  Future<Response> cancelSub({
+    required int seasonId,
+    required String csrf,
+  }) {
+    return _dio.post(
+      ApiConstants.cancelSub,
+      data: 'platform=web&season_id=$seasonId&csrf=$csrf',
+    );
+  }
+
   // Watch Later
   Future<Response> getWatchLaterList() {
     return _dio.get(ApiConstants.watchLaterList);
+  }
+
+  Future<Response> addWatchLater({
+    String? bvid,
+    int? aid,
+    required String csrf,
+  }) {
+    final data = StringBuffer('csrf=$csrf');
+    if (bvid != null) data.write('&bvid=$bvid');
+    if (aid != null) data.write('&aid=$aid');
+    return _dio.post(
+      ApiConstants.watchLaterAdd,
+      data: data.toString(),
+    );
   }
 
   Future<Response> deleteWatchLater({

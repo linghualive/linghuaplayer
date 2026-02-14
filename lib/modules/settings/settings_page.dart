@@ -17,9 +17,12 @@ class SettingsPage extends GetView<SettingsController> {
       ),
       body: ListView(
         children: [
+          // ── 外观设置 ──
+          _buildSectionHeader(theme, '外观设置'),
+
           // Theme Mode
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Text(
               '主题模式',
               style: theme.textTheme.titleSmall?.copyWith(
@@ -50,8 +53,6 @@ class SettingsPage extends GetView<SettingsController> {
                 ),
               )),
 
-          const Divider(),
-
           // Dynamic Color
           Obx(() => SwitchListTile(
                 title: const Text('动态取色 (Monet)'),
@@ -59,18 +60,6 @@ class SettingsPage extends GetView<SettingsController> {
                 value: controller.themeCtrl.dynamicColor.value,
                 onChanged: (v) => controller.themeCtrl.setDynamicColor(v),
               )),
-
-          const Divider(),
-
-          // Video Playback
-          Obx(() => SwitchListTile(
-                title: const Text('视频播放'),
-                subtitle: const Text('开启后播放视频画面，关闭为纯音频模式'),
-                value: controller.enableVideo.value,
-                onChanged: (v) => controller.setEnableVideo(v),
-              )),
-
-          const Divider(),
 
           // Color Palette
           Padding(
@@ -86,7 +75,6 @@ class SettingsPage extends GetView<SettingsController> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Obx(() {
               final selected = controller.themeCtrl.customColorIndex.value;
-              // Skip index 0 (Dynamic) — that's controlled by the switch
               return Wrap(
                 spacing: 10,
                 runSpacing: 10,
@@ -128,15 +116,18 @@ class SettingsPage extends GetView<SettingsController> {
               );
             }),
           ),
-
           const SizedBox(height: 16),
+
           const Divider(),
+
+          // ── 主页设置 ──
+          _buildSectionHeader(theme, '主页设置'),
 
           // Grid Columns
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
             child: Text(
-              '列数',
+              '推荐列数',
               style: theme.textTheme.titleSmall?.copyWith(
                 color: theme.colorScheme.primary,
               ),
@@ -157,8 +148,35 @@ class SettingsPage extends GetView<SettingsController> {
                   }).toList(),
                 )),
           ),
+          const SizedBox(height: 16),
+
+          const Divider(),
+
+          // ── 播放设置 ──
+          _buildSectionHeader(theme, '播放设置'),
+
+          // Video Playback
+          Obx(() => SwitchListTile(
+                title: const Text('默认视频模式'),
+                subtitle: const Text('开启后默认播放视频画面，可在播放页切换'),
+                value: controller.enableVideo.value,
+                onChanged: (v) => controller.setEnableVideo(v),
+              )),
+
           const SizedBox(height: 32),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(ThemeData theme, String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        title,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

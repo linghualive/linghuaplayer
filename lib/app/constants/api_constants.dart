@@ -72,9 +72,11 @@ class ApiConstants {
   // Subscriptions endpoints
   static const String subFolderList = '/x/v3/fav/folder/collected/list';
   static const String subSeasonList = '/x/space/fav/season/list';
+  static const String cancelSub = '/x/v3/fav/season/unfav';
 
   // Watch Later endpoints
   static const String watchLaterList = '/x/v2/history/toview';
+  static const String watchLaterAdd = '/x/v2/history/toview/add';
   static const String watchLaterDel = '/x/v2/history/toview/del';
   static const String watchLaterClear = '/x/v2/history/toview/clear';
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../player_controller.dart';
+import 'play_queue_sheet.dart';
 
 class PlayerControls extends GetView<PlayerController> {
   const PlayerControls({super.key});
@@ -113,11 +114,22 @@ class PlayerControls extends GetView<PlayerController> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
+                iconSize: 24,
+                icon: Icon(
+                  _playModeIcon(controller.playMode.value),
+                  color: controller.playMode.value == PlayMode.sequential
+                      ? Theme.of(context).colorScheme.outline
+                      : Theme.of(context).colorScheme.primary,
+                ),
+                onPressed: controller.togglePlayMode,
+              ),
+              const SizedBox(width: 8),
+              IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_previous_rounded),
                 onPressed: controller.skipPrevious,
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 12),
               SizedBox(
                 width: 64,
                 height: 64,
@@ -135,17 +147,54 @@ class PlayerControls extends GetView<PlayerController> {
                   ),
                 ),
               ),
-              const SizedBox(width: 20),
+              const SizedBox(width: 12),
               IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_next_rounded),
                 onPressed: controller.skipNext,
               ),
+              const SizedBox(width: 8),
+              IconButton(
+                iconSize: 24,
+                icon: const Icon(Icons.queue_music_rounded),
+                onPressed: PlayQueueSheet.show,
+              ),
             ],
+          ),
+          const SizedBox(height: 8),
+          // Video/Audio toggle
+          TextButton.icon(
+            onPressed: controller.toggleVideoMode,
+            icon: Icon(
+              controller.isVideoMode.value
+                  ? Icons.videocam
+                  : Icons.music_note,
+              size: 18,
+            ),
+            label: Text(
+              controller.isVideoMode.value ? '视频模式' : '音频模式',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: controller.isVideoMode.value
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.outline,
+            ),
           ),
         ],
       );
     });
+  }
+
+  IconData _playModeIcon(PlayMode mode) {
+    switch (mode) {
+      case PlayMode.sequential:
+        return Icons.repeat;
+      case PlayMode.shuffle:
+        return Icons.shuffle;
+      case PlayMode.repeatOne:
+        return Icons.repeat_one;
+    }
   }
 
   Widget _buildQualityBadge(BuildContext context, String label) {

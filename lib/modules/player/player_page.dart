@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/storage/storage_service.dart';
+import '../../shared/widgets/fav_panel.dart';
 import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
@@ -22,6 +24,25 @@ class PlayerPage extends GetView<PlayerController> {
           onPressed: () => Get.back(),
         ),
         actions: [
+          Obx(() {
+            final video = controller.currentVideo.value;
+            if (video == null || video.id <= 0) {
+              return const SizedBox.shrink();
+            }
+            return IconButton(
+              icon: const Icon(Icons.favorite_border),
+              tooltip: '收藏',
+              onPressed: () {
+                final storage = Get.find<StorageService>();
+                if (!storage.isLoggedIn) {
+                  Get.snackbar('提示', '请先登录',
+                      snackPosition: SnackPosition.BOTTOM);
+                  return;
+                }
+                FavPanel.show(context, video.id);
+              },
+            );
+          }),
           IconButton(
             icon: const Icon(Icons.queue_music),
             onPressed: PlayQueueSheet.show,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../shared/widgets/cached_image.dart';
+import '../../shared/widgets/video_action_buttons.dart';
 import 'subscription_detail_controller.dart';
 
 class SubscriptionDetailPage extends StatelessWidget {
@@ -85,6 +86,9 @@ class SubscriptionDetailPage extends StatelessWidget {
                               ],
                             ),
                           ),
+                        ),
+                        VideoActionColumn(
+                          video: video.toSearchVideoModel(),
                         ),
                       ],
                     ),

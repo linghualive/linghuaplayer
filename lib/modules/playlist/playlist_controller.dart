@@ -28,14 +28,18 @@ class PlaylistController extends GetxController {
 
   Future<void> loadFolders() async {
     isLoading.value = true;
-    final mid = _storage.userMid;
-    if (mid == null) {
+    final mid = int.tryParse(_storage.userMid ?? '') ?? 0;
+    if (mid == 0) {
       isLoading.value = false;
       return;
     }
-    final list = await _repo.getFavFoldersAll(upMid: int.parse(mid));
-    folders.assignAll(list);
-    _applyVisibleConfig();
+    try {
+      final list = await _repo.getFavFolders(upMid: mid);
+      folders.assignAll(list);
+      _applyVisibleConfig();
+    } catch (_) {
+      // Prevent stuck loading on network/parse errors
+    }
     isLoading.value = false;
   }
 
@@ -59,9 +63,14 @@ class PlaylistController extends GetxController {
   Future<void> loadVideosForFolder(int folderId) async {
     tabLoading[folderId] = true;
     tabPage[folderId] = 1;
-    final result = await _repo.getFavResources(mediaId: folderId, pn: 1);
-    tabVideos[folderId] = result.items;
-    tabHasMore[folderId] = result.hasMore;
+    try {
+      final result = await _repo.getFavResources(mediaId: folderId, pn: 1);
+      tabVideos[folderId] = result.items;
+      tabHasMore[folderId] = result.hasMore;
+    } catch (_) {
+      tabVideos[folderId] = [];
+      tabHasMore[folderId] = false;
+    }
     tabLoading[folderId] = false;
   }
 
@@ -70,10 +79,14 @@ class PlaylistController extends GetxController {
     if (tabLoading[folderId] ?? false) return;
     final page = (tabPage[folderId] ?? 1) + 1;
     tabPage[folderId] = page;
-    final result = await _repo.getFavResources(mediaId: folderId, pn: page);
-    final existing = tabVideos[folderId] ?? [];
-    tabVideos[folderId] = [...existing, ...result.items];
-    tabHasMore[folderId] = result.hasMore;
+    try {
+      final result = await _repo.getFavResources(mediaId: folderId, pn: page);
+      final existing = tabVideos[folderId] ?? [];
+      tabVideos[folderId] = [...existing, ...result.items];
+      tabHasMore[folderId] = result.hasMore;
+    } catch (_) {
+      tabHasMore[folderId] = false;
+    }
   }
 
   void playVideo(FavResourceModel video) {

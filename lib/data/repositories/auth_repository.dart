@@ -81,15 +81,22 @@ class AuthRepository {
     return false;
   }
 
-  /// Login with password (RSA encrypted)
-  Future<bool> loginByPassword({
+  /// Login with password (RSA encrypted).
+  /// Returns [PasswordLoginResult] with status, message, and optional
+  /// verification URL when additional device verification is required.
+  Future<PasswordLoginResult> loginByPassword({
     required String username,
     required String password,
     required CaptchaModel captcha,
   }) async {
     // 1. Get RSA public key
     final keyRes = await _provider.getWebKey();
-    if (keyRes.data['code'] != 0) return false;
+    if (keyRes.data['code'] != 0) {
+      return PasswordLoginResult(
+        success: false,
+        message: keyRes.data['message'] ?? '获取密钥失败',
+      );
+    }
 
     final rhash = keyRes.data['data']['hash'] as String;
     final publicKeyPem = keyRes.data['data']['key'] as String;
@@ -113,9 +120,24 @@ class AuthRepository {
 
     if (res.data['code'] == 0 && res.data['data']?['status'] == 0) {
       await confirmLogin();
-      return true;
+      return PasswordLoginResult(success: true);
     }
-    return false;
+
+    // status != 0 means additional verification is needed
+    if (res.data['code'] == 0 && res.data['data']?['status'] != 0) {
+      final verifyUrl = res.data['data']?['url'] as String?;
+      return PasswordLoginResult(
+        success: false,
+        needsVerification: true,
+        verifyUrl: verifyUrl,
+        message: '需要安全验证',
+      );
+    }
+
+    return PasswordLoginResult(
+      success: false,
+      message: res.data['message'] ?? '登录失败',
+    );
   }
 
   /// Post-login: fetch user info, set headers, cache
@@ -161,4 +183,18 @@ class AuthRepository {
 
   /// Check if user is logged in
   bool get isLoggedIn => _storage.isLoggedIn;
+}
+
+class PasswordLoginResult {
+  final bool success;
+  final bool needsVerification;
+  final String? verifyUrl;
+  final String? message;
+
+  PasswordLoginResult({
+    required this.success,
+    this.needsVerification = false,
+    this.verifyUrl,
+    this.message,
+  });
 }

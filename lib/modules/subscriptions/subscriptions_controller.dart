@@ -50,4 +50,14 @@ class SubscriptionsController extends GetxController {
       arguments: {'seasonId': folder.id, 'title': folder.title},
     );
   }
+
+  Future<void> cancelSub(SubFolderModel folder) async {
+    final success = await _repo.cancelSub(folder.id);
+    if (success) {
+      folders.remove(folder);
+      Get.snackbar('提示', '已取消订阅', snackPosition: SnackPosition.BOTTOM);
+    } else {
+      Get.snackbar('错误', '取消订阅失败', snackPosition: SnackPosition.BOTTOM);
+    }
+  }
 }

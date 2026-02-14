@@ -29,8 +29,7 @@ class WatchLaterController extends GetxController {
     if (success) {
       videos.removeAt(index);
     } else {
-      Get.snackbar('Error', 'Failed to delete',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('错误', '删除失败', snackPosition: SnackPosition.BOTTOM);
     }
   }
 
@@ -39,13 +38,23 @@ class WatchLaterController extends GetxController {
     if (success) {
       videos.clear();
     } else {
-      Get.snackbar('Error', 'Failed to clear',
-          snackPosition: SnackPosition.BOTTOM);
+      Get.snackbar('错误', '清空失败', snackPosition: SnackPosition.BOTTOM);
     }
   }
 
   void playVideo(WatchLaterModel video) {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(video.toSearchVideoModel());
+  }
+
+  void playAll() {
+    if (videos.isEmpty) return;
+    final playerCtrl = Get.find<PlayerController>();
+    // Play the first video
+    playerCtrl.playFromSearch(videos.first.toSearchVideoModel());
+    // Add the rest to queue
+    for (var i = 1; i < videos.length; i++) {
+      playerCtrl.addToQueueSilent(videos[i].toSearchVideoModel());
+    }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/storage/storage_service.dart';
+import '../../modules/home/home_controller.dart';
 import '../../data/models/user/fav_resource_model.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/video_action_buttons.dart';
@@ -21,16 +21,15 @@ class PlaylistPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<PlaylistController>();
-    final storage = Get.find<StorageService>();
-
-    if (!storage.isLoggedIn) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('歌单')),
-        body: const Center(child: Text('请先登录')),
-      );
-    }
+    final homeController = Get.find<HomeController>();
 
     return Obx(() {
+      if (!homeController.isLoggedIn.value) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('歌单')),
+          body: const Center(child: Text('请先登录')),
+        );
+      }
       if (controller.isLoading.value) {
         return Scaffold(
           appBar: AppBar(title: const Text('歌单')),
@@ -163,70 +162,68 @@ class _FolderTabState extends State<_FolderTab> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: SizedBox(
-                          height: 100,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                video.title,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style:
-                                    Theme.of(context).textTheme.bodyMedium,
-                              ),
-                              const Spacer(),
-                              Text(
-                                video.author,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline,
-                                    ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(Icons.play_arrow,
-                                      size: 14,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    widget.formatPlay(video.play),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .outline,
-                                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              video.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              video.author,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline,
                                   ),
-                                  const Spacer(),
-                                  Text(
-                                    video.durationStr,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .outline,
-                                        ),
-                                  ),
-                                ],
-                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.play_arrow,
+                                    size: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outline),
+                                const SizedBox(width: 2),
+                                Text(
+                                  widget.formatPlay(video.play),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  video.durationStr,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                              ],
+                            ),
                             ],
                           ),
                         ),
-                      ),
                       VideoActionColumn(
                         video: video.toSearchVideoModel(),
                       ),

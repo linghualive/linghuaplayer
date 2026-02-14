@@ -21,36 +21,51 @@ class WatchLaterPage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('稍后再看'),
+        title: Obx(() => Text(
+              controller.videos.isEmpty
+                  ? '稍后再看'
+                  : '稍后再看 (${controller.videos.length})',
+            )),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('全部清空'),
-                  content: const Text(
-                      '确定要清空全部稍后再看吗？'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('取消'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        controller.clearAll();
-                      },
-                      child: const Text('清空'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+          Obx(() {
+            if (controller.videos.isEmpty) return const SizedBox.shrink();
+            return IconButton(
+              icon: const Icon(Icons.delete_sweep),
+              tooltip: '全部清空',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('全部清空'),
+                    content: const Text('确定要清空全部稍后再看吗？'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('取消'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          controller.clearAll();
+                        },
+                        child: const Text('清空'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          }),
         ],
       ),
+      floatingActionButton: Obx(() {
+        if (controller.videos.isEmpty) return const SizedBox.shrink();
+        return FloatingActionButton.extended(
+          onPressed: controller.playAll,
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('播放全部'),
+        );
+      }),
       body: Obx(() {
         if (controller.isLoading.value) {
           return const Center(child: CircularProgressIndicator());

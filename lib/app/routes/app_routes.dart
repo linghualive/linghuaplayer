@@ -16,4 +16,5 @@ abstract class AppRoutes {
   static const musicRanking = '/music-ranking';
   static const hotPlaylists = '/hot-playlists';
   static const mvList = '/mv-list';
+  static const webview = '/webview';
 }

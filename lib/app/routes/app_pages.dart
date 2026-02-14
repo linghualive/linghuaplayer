@@ -31,6 +31,7 @@ import '../../modules/hot_playlists/hot_playlists_page.dart';
 import '../../modules/hot_playlists/hot_playlists_controller.dart';
 import '../../modules/mv_list/mv_list_page.dart';
 import '../../modules/mv_list/mv_list_controller.dart';
+import '../../modules/webview/webview_page.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -143,6 +144,10 @@ class AppPages {
       binding: BindingsBuilder(() {
         Get.put(MvListController());
       }),
+    ),
+    GetPage(
+      name: AppRoutes.webview,
+      page: () => const WebviewPage(),
     ),
   ];
 }

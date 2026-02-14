@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
+import 'dart:math' show Random;
 
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
@@ -14,6 +15,8 @@ import '../../data/models/music/audio_song_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/player_repository.dart';
+
+enum PlayMode { sequential, shuffle, repeatOne }
 
 class QueueItem {
   final SearchVideoModel video;
@@ -55,6 +58,9 @@ class PlayerController extends GetxController {
   // Queue
   final queue = <QueueItem>[].obs;
   final currentIndex = (-1).obs;
+
+  // Play mode
+  final playMode = PlayMode.sequential.obs;
 
   // Audio quality
   final audioQualityLabel = ''.obs;
@@ -332,10 +338,81 @@ class PlayerController extends GetxController {
           },
         ),
       );
-      await _audioPlayer.play();
+      _audioPlayer.play();
     } catch (e) {
       log('Audio source error: $e');
       rethrow;
+    }
+  }
+
+  /// Switch the current track between video and audio-only mode.
+  Future<void> toggleVideoMode() async {
+    if (currentIndex.value < 0 || currentIndex.value >= queue.length) return;
+    final item = queue[currentIndex.value];
+    final currentPos = position.value;
+
+    if (isVideoMode.value) {
+      // Switch to audio-only
+      _mediaKitPlayer?.stop();
+      isVideoMode.value = false;
+      videoQualityLabel.value = '';
+      await _playAudioUrl(item.audioUrl);
+      if (currentPos > Duration.zero) {
+        await Future.delayed(const Duration(milliseconds: 200));
+        _audioPlayer.seek(currentPos);
+      }
+    } else {
+      // Switch to video
+      if (item.videoUrl != null) {
+        _audioPlayer.stop();
+        _ensureMediaKitPlayer();
+        isVideoMode.value = true;
+        videoQualityLabel.value = item.videoQualityLabel ?? '';
+        await _openVideoWithAudio(item.videoUrl!, item.audioUrl);
+        if (currentPos > Duration.zero) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          _mediaKitPlayer?.seek(currentPos);
+        }
+      } else {
+        // No video URL available, try to fetch it
+        try {
+          final playUrl =
+              await _playerRepo.getFullPlayUrl(item.video.bvid);
+          if (playUrl != null &&
+              playUrl.videoStreams.isNotEmpty &&
+              playUrl.bestAudio != null) {
+            final bestVideo = playUrl.bestVideo!;
+            final bestAudio = playUrl.bestAudio!;
+            // Update queue item with video URL
+            final newItem = QueueItem(
+              video: item.video,
+              audioUrl: bestAudio.baseUrl,
+              qualityLabel: bestAudio.qualityLabel,
+              videoUrl: bestVideo.baseUrl,
+              videoQualityLabel: bestVideo.qualityLabel,
+            );
+            queue[currentIndex.value] = newItem;
+
+            _audioPlayer.stop();
+            _ensureMediaKitPlayer();
+            isVideoMode.value = true;
+            audioQualityLabel.value = bestAudio.qualityLabel;
+            videoQualityLabel.value = bestVideo.qualityLabel;
+            await _openVideoWithAudio(bestVideo.baseUrl, bestAudio.baseUrl);
+            if (currentPos > Duration.zero) {
+              await Future.delayed(const Duration(milliseconds: 500));
+              _mediaKitPlayer?.seek(currentPos);
+            }
+          } else {
+            Get.snackbar('提示', '该视频无画面资源',
+                snackPosition: SnackPosition.BOTTOM);
+          }
+        } catch (e) {
+          log('Failed to fetch video: $e');
+          Get.snackbar('错误', '获取视频失败',
+              snackPosition: SnackPosition.BOTTOM);
+        }
+      }
     }
   }
 
@@ -360,15 +437,36 @@ class PlayerController extends GetxController {
   }
 
   void _playNext() {
-    if (currentIndex.value < queue.length - 1) {
-      skipNext();
-    } else {
-      if (isVideoMode.value) {
-        _mediaKitPlayer?.stop();
-      } else {
-        _audioPlayer.stop();
-        _audioPlayer.seek(Duration.zero);
-      }
+    switch (playMode.value) {
+      case PlayMode.repeatOne:
+        seekTo(Duration.zero);
+        if (isVideoMode.value) {
+          _mediaKitPlayer?.play();
+        } else {
+          _audioPlayer.play();
+        }
+        break;
+      case PlayMode.shuffle:
+        if (queue.length <= 1) return;
+        final rng = Random();
+        int next;
+        do {
+          next = rng.nextInt(queue.length);
+        } while (next == currentIndex.value);
+        playAt(next);
+        break;
+      case PlayMode.sequential:
+        if (currentIndex.value < queue.length - 1) {
+          skipNext();
+        } else {
+          if (isVideoMode.value) {
+            _mediaKitPlayer?.stop();
+          } else {
+            _audioPlayer.stop();
+            _audioPlayer.seek(Duration.zero);
+          }
+        }
+        break;
     }
   }
 
@@ -395,6 +493,46 @@ class PlayerController extends GetxController {
       await _playQueueItem(item);
     } else {
       seekTo(Duration.zero);
+    }
+  }
+
+  void togglePlayMode() {
+    switch (playMode.value) {
+      case PlayMode.sequential:
+        playMode.value = PlayMode.shuffle;
+        break;
+      case PlayMode.shuffle:
+        playMode.value = PlayMode.repeatOne;
+        break;
+      case PlayMode.repeatOne:
+        playMode.value = PlayMode.sequential;
+        break;
+    }
+  }
+
+  Future<void> playAt(int index) async {
+    if (index < 0 || index >= queue.length) return;
+    currentIndex.value = index;
+    final item = queue[index];
+    currentVideo.value = item.video;
+    audioQualityLabel.value = item.qualityLabel;
+    await _playQueueItem(item);
+  }
+
+  void reorderQueue(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) newIndex--;
+    final item = queue.removeAt(oldIndex);
+    queue.insert(newIndex, item);
+
+    // Keep currentIndex pointing to the same item
+    if (currentIndex.value == oldIndex) {
+      currentIndex.value = newIndex;
+    } else if (oldIndex < currentIndex.value &&
+        newIndex >= currentIndex.value) {
+      currentIndex.value--;
+    } else if (oldIndex > currentIndex.value &&
+        newIndex <= currentIndex.value) {
+      currentIndex.value++;
     }
   }
 
@@ -496,6 +634,83 @@ class PlayerController extends GetxController {
       }
     }
     isLoading.value = false;
+  }
+
+  /// Add a video to the queue silently (no snackbar).
+  /// Returns true if added successfully, false if already in queue or failed.
+  Future<bool> addToQueueSilent(SearchVideoModel video) async {
+    final existingIndex =
+        queue.indexWhere((item) => item.video.bvid == video.bvid);
+    if (existingIndex >= 0) return false;
+
+    try {
+      if (_storage.enableVideo) {
+        final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
+        if (playUrl != null &&
+            playUrl.videoStreams.isNotEmpty &&
+            playUrl.bestAudio != null) {
+          final bestVideo = playUrl.bestVideo!;
+          final bestAudio = playUrl.bestAudio!;
+          queue.add(QueueItem(
+            video: video,
+            audioUrl: bestAudio.baseUrl,
+            qualityLabel: bestAudio.qualityLabel,
+            videoUrl: bestVideo.baseUrl,
+            videoQualityLabel: bestVideo.qualityLabel,
+          ));
+        } else {
+          final streams = await _playerRepo.getAudioStreams(video.bvid);
+          if (streams.isNotEmpty) {
+            queue.add(QueueItem(
+              video: video,
+              audioUrl: streams.first.baseUrl,
+              qualityLabel: streams.first.qualityLabel,
+            ));
+          } else {
+            return false;
+          }
+        }
+      } else {
+        final streams = await _playerRepo.getAudioStreams(video.bvid);
+        if (streams.isNotEmpty) {
+          queue.add(QueueItem(
+            video: video,
+            audioUrl: streams.first.baseUrl,
+            qualityLabel: streams.first.qualityLabel,
+          ));
+        } else {
+          return false;
+        }
+      }
+
+      if (!hasCurrentTrack) {
+        currentIndex.value = 0;
+        final item = queue[0];
+        currentVideo.value = item.video;
+        audioQualityLabel.value = item.qualityLabel;
+        await _playQueueItem(item);
+      }
+      return true;
+    } catch (e) {
+      log('Add to queue silent failed: $e');
+      return false;
+    }
+  }
+
+  /// Batch add videos to the queue. Shows a single summary snackbar.
+  Future<void> addAllToQueue(List<SearchVideoModel> videos) async {
+    int added = 0;
+    for (final video in videos) {
+      final success = await addToQueueSilent(video);
+      if (success) added++;
+    }
+    if (added > 0) {
+      Get.snackbar('提示', '已添加 $added 首到播放列表',
+          snackPosition: SnackPosition.BOTTOM);
+    } else {
+      Get.snackbar('提示', '所有歌曲已在播放列表中',
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
 
   /// Add a video to the queue without navigating to the player page.
