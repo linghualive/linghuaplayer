@@ -50,6 +50,75 @@ class UserRepository {
     return (items: <FavResourceModel>[], hasMore: false);
   }
 
+  Future<List<FavFolderModel>> getFavFoldersAll({
+    required int upMid,
+    int? rid,
+  }) async {
+    final res = await _provider.getFavFoldersAll(upMid: upMid, rid: rid);
+    if (res.data['code'] == 0 && res.data['data'] != null) {
+      final list = res.data['data']['list'] as List<dynamic>? ?? [];
+      return list
+          .map((e) => FavFolderModel.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  Future<bool> favResourceDeal({
+    required int rid,
+    required List<int> addIds,
+    required List<int> delIds,
+  }) async {
+    final csrf = await HttpClient.instance.getCsrf();
+    final res = await _provider.favResourceDeal(
+      rid: rid,
+      addMediaIds: addIds.join(','),
+      delMediaIds: delIds.join(','),
+      csrf: csrf,
+    );
+    return res.data['code'] == 0;
+  }
+
+  Future<bool> hasFavVideo(int aid) async {
+    final res = await _provider.hasFavVideo(aid: aid);
+    if (res.data['code'] == 0 && res.data['data'] != null) {
+      return (res.data['data']['favoured'] as bool?) ?? false;
+    }
+    return false;
+  }
+
+  Future<bool> addFavFolder({
+    required String title,
+    String intro = '',
+    int privacy = 0,
+  }) async {
+    final csrf = await HttpClient.instance.getCsrf();
+    final res = await _provider.addFavFolder(
+      title: title,
+      intro: intro,
+      privacy: privacy,
+      csrf: csrf,
+    );
+    return res.data['code'] == 0;
+  }
+
+  Future<bool> editFavFolder({
+    required String title,
+    required int mediaId,
+    String intro = '',
+    int privacy = 0,
+  }) async {
+    final csrf = await HttpClient.instance.getCsrf();
+    final res = await _provider.editFavFolder(
+      title: title,
+      intro: intro,
+      mediaId: mediaId,
+      privacy: privacy,
+      csrf: csrf,
+    );
+    return res.data['code'] == 0;
+  }
+
   // ── Subscriptions ──
 
   Future<({List<SubFolderModel> items, bool hasMore})> getSubFolders({

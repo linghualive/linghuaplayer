@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../modules/player/widgets/mini_player_bar.dart';
+import '../../modules/playlist/playlist_controller.dart';
+import '../../modules/playlist/playlist_page.dart';
 import '../../modules/profile/profile_page.dart';
 import '../../modules/profile/profile_controller.dart';
 import '../../modules/recommend/recommend_page.dart';
@@ -15,6 +17,7 @@ class HomePage extends GetView<HomeController> {
   Widget build(BuildContext context) {
     // Ensure sub-controllers are created
     Get.put(RecommendController());
+    Get.put(PlaylistController());
     Get.put(ProfileController());
 
     return Scaffold(
@@ -23,6 +26,7 @@ class HomePage extends GetView<HomeController> {
           index: controller.currentIndex.value,
           children: const [
             RecommendPage(),
+            PlaylistPage(),
             ProfilePage(),
           ],
         );
@@ -39,6 +43,11 @@ class HomePage extends GetView<HomeController> {
                     icon: Icon(Icons.home_outlined),
                     selectedIcon: Icon(Icons.home),
                     label: '首页',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.queue_music_outlined),
+                    selectedIcon: Icon(Icons.queue_music),
+                    label: '歌单',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.person_outline),

@@ -35,6 +35,64 @@ class UserProvider {
     );
   }
 
+  Future<Response> getFavFoldersAll({
+    required int upMid,
+    int? rid,
+  }) {
+    final params = <String, dynamic>{'up_mid': upMid};
+    if (rid != null) params['rid'] = rid;
+    return _dio.get(
+      ApiConstants.favFolderListAll,
+      queryParameters: params,
+    );
+  }
+
+  Future<Response> favResourceDeal({
+    required int rid,
+    required String addMediaIds,
+    required String delMediaIds,
+    required String csrf,
+  }) {
+    return _dio.post(
+      ApiConstants.favResourceDeal,
+      data:
+          'rid=$rid&type=2&add_media_ids=$addMediaIds&del_media_ids=$delMediaIds&csrf=$csrf',
+    );
+  }
+
+  Future<Response> hasFavVideo({required int aid}) {
+    return _dio.get(
+      ApiConstants.hasFavVideo,
+      queryParameters: {'aid': aid},
+    );
+  }
+
+  Future<Response> addFavFolder({
+    required String title,
+    required String intro,
+    required int privacy,
+    required String csrf,
+  }) {
+    return _dio.post(
+      ApiConstants.addFavFolder,
+      data: 'title=$title&intro=$intro&privacy=$privacy&csrf=$csrf',
+    );
+  }
+
+  Future<Response> editFavFolder({
+    required String title,
+    required String intro,
+    required int mediaId,
+    required int privacy,
+    required String csrf,
+  }) {
+    return _dio.post(
+      ApiConstants.editFavFolder,
+      data:
+          'title=$title&intro=$intro&media_id=$mediaId&privacy=$privacy&csrf=$csrf',
+    );
+  }
+
   // Subscriptions
   Future<Response> getSubFolders({
     required int upMid,

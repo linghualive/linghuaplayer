@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../../../core/storage/storage_service.dart';
 import '../../../data/models/recommend/rec_video_item_model.dart';
+import '../../../modules/player/player_controller.dart';
 import '../../../shared/utils/duration_formatter.dart';
 import '../../../shared/widgets/cached_image.dart';
+import '../../../shared/widgets/fav_panel.dart';
 
 class VideoCardV extends StatelessWidget {
   final RecVideoItemModel video;
@@ -64,15 +68,23 @@ class VideoCardV extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          // Title
-          Text(
-            video.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              height: 1.3,
-            ),
+          // Title + more button
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  video.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              _MoreButton(video: video),
+            ],
           ),
           const SizedBox(height: 3),
           // Author + stats
@@ -95,5 +107,65 @@ class VideoCardV extends StatelessWidget {
       return '${(count / 10000).toStringAsFixed(1)}w';
     }
     return count.toString();
+  }
+}
+
+class _MoreButton extends StatelessWidget {
+  final RecVideoItemModel video;
+
+  const _MoreButton({required this.video});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 24,
+      height: 24,
+      child: PopupMenuButton<String>(
+        padding: EdgeInsets.zero,
+        iconSize: 18,
+        icon: Icon(
+          Icons.more_vert,
+          size: 18,
+          color: Theme.of(context).colorScheme.outline,
+        ),
+        onSelected: (value) {
+          final searchModel = video.toSearchVideoModel();
+          if (value == 'queue') {
+            final player = Get.find<PlayerController>();
+            player.addToQueue(searchModel);
+          } else if (value == 'fav') {
+            final storage = Get.find<StorageService>();
+            if (!storage.isLoggedIn) {
+              Get.snackbar('提示', '请先登录',
+                  snackPosition: SnackPosition.BOTTOM);
+              return;
+            }
+            FavPanel.show(context, searchModel.id);
+          }
+        },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'queue',
+            child: Row(
+              children: [
+                Icon(Icons.playlist_add, size: 20),
+                SizedBox(width: 8),
+                Text('添加到播放列表'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'fav',
+            child: Row(
+              children: [
+                Icon(Icons.favorite_border, size: 20),
+                SizedBox(width: 8),
+                Text('收藏'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

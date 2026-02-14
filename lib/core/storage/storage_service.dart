@@ -95,6 +95,16 @@ class StorageService extends GetxService {
   int get customRows => _box.read<int>('custom_rows') ?? 2;
   set customRows(int value) => _box.write('custom_rows', value);
 
+  // Playlist visible folder IDs
+  List<int> get playlistVisibleFolderIds {
+    final list = _box.read<List>('playlist_visible_folder_ids');
+    if (list == null) return [];
+    return list.cast<int>();
+  }
+
+  set playlistVisibleFolderIds(List<int> value) =>
+      _box.write('playlist_visible_folder_ids', value);
+
   // Clear all auth data
   void clearAuth() {
     _box.remove('user_info');

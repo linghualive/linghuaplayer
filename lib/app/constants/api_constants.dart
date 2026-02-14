@@ -62,7 +62,12 @@ class ApiConstants {
 
   // Favorites endpoints
   static const String favFolderList = '/x/v3/fav/folder/created/list';
+  static const String favFolderListAll = '/x/v3/fav/folder/created/list-all';
   static const String favResourceList = '/x/v3/fav/resource/list';
+  static const String favResourceDeal = '/x/v3/fav/resource/deal';
+  static const String hasFavVideo = '/x/v2/fav/video/favoured';
+  static const String addFavFolder = '/x/v3/fav/folder/add';
+  static const String editFavFolder = '/x/v3/fav/folder/edit';
 
   // Subscriptions endpoints
   static const String subFolderList = '/x/v3/fav/folder/collected/list';

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../shared/widgets/cached_image.dart';
+import '../../shared/widgets/video_action_buttons.dart';
 import 'watch_later_controller.dart';
 
 class WatchLaterPage extends StatelessWidget {
@@ -153,6 +154,9 @@ class WatchLaterPage extends StatelessWidget {
                               ],
                             ),
                           ),
+                        ),
+                        VideoActionColumn(
+                          video: video.toSearchVideoModel(),
                         ),
                       ],
                     ),

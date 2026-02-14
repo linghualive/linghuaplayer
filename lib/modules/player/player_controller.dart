@@ -8,6 +8,7 @@ import 'package:media_kit/media_kit.dart' as mk;
 import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 import '../../app/constants/app_constants.dart';
+import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/player_repository.dart';
@@ -138,10 +139,15 @@ class PlayerController extends GetxController {
     });
   }
 
-  /// Play from search result
+  /// Play from search result and navigate to player page
   Future<void> playFromSearch(SearchVideoModel video) async {
     isLoading.value = true;
     currentVideo.value = video;
+
+    // Navigate to player page if not already there
+    if (Get.currentRoute != AppRoutes.player) {
+      Get.toNamed(AppRoutes.player);
+    }
 
     try {
       if (_storage.enableVideo) {
@@ -432,4 +438,70 @@ class PlayerController extends GetxController {
   }
 
   bool get hasCurrentTrack => currentVideo.value != null;
+
+  /// Add a video to the queue without navigating to the player page.
+  /// If nothing is currently playing, starts playback.
+  Future<void> addToQueue(SearchVideoModel video) async {
+    final existingIndex =
+        queue.indexWhere((item) => item.video.bvid == video.bvid);
+    if (existingIndex >= 0) {
+      Get.snackbar('提示', '已在播放列表中',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+
+    try {
+      if (_storage.enableVideo) {
+        final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
+        if (playUrl != null &&
+            playUrl.videoStreams.isNotEmpty &&
+            playUrl.bestAudio != null) {
+          final bestVideo = playUrl.bestVideo!;
+          final bestAudio = playUrl.bestAudio!;
+          queue.add(QueueItem(
+            video: video,
+            audioUrl: bestAudio.baseUrl,
+            qualityLabel: bestAudio.qualityLabel,
+            videoUrl: bestVideo.baseUrl,
+            videoQualityLabel: bestVideo.qualityLabel,
+          ));
+        } else {
+          // Fallback to audio-only
+          final streams = await _playerRepo.getAudioStreams(video.bvid);
+          if (streams.isNotEmpty) {
+            queue.add(QueueItem(
+              video: video,
+              audioUrl: streams.first.baseUrl,
+              qualityLabel: streams.first.qualityLabel,
+            ));
+          }
+        }
+      } else {
+        final streams = await _playerRepo.getAudioStreams(video.bvid);
+        if (streams.isNotEmpty) {
+          queue.add(QueueItem(
+            video: video,
+            audioUrl: streams.first.baseUrl,
+            qualityLabel: streams.first.qualityLabel,
+          ));
+        }
+      }
+
+      Get.snackbar('提示', '已添加到播放列表',
+          snackPosition: SnackPosition.BOTTOM);
+
+      // If nothing is currently playing, start playback
+      if (!hasCurrentTrack) {
+        currentIndex.value = 0;
+        final item = queue[0];
+        currentVideo.value = item.video;
+        audioQualityLabel.value = item.qualityLabel;
+        await _playQueueItem(item);
+      }
+    } catch (e) {
+      log('Add to queue failed: $e');
+      Get.snackbar('错误', '添加失败: $e',
+          snackPosition: SnackPosition.BOTTOM);
+    }
+  }
 }

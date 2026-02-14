@@ -7,6 +7,7 @@ class FavFolderModel {
   final int mid;
   final String name;
   final String face;
+  final int favState;
 
   FavFolderModel({
     required this.id,
@@ -17,6 +18,7 @@ class FavFolderModel {
     required this.mid,
     required this.name,
     required this.face,
+    this.favState = 0,
   });
 
   factory FavFolderModel.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,7 @@ class FavFolderModel {
       mid: upper['mid'] as int? ?? 0,
       name: upper['name'] as String? ?? '',
       face: upper['face'] as String? ?? '',
+      favState: json['fav_state'] as int? ?? 0,
     );
   }
 }

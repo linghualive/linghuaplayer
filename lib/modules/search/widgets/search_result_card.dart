@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../../data/models/search/search_video_model.dart';
 import '../../../modules/player/player_controller.dart';
 import '../../../shared/widgets/cached_image.dart';
+import '../../../shared/widgets/video_action_buttons.dart';
 
 class SearchResultCard extends StatelessWidget {
   final SearchVideoModel video;
@@ -104,6 +105,7 @@ class SearchResultCard extends StatelessWidget {
                 ),
               ),
             ),
+            VideoActionColumn(video: video),
           ],
         ),
       ),
