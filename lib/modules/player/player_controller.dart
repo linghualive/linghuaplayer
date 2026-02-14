@@ -10,7 +10,9 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import '../../app/constants/app_constants.dart';
 import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
+import '../../data/models/music/audio_song_model.dart';
 import '../../data/models/search/search_video_model.dart';
+import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/player_repository.dart';
 
 class QueueItem {
@@ -438,6 +440,63 @@ class PlayerController extends GetxController {
   }
 
   bool get hasCurrentTrack => currentVideo.value != null;
+
+  /// Play from an AU audio song (Bilibili audio channel).
+  /// Tries to get the direct audio URL from the AU API first,
+  /// then falls back to the standard BV-based playback.
+  Future<void> playFromAudioSong(AudioSongModel song) async {
+    final video = song.toSearchVideoModel();
+    isLoading.value = true;
+    currentVideo.value = video;
+
+    if (Get.currentRoute != AppRoutes.player) {
+      Get.toNamed(AppRoutes.player);
+    }
+
+    try {
+      // Try AU audio URL first
+      final musicRepo = Get.find<MusicRepository>();
+      final audioUrl = await musicRepo.getAudioUrl(song.id);
+
+      if (audioUrl != null && audioUrl.isNotEmpty) {
+        // Stop media_kit if it was playing
+        if (isVideoMode.value) {
+          _mediaKitPlayer?.stop();
+        }
+        isVideoMode.value = false;
+
+        await _playAudioUrl(audioUrl);
+        audioQualityLabel.value = 'AU';
+        videoQualityLabel.value = '';
+
+        _addToQueue(
+          video: video,
+          audioUrl: audioUrl,
+          qualityLabel: 'AU',
+        );
+      } else if (video.bvid.isNotEmpty) {
+        // Fallback to standard BV-based playback
+        await _playAudioOnly(video);
+      } else {
+        throw Exception('No playable URL');
+      }
+    } catch (e) {
+      log('AU playback failed: $e');
+      // Fallback to BV-based playback if bvid is available
+      if (video.bvid.isNotEmpty) {
+        try {
+          await _playAudioOnly(video);
+        } catch (e2) {
+          Get.snackbar('错误', '播放失败: $e2',
+              snackPosition: SnackPosition.BOTTOM);
+        }
+      } else {
+        Get.snackbar('错误', '播放失败: $e',
+            snackPosition: SnackPosition.BOTTOM);
+      }
+    }
+    isLoading.value = false;
+  }
 
   /// Add a video to the queue without navigating to the player page.
   /// If nothing is currently playing, starts playback.

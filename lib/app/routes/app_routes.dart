@@ -12,4 +12,6 @@ abstract class AppRoutes {
   static const watchLater = '/watch-later';
   static const watchHistory = '/watch-history';
   static const settings = '/settings';
+  static const audioPlaylistDetail = '/audio-playlist-detail';
+  static const musicRanking = '/music-ranking';
 }

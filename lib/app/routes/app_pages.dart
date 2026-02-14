@@ -23,6 +23,10 @@ import '../../modules/watch_history/watch_history_page.dart';
 import '../../modules/watch_history/watch_history_controller.dart';
 import '../../modules/settings/settings_page.dart';
 import '../../modules/settings/settings_controller.dart';
+import '../../modules/audio_playlist_detail/audio_playlist_detail_page.dart';
+import '../../modules/audio_playlist_detail/audio_playlist_detail_controller.dart';
+import '../../modules/music_ranking/music_ranking_page.dart';
+import '../../modules/music_ranking/music_ranking_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -106,6 +110,20 @@ class AppPages {
       page: () => const SettingsPage(),
       binding: BindingsBuilder(() {
         Get.put(SettingsController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.audioPlaylistDetail,
+      page: () => const AudioPlaylistDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(AudioPlaylistDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.musicRanking,
+      page: () => const MusicRankingPage(),
+      binding: BindingsBuilder(() {
+        Get.put(MusicRankingController());
       }),
     ),
   ];

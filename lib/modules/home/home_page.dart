@@ -6,8 +6,8 @@ import '../../modules/playlist/playlist_controller.dart';
 import '../../modules/playlist/playlist_page.dart';
 import '../../modules/profile/profile_page.dart';
 import '../../modules/profile/profile_controller.dart';
-import '../../modules/recommend/recommend_page.dart';
-import '../../modules/recommend/recommend_controller.dart';
+import '../../modules/music_discovery/music_discovery_page.dart';
+import '../../modules/music_discovery/music_discovery_controller.dart';
 import 'home_controller.dart';
 
 class HomePage extends GetView<HomeController> {
@@ -16,7 +16,7 @@ class HomePage extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     // Ensure sub-controllers are created
-    Get.put(RecommendController());
+    Get.put(MusicDiscoveryController());
     Get.put(PlaylistController());
     Get.put(ProfileController());
 
@@ -25,7 +25,7 @@ class HomePage extends GetView<HomeController> {
         return IndexedStack(
           index: controller.currentIndex.value,
           children: const [
-            RecommendPage(),
+            MusicDiscoveryPage(),
             PlaylistPage(),
             ProfilePage(),
           ],
@@ -40,9 +40,9 @@ class HomePage extends GetView<HomeController> {
                 onDestinationSelected: controller.onTabChanged,
                 destinations: const [
                   NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(Icons.home),
-                    label: '首页',
+                    icon: Icon(Icons.music_note_outlined),
+                    selectedIcon: Icon(Icons.music_note),
+                    label: '音乐',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.queue_music_outlined),

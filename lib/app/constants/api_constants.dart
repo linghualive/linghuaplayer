@@ -82,4 +82,23 @@ class ApiConstants {
   static const String historyCursor = '/x/web-interface/history/cursor';
   static const String historyDelete = '/x/v2/history/delete';
   static const String historyClear = '/x/v2/history/clear';
+
+  // Audio/Music endpoints (base: www.bilibili.com)
+  static const String audioHotPlaylists =
+      '/audio/music-service-c/web/menu/hit';
+  static const String audioPlaylistInfo =
+      '/audio/music-service-c/web/menu/info';
+  static const String audioPlaylistSongs =
+      '/audio/music-service-c/web/song/of-menu';
+  static const String audioSongInfo = '/audio/music-service-c/web/song/info';
+  static const String audioUrl = '/audio/music-service-c/web/url';
+
+  // Music Ranking endpoints (base: api.bilibili.com)
+  static const String musicRankPeriods =
+      '/x/copyright-music-publicity/toplist/all_period';
+  static const String musicRankSongs =
+      '/x/copyright-music-publicity/toplist/music_list';
+
+  // MV List endpoint (base: api.bilibili.com)
+  static const String mvList = '/x/mv/list';
 }
