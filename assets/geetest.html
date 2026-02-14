@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeeTest Captcha</title>
+    <script src="https://static.geetest.com/static/js/gt.0.5.0.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f5f5f5;
+        }
+        #captcha-box {
+            width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="captcha-box"></div>
+    <script>
+        function initGeetest(gt, challenge, token) {
+            window.initGeetest4 && window.initGeetest4({
+                captchaId: gt,
+                product: 'bind',
+            }, function(captchaObj) {
+                captchaObj.onReady(function() {
+                    captchaObj.verify();
+                });
+                captchaObj.onSuccess(function() {
+                    var result = captchaObj.getValidate();
+                    if (window.GeetestChannel) {
+                        window.GeetestChannel.postMessage(JSON.stringify({
+                            validate: result.geetest_validate,
+                            seccode: result.geetest_seccode,
+                            challenge: result.geetest_challenge,
+                        }));
+                    }
+                });
+            });
+        }
+    </script>
+</body>
+</html>
