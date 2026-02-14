@@ -31,7 +31,7 @@ class AppErrorWidget extends StatelessWidget {
             const SizedBox(height: 16),
             FilledButton.tonal(
               onPressed: onRetry,
-              child: const Text('Retry'),
+              child: const Text('重试'),
             ),
           ],
         ],

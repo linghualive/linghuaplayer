@@ -24,40 +24,37 @@ class MiniPlayerBar extends GetView<PlayerController> {
       return GestureDetector(
         onTap: () => Get.toNamed(AppRoutes.player),
         child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withValues(alpha: 0.08),
                 blurRadius: 8,
-                offset: const Offset(0, -2),
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Progress bar
-              LinearProgressIndicator(
-                value: progress.clamp(0.0, 1.0),
-                minHeight: 2,
-                backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation(
-                  Theme.of(context).colorScheme.primary,
-                ),
-              ),
               Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    const EdgeInsets.fromLTRB(10, 8, 4, 6),
                 child: Row(
                   children: [
-                    CachedImage(
-                      imageUrl: video.pic,
-                      width: 48,
-                      height: 48,
+                    // Cover art
+                    ClipRRect(
                       borderRadius: BorderRadius.circular(8),
+                      child: CachedImage(
+                        imageUrl: video.pic,
+                        width: 44,
+                        height: 44,
+                      ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
+                    // Title + author
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,45 +64,76 @@ class MiniPlayerBar extends GetView<PlayerController> {
                             video.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.bodyMedium,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w500),
                           ),
+                          const SizedBox(height: 1),
                           Text(
                             video.author,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.outline,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline,
+                                      fontSize: 12,
+                                    ),
                           ),
                         ],
                       ),
                     ),
+                    // Controls
                     if (controller.isLoading.value)
-                      const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                      const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child:
+                              CircularProgressIndicator(strokeWidth: 2),
+                        ),
                       )
                     else
                       IconButton(
                         icon: Icon(
                           controller.isPlaying.value
-                              ? Icons.pause
-                              : Icons.play_arrow,
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 28,
                         ),
                         onPressed: controller.togglePlay,
+                        visualDensity: VisualDensity.compact,
                       ),
                     IconButton(
-                      icon: const Icon(Icons.skip_next),
+                      icon: const Icon(Icons.skip_next_rounded, size: 24),
                       onPressed: controller.skipNext,
+                      visualDensity: VisualDensity.compact,
                     ),
                   ],
                 ),
               ),
+              // Progress bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(2),
+                  child: LinearProgressIndicator(
+                    value: progress.clamp(0.0, 1.0),
+                    minHeight: 3,
+                    backgroundColor: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.08),
+                    valueColor: AlwaysStoppedAnimation(
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
             ],
           ),
         ),

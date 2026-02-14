@@ -9,6 +9,20 @@ import '../../modules/search/search_page.dart';
 import '../../modules/search/search_controller.dart' as app;
 import '../../modules/splash/splash_page.dart';
 import '../../modules/splash/splash_controller.dart';
+import '../../modules/favorites/favorites_page.dart';
+import '../../modules/favorites/favorites_controller.dart';
+import '../../modules/favorites/favorite_detail_page.dart';
+import '../../modules/favorites/favorite_detail_controller.dart';
+import '../../modules/subscriptions/subscriptions_page.dart';
+import '../../modules/subscriptions/subscriptions_controller.dart';
+import '../../modules/subscriptions/subscription_detail_page.dart';
+import '../../modules/subscriptions/subscription_detail_controller.dart';
+import '../../modules/watch_later/watch_later_page.dart';
+import '../../modules/watch_later/watch_later_controller.dart';
+import '../../modules/watch_history/watch_history_page.dart';
+import '../../modules/watch_history/watch_history_controller.dart';
+import '../../modules/settings/settings_page.dart';
+import '../../modules/settings/settings_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -44,6 +58,55 @@ class AppPages {
     GetPage(
       name: AppRoutes.player,
       page: () => const PlayerPage(),
+    ),
+    GetPage(
+      name: AppRoutes.favorites,
+      page: () => const FavoritesPage(),
+      binding: BindingsBuilder(() {
+        Get.put(FavoritesController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.favoriteDetail,
+      page: () => const FavoriteDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(FavoriteDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.subscriptions,
+      page: () => const SubscriptionsPage(),
+      binding: BindingsBuilder(() {
+        Get.put(SubscriptionsController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.subscriptionDetail,
+      page: () => const SubscriptionDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(SubscriptionDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.watchLater,
+      page: () => const WatchLaterPage(),
+      binding: BindingsBuilder(() {
+        Get.put(WatchLaterController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.watchHistory,
+      page: () => const WatchHistoryPage(),
+      binding: BindingsBuilder(() {
+        Get.put(WatchHistoryController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.settings,
+      page: () => const SettingsPage(),
+      binding: BindingsBuilder(() {
+        Get.put(SettingsController());
+      }),
     ),
   ];
 }

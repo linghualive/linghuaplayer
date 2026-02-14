@@ -14,7 +14,13 @@ class ProfilePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
+        title: const Text('我的'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Get.toNamed(AppRoutes.settings),
+          ),
+        ],
       ),
       body: Obx(() {
         if (!controller.isLoggedIn.value) {
@@ -26,86 +32,225 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildLoggedOut(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.account_circle_outlined,
-            size: 80,
-            color: Theme.of(context).colorScheme.outline,
+    final theme = Theme.of(context);
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      children: [
+        // Login card
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => Get.toNamed(AppRoutes.login),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 32,
+                      color: theme.colorScheme.outline,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '点击登录',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '登录后可使用更多功能',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: theme.colorScheme.outline,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Not logged in',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+        ),
+        const SizedBox(height: 12),
+        // Settings
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: ListTile(
+            leading: const Icon(Icons.settings_outlined),
+            title: const Text('设置'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Get.toNamed(AppRoutes.settings),
           ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => Get.toNamed(AppRoutes.login),
-            icon: const Icon(Icons.login),
-            label: const Text('Login'),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildLoggedIn(BuildContext context, HomeController controller) {
     final user = controller.userInfo.value;
+    final theme = Theme.of(context);
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       children: [
-        const SizedBox(height: 16),
-        Center(
-          child: ClipOval(
-            child: CachedImage(
-              imageUrl: user?.face,
-              width: 80,
-              height: 80,
+        // User info card
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                ClipOval(
+                  child: CachedImage(
+                    imageUrl: user?.face,
+                    width: 60,
+                    height: 60,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.uname ?? '用户',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Lv.${user?.currentLevel ?? 0}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (user?.isVip ?? false) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.shade100,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '大会员',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: Colors.amber.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(width: 8),
+                          Text(
+                            'UID: ${user?.mid ?? ''}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Center(
-          child: Text(
-            user?.uname ?? 'User',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+        const SizedBox(height: 12),
+        // Media library card
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.favorite_outline),
+                title: const Text('我的收藏'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.favorites),
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.subscriptions_outlined),
+                title: const Text('我的订阅'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.subscriptions),
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.watch_later_outlined),
+                title: const Text('稍后再看'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.watchLater),
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('观看历史'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.watchHistory),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Settings & logout card
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('设置'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.settings),
+              ),
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: Icon(
+                  Icons.logout,
+                  color: theme.colorScheme.error,
                 ),
-          ),
-        ),
-        Center(
-          child: Text(
-            'Lv.${user?.currentLevel ?? 0}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
+                title: Text(
+                  '退出登录',
+                  style: TextStyle(color: theme.colorScheme.error),
                 ),
-          ),
-        ),
-        const SizedBox(height: 32),
-        const Divider(),
-        ListTile(
-          leading: const Icon(Icons.info_outline),
-          title: Text('UID: ${user?.mid ?? ''}'),
-        ),
-        if (user?.isVip ?? false)
-          const ListTile(
-            leading: Icon(Icons.star, color: Colors.amber),
-            title: Text('VIP Member'),
-          ),
-        const Divider(),
-        const SizedBox(height: 16),
-        Center(
-          child: OutlinedButton.icon(
-            onPressed: () async {
-              await controller.logout();
-            },
-            icon: const Icon(Icons.logout),
-            label: const Text('Logout'),
+                onTap: () async {
+                  await controller.logout();
+                },
+              ),
+            ],
           ),
         ),
       ],

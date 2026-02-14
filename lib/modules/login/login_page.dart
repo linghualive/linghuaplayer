@@ -13,13 +13,13 @@ class LoginPage extends GetView<LoginController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: const Text('登录'),
         bottom: TabBar(
           controller: controller.tabController,
           tabs: const [
-            Tab(text: 'QR Code'),
-            Tab(text: 'SMS'),
-            Tab(text: 'Password'),
+            Tab(text: '扫码登录'),
+            Tab(text: '短信登录'),
+            Tab(text: '密码登录'),
           ],
         ),
       ),

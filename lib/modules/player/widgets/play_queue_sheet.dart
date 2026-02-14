@@ -44,7 +44,7 @@ class PlayQueueSheet extends GetView<PlayerController> {
             child: Row(
               children: [
                 Obx(() => Text(
-                      'Play Queue (${controller.queue.length})',
+                      '播放队列 (${controller.queue.length})',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -55,7 +55,7 @@ class PlayQueueSheet extends GetView<PlayerController> {
                     controller.clearQueue();
                     Get.back();
                   },
-                  child: const Text('Clear'),
+                  child: const Text('清空'),
                 ),
               ],
             ),
@@ -67,7 +67,7 @@ class PlayQueueSheet extends GetView<PlayerController> {
               if (controller.queue.isEmpty) {
                 return const Padding(
                   padding: EdgeInsets.all(32),
-                  child: Text('Queue is empty'),
+                  child: Text('播放队列为空'),
                 );
               }
               return ListView.builder(

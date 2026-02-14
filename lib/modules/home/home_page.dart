@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../modules/player/widgets/mini_player_bar.dart';
-import '../../modules/search/search_page.dart';
-import '../../modules/search/search_controller.dart' as app;
 import '../../modules/profile/profile_page.dart';
 import '../../modules/profile/profile_controller.dart';
+import '../../modules/recommend/recommend_page.dart';
+import '../../modules/recommend/recommend_controller.dart';
 import 'home_controller.dart';
 
 class HomePage extends GetView<HomeController> {
@@ -14,7 +14,7 @@ class HomePage extends GetView<HomeController> {
   @override
   Widget build(BuildContext context) {
     // Ensure sub-controllers are created
-    Get.put(app.SearchController());
+    Get.put(RecommendController());
     Get.put(ProfileController());
 
     return Scaffold(
@@ -22,7 +22,7 @@ class HomePage extends GetView<HomeController> {
         return IndexedStack(
           index: controller.currentIndex.value,
           children: const [
-            SearchPage(),
+            RecommendPage(),
             ProfilePage(),
           ],
         );
@@ -36,14 +36,14 @@ class HomePage extends GetView<HomeController> {
                 onDestinationSelected: controller.onTabChanged,
                 destinations: const [
                   NavigationDestination(
-                    icon: Icon(Icons.search),
-                    selectedIcon: Icon(Icons.search),
-                    label: 'Search',
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(Icons.home),
+                    label: '首页',
                   ),
                   NavigationDestination(
                     icon: Icon(Icons.person_outline),
                     selectedIcon: Icon(Icons.person),
-                    label: 'Profile',
+                    label: '我的',
                   ),
                 ],
               )),

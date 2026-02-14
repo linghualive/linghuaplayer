@@ -5,7 +5,7 @@ class EmptyWidget extends StatelessWidget {
 
   const EmptyWidget({
     super.key,
-    this.message = 'Nothing here',
+    this.message = '这里空空如也',
   });
 
   @override

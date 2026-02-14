@@ -48,6 +48,11 @@ class PlayerRepository {
     return playUrl;
   }
 
+  /// Get the full PlayUrlModel (audio + video streams) by BV id
+  Future<PlayUrlModel?> getFullPlayUrl(String bvid) async {
+    return _fetchPlayUrl(bvid);
+  }
+
   /// Get the best audio stream, returns all streams sorted by quality for fallback
   Future<List<AudioStreamModel>> getAudioStreams(String bvid) async {
     final playUrl = await _fetchPlayUrl(bvid);

@@ -16,12 +16,12 @@ class QrLoginTab extends GetView<LoginController> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Scan QR Code',
+              '扫码登录',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 8),
             Text(
-              'Use Bilibili app to scan',
+              '请使用哔哩哔哩客户端扫码',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.outline,
                   ),
@@ -53,18 +53,18 @@ class QrLoginTab extends GetView<LoginController> {
             Obx(() => Text(
                   controller.qrStatus.value,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: controller.qrStatus.value.contains('expired')
+                        color: controller.qrStatus.value.contains('过期')
                             ? Theme.of(context).colorScheme.error
                             : Theme.of(context).colorScheme.primary,
                       ),
                 )),
             const SizedBox(height: 16),
             Obx(() {
-              if (controller.qrStatus.value.contains('expired')) {
+              if (controller.qrStatus.value.contains('过期')) {
                 return FilledButton.icon(
                   onPressed: controller.refreshQrcode,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh QR Code'),
+                  label: const Text('刷新二维码'),
                 );
               }
               return const SizedBox.shrink();

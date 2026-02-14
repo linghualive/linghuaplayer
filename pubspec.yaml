@@ -27,6 +27,10 @@ dependencies:
   path_provider: ^2.1.2
   webview_flutter: ^4.7.0
   shimmer: ^3.0.0
+  dynamic_color: ^1.7.0
+  media_kit: ^1.1.10
+  media_kit_video: ^1.2.4
+  media_kit_libs_video: ^1.0.4
 
 dev_dependencies:
   flutter_test:

@@ -3,39 +3,31 @@ import 'package:flutter/material.dart';
 class AppTheme {
   static const Color bilibiliPink = Color(0xFFFB7299);
 
-  static ThemeData get lightTheme {
+  static ThemeData lightTheme(Color seedColor) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: bilibiliPink,
+      seedColor: seedColor,
       brightness: Brightness.light,
     );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: colorScheme,
-      appBarTheme: AppBarTheme(
-        centerTitle: true,
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        indicatorColor: colorScheme.secondaryContainer,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-    );
+    return _buildTheme(colorScheme);
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData darkTheme(Color seedColor) {
     final colorScheme = ColorScheme.fromSeed(
-      seedColor: bilibiliPink,
+      seedColor: seedColor,
       brightness: Brightness.dark,
     );
+    return _buildTheme(colorScheme);
+  }
+
+  static ThemeData lightThemeFromScheme(ColorScheme colorScheme) {
+    return _buildTheme(colorScheme);
+  }
+
+  static ThemeData darkThemeFromScheme(ColorScheme colorScheme) {
+    return _buildTheme(colorScheme);
+  }
+
+  static ThemeData _buildTheme(ColorScheme colorScheme) {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,

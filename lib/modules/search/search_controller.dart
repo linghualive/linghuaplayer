@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../core/storage/storage_service.dart';
 import '../../data/models/search/hot_search_model.dart';
 import '../../data/models/search/search_result_model.dart';
 import '../../data/models/search/search_suggest_model.dart';
@@ -11,6 +12,7 @@ enum SearchState { hot, suggesting, results, empty }
 
 class SearchController extends GetxController {
   final _searchRepo = Get.find<SearchRepository>();
+  final _storage = Get.find<StorageService>();
   final searchTextController = TextEditingController();
   final focusNode = FocusNode();
 
@@ -19,6 +21,7 @@ class SearchController extends GetxController {
   final suggestions = <SearchSuggestModel>[].obs;
   final searchResults = <SearchResultModel>[].obs;
   final allResults = <dynamic>[].obs;
+  final searchHistory = <String>[].obs;
   final isLoadingMore = false.obs;
   final isLoading = false.obs;
   final currentKeyword = ''.obs;
@@ -26,11 +29,13 @@ class SearchController extends GetxController {
   bool _hasMore = true;
 
   final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
+  bool _isSearching = false;
 
   @override
   void onInit() {
     super.onInit();
     loadHotSearch();
+    loadSearchHistory();
     searchTextController.addListener(_onSearchTextChanged);
   }
 
@@ -42,13 +47,22 @@ class SearchController extends GetxController {
     super.onClose();
   }
 
+  void loadSearchHistory() {
+    searchHistory.assignAll(_storage.getSearchHistory());
+  }
+
   void _onSearchTextChanged() {
+    if (_isSearching) return;
+
     final text = searchTextController.text.trim();
     if (text.isEmpty) {
       state.value = SearchState.hot;
       suggestions.clear();
       return;
     }
+
+    if (!focusNode.hasFocus) return;
+
     _debouncer.call(() => _loadSuggestions(text));
   }
 
@@ -74,6 +88,9 @@ class SearchController extends GetxController {
   Future<void> search(String keyword) async {
     if (keyword.trim().isEmpty) return;
 
+    _isSearching = true;
+    _debouncer.cancel();
+
     currentKeyword.value = keyword.trim();
     searchTextController.text = keyword.trim();
     _currentPage = 1;
@@ -82,6 +99,10 @@ class SearchController extends GetxController {
     state.value = SearchState.results;
     isLoading.value = true;
     focusNode.unfocus();
+
+    // Save to history
+    _storage.addSearchHistory(keyword.trim());
+    loadSearchHistory();
 
     try {
       final result = await _searchRepo.searchVideos(
@@ -98,6 +119,7 @@ class SearchController extends GetxController {
       state.value = SearchState.empty;
     }
     isLoading.value = false;
+    _isSearching = false;
   }
 
   Future<void> loadMore() async {
@@ -128,6 +150,16 @@ class SearchController extends GetxController {
 
   void onSuggestionTap(String keyword) {
     search(keyword);
+  }
+
+  void removeHistory(String keyword) {
+    _storage.removeSearchHistory(keyword);
+    loadSearchHistory();
+  }
+
+  void clearHistory() {
+    _storage.clearSearchHistory();
+    searchHistory.clear();
   }
 
   void clearSearch() {

@@ -47,6 +47,9 @@ class ApiConstants {
   static const String webLogin =
       '/x/passport-login/web/login';
 
+  // Recommendation endpoints
+  static const String topFeedRcmd = '/x/web-interface/index/top/feed/rcmd';
+
   // Search endpoints
   static const String hotSearch = '/main/hotword';
   static const String searchSuggest = '/main/suggest';
@@ -56,4 +59,22 @@ class ApiConstants {
   // Player endpoints
   static const String pagelist = '/x/player/pagelist';
   static const String playUrl = '/x/player/wbi/playurl';
+
+  // Favorites endpoints
+  static const String favFolderList = '/x/v3/fav/folder/created/list';
+  static const String favResourceList = '/x/v3/fav/resource/list';
+
+  // Subscriptions endpoints
+  static const String subFolderList = '/x/v3/fav/folder/collected/list';
+  static const String subSeasonList = '/x/space/fav/season/list';
+
+  // Watch Later endpoints
+  static const String watchLaterList = '/x/v2/history/toview';
+  static const String watchLaterDel = '/x/v2/history/toview/del';
+  static const String watchLaterClear = '/x/v2/history/toview/clear';
+
+  // Watch History endpoints
+  static const String historyCursor = '/x/web-interface/history/cursor';
+  static const String historyDelete = '/x/v2/history/delete';
+  static const String historyClear = '/x/v2/history/clear';
 }

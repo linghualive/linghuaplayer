@@ -15,7 +15,7 @@ class PasswordLoginTab extends GetView<LoginController> {
         children: [
           const SizedBox(height: 32),
           Text(
-            'Password Login',
+            '密码登录',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 32),
@@ -23,7 +23,7 @@ class PasswordLoginTab extends GetView<LoginController> {
             controller: controller.usernameController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              labelText: 'Phone Number',
+              labelText: '手机号',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -34,7 +34,7 @@ class PasswordLoginTab extends GetView<LoginController> {
                 controller: controller.passwordController,
                 obscureText: controller.obscurePassword.value,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: '密码',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -59,7 +59,7 @@ class PasswordLoginTab extends GetView<LoginController> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Login'),
+                    : const Text('登录'),
               )),
         ],
       ),

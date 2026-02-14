@@ -15,7 +15,7 @@ class SmsLoginTab extends GetView<LoginController> {
         children: [
           const SizedBox(height: 32),
           Text(
-            'SMS Login',
+            '短信登录',
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 32),
@@ -23,7 +23,7 @@ class SmsLoginTab extends GetView<LoginController> {
             controller: controller.phoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              labelText: 'Phone Number',
+              labelText: '手机号',
               prefixText: '+86 ',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -38,7 +38,7 @@ class SmsLoginTab extends GetView<LoginController> {
                   controller: controller.smsCodeController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'SMS Code',
+                    labelText: '验证码',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -53,7 +53,7 @@ class SmsLoginTab extends GetView<LoginController> {
                   child: FilledButton.tonal(
                     onPressed: countdown > 0 ? null : controller.sendSmsCode,
                     child: Text(
-                      countdown > 0 ? '${countdown}s' : 'Send Code',
+                      countdown > 0 ? '${countdown}s' : '发送验证码',
                     ),
                   ),
                 );
@@ -70,7 +70,7 @@ class SmsLoginTab extends GetView<LoginController> {
                         height: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Login'),
+                    : const Text('登录'),
               )),
         ],
       ),

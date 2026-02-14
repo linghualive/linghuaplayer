@@ -15,23 +15,30 @@ class SearchPage extends GetView<app.SearchController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(right: 16),
+        toolbarHeight: 64,
+        title: Container(
+          height: 46,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
           child: SearchBar(
             controller: controller.searchTextController,
             focusNode: controller.focusNode,
-            hintText: 'Search music...',
-            leading: const Padding(
-              padding: EdgeInsets.only(left: 8),
-              child: Icon(Icons.search),
+            hintText: '搜索音乐...',
+            textStyle: WidgetStateProperty.all(
+              Theme.of(context).textTheme.bodyLarge,
+            ),
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Icon(
+                Icons.search,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
             trailing: [
               Obx(() {
                 if (controller.currentKeyword.isNotEmpty ||
                     controller.searchTextController.text.isNotEmpty) {
                   return IconButton(
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, size: 20),
                     onPressed: controller.clearSearch,
                   );
                 }
@@ -40,13 +47,16 @@ class SearchPage extends GetView<app.SearchController> {
             ],
             onSubmitted: controller.search,
             elevation: WidgetStateProperty.all(0),
+            backgroundColor: WidgetStateProperty.all(
+              Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
             shape: WidgetStateProperty.all(
               RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(28),
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                ),
+                borderRadius: BorderRadius.circular(23),
               ),
+            ),
+            padding: WidgetStateProperty.all(
+              const EdgeInsets.symmetric(horizontal: 4),
             ),
           ),
         ),
@@ -58,7 +68,7 @@ class SearchPage extends GetView<app.SearchController> {
           case app.SearchState.suggesting:
             return const SearchSuggestionList();
           case app.SearchState.empty:
-            return const EmptyWidget(message: 'No results found');
+            return const EmptyWidget(message: '未找到结果');
           case app.SearchState.results:
             return _buildResults();
         }
@@ -81,8 +91,8 @@ class SearchPage extends GetView<app.SearchController> {
           return const Center(child: CircularProgressIndicator());
         }
         return ListView.builder(
-          itemCount:
-              controller.allResults.length + (controller.isLoadingMore.value ? 1 : 0),
+          itemCount: controller.allResults.length +
+              (controller.isLoadingMore.value ? 1 : 0),
           itemBuilder: (context, index) {
             if (index == controller.allResults.length) {
               return const Padding(

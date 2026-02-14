@@ -66,15 +66,15 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   // ── QR Login ────────────────────────────────────────
 
   Future<void> _generateQrcode() async {
-    qrStatus.value = 'Loading QR code...';
+    qrStatus.value = '正在加载二维码...';
     final qrcode = await _authRepo.getQrcode();
     if (qrcode != null) {
       qrcodeUrl.value = qrcode.url ?? '';
       qrcodeKey.value = qrcode.qrcodeKey ?? '';
-      qrStatus.value = 'Scan with Bilibili app';
+      qrStatus.value = '请使用哔哩哔哩客户端扫码';
       _startQrPolling();
     } else {
-      qrStatus.value = 'Failed to generate QR code';
+      qrStatus.value = '二维码生成失败';
     }
   }
 
@@ -85,7 +85,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       _qrPollCount++;
       if (_qrPollCount > 180) {
         timer.cancel();
-        qrStatus.value = 'QR code expired';
+        qrStatus.value = '二维码已过期';
         return;
       }
       if (qrcodeKey.value.isEmpty) return;
@@ -93,13 +93,13 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       final result = await _authRepo.pollQrcode(qrcodeKey.value);
       if (result.isSuccess) {
         timer.cancel();
-        qrStatus.value = 'Login successful!';
+        qrStatus.value = '登录成功！';
         await _onLoginSuccess();
       } else if (result.isScanned) {
-        qrStatus.value = 'Scanned, confirm on phone';
+        qrStatus.value = '已扫码，请在手机上确认';
       } else if (result.isExpired) {
         timer.cancel();
-        qrStatus.value = 'QR code expired';
+        qrStatus.value = '二维码已过期';
       }
     });
   }
@@ -124,22 +124,22 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
   Future<void> sendSmsCode() async {
     if (phoneController.text.isEmpty) {
-      Get.snackbar('Error', 'Please enter phone number',
+      Get.snackbar('错误', '请输入手机号',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     await requestCaptcha();
     if (_captchaData == null) {
-      Get.snackbar('Error', 'Failed to get captcha',
+      Get.snackbar('错误', '获取验证码失败',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     // In production, show GeeTest WebView here and get validate/seccode
     // For now, we'll show a placeholder message
-    Get.snackbar('Captcha Required',
-        'GeeTest verification needed. GT: ${_captchaData?.geetest?.gt}',
+    Get.snackbar('需要验证',
+        '需要极验验证，GT: ${_captchaData?.geetest?.gt}',
         snackPosition: SnackPosition.BOTTOM);
   }
 
@@ -166,7 +166,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     if (success) {
       _onLoginSuccess();
     } else {
-      Get.snackbar('Error', 'SMS login failed',
+      Get.snackbar('错误', '短信登录失败',
           snackPosition: SnackPosition.BOTTOM);
     }
   }
@@ -184,10 +184,10 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     if (key != null) {
       captchaKey.value = key;
       _startSmsCountdown();
-      Get.snackbar('Success', 'SMS code sent',
+      Get.snackbar('成功', '验证码已发送',
           snackPosition: SnackPosition.BOTTOM);
     } else {
-      Get.snackbar('Error', 'Failed to send SMS',
+      Get.snackbar('错误', '验证码发送失败',
           snackPosition: SnackPosition.BOTTOM);
     }
   }
@@ -196,21 +196,21 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
   Future<void> loginByPassword() async {
     if (usernameController.text.isEmpty || passwordController.text.isEmpty) {
-      Get.snackbar('Error', 'Please fill all fields',
+      Get.snackbar('错误', '请填写所有字段',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     await requestCaptcha();
     if (_captchaData == null) {
-      Get.snackbar('Error', 'Failed to get captcha',
+      Get.snackbar('错误', '获取验证码失败',
           snackPosition: SnackPosition.BOTTOM);
       return;
     }
 
     // In production, show GeeTest WebView here
-    Get.snackbar('Captcha Required',
-        'GeeTest verification needed. GT: ${_captchaData?.geetest?.gt}',
+    Get.snackbar('需要验证',
+        '需要极验验证，GT: ${_captchaData?.geetest?.gt}',
         snackPosition: SnackPosition.BOTTOM);
   }
 
@@ -229,7 +229,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     if (success) {
       _onLoginSuccess();
     } else {
-      Get.snackbar('Error', 'Password login failed',
+      Get.snackbar('错误', '密码登录失败',
           snackPosition: SnackPosition.BOTTOM);
     }
   }
@@ -243,8 +243,8 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       Get.find<HomeController>().refreshLoginStatus();
     }
     Get.back();
-    Get.snackbar('Success',
-        success ? 'Login successful' : 'Login OK but failed to fetch user info',
+    Get.snackbar('成功',
+        success ? '登录成功' : '登录成功，但获取用户信息失败',
         snackPosition: SnackPosition.BOTTOM);
   }
 }
