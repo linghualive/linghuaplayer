@@ -27,7 +27,7 @@ class PlayerPage extends GetView<PlayerController> {
         actions: [
           Obx(() {
             final video = controller.currentVideo.value;
-            if (video == null || video.id <= 0) {
+            if (video == null || video.id <= 0 || video.isNetease) {
               return const SizedBox.shrink();
             }
             return IconButton(

@@ -1,0 +1,165 @@
+import 'dart:developer';
+
+import 'package:get/get.dart';
+
+import '../models/search/search_video_model.dart';
+import '../providers/netease_provider.dart';
+
+class NeteaseSearchResult {
+  final List<SearchVideoModel> songs;
+  final int songCount;
+
+  NeteaseSearchResult({required this.songs, required this.songCount});
+
+  bool get hasMore => songs.isNotEmpty;
+}
+
+class NeteasePlaylistBrief {
+  final int id;
+  final String name;
+  final String coverUrl;
+  final int playCount;
+
+  NeteasePlaylistBrief({
+    required this.id,
+    required this.name,
+    required this.coverUrl,
+    required this.playCount,
+  });
+}
+
+class NeteaseRepository {
+  final _provider = Get.find<NeteaseProvider>();
+
+  static String _formatDuration(int milliseconds) {
+    final totalSeconds = milliseconds ~/ 1000;
+    final minutes = totalSeconds ~/ 60;
+    final seconds = totalSeconds % 60;
+    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  static String _joinArtists(List<dynamic>? artists) {
+    if (artists == null || artists.isEmpty) return '';
+    return artists.map((a) => a['name'] as String? ?? '').join(' / ');
+  }
+
+  static SearchVideoModel _songToModel(Map<String, dynamic> song) {
+    final artists = song['artists'] ?? song['ar'];
+    final album = song['album'] ?? song['al'];
+    final dt = song['duration'] ?? song['dt'] ?? 0;
+
+    return SearchVideoModel(
+      id: song['id'] as int? ?? 0,
+      author: _joinArtists(artists as List<dynamic>?),
+      title: song['name'] as String? ?? '',
+      description: album is Map ? (album['name'] as String? ?? '') : '',
+      pic: album is Map ? (album['picUrl'] as String? ?? '') : '',
+      duration: _formatDuration(dt as int),
+      source: MusicSource.netease,
+    );
+  }
+
+  Future<NeteaseSearchResult> searchSongs({
+    required String keyword,
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    final res = await _provider.search(keyword, limit: limit, offset: offset);
+    final data = res.data;
+    log('NetEase search response code: ${data['code']}');
+    if (data['code'] != 200 || data['result'] == null) {
+      log('NetEase search failed: code=${data['code']}, msg=${data['msg'] ?? data['message'] ?? 'unknown'}');
+      return NeteaseSearchResult(songs: [], songCount: 0);
+    }
+
+    final result = data['result'] as Map<String, dynamic>;
+    final songCount = result['songCount'] as int? ?? 0;
+    final songList = result['songs'] as List<dynamic>? ?? [];
+    log('NetEase search: found $songCount songs, returned ${songList.length}');
+
+    final songs = songList
+        .map((s) => _songToModel(s as Map<String, dynamic>))
+        .toList();
+
+    return NeteaseSearchResult(songs: songs, songCount: songCount);
+  }
+
+  Future<String?> getSongUrl(int songId, {String level = 'standard'}) async {
+    try {
+      final res = await _provider.getSongUrl(songId, level: level);
+      final data = res.data;
+      log('NetEase getSongUrl response: code=${data['code']}, hasData=${data['data'] != null}');
+      if (data['code'] != 200 || data['data'] == null) {
+        log('NetEase getSongUrl failed: code=${data['code']}, msg=${data['msg'] ?? data['message'] ?? 'unknown'}');
+        return null;
+      }
+
+      final list = data['data'] as List<dynamic>;
+      if (list.isEmpty) {
+        log('NetEase getSongUrl: empty data list');
+        return null;
+      }
+
+      final item = list.first as Map<String, dynamic>;
+      final url = item['url'] as String?;
+      log('NetEase getSongUrl: url=${url != null ? '${url.substring(0, url.length > 60 ? 60 : url.length)}...' : 'null'}, code=${item['code']}, type=${item['type']}');
+      return url;
+    } catch (e) {
+      log('NetEase getSongUrl error: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getLrcLyrics(int songId) async {
+    try {
+      final res = await _provider.getLyrics(songId);
+      final data = res.data;
+      if (data['code'] != 200) return null;
+
+      final lrc = data['lrc'];
+      if (lrc == null) return null;
+      return lrc['lyric'] as String?;
+    } catch (e) {
+      log('NetEase getLrcLyrics error: $e');
+      return null;
+    }
+  }
+
+  Future<List<SearchVideoModel>> getTopSongs({int type = 0}) async {
+    try {
+      final res = await _provider.getTopSong(type: type);
+      final data = res.data;
+      if (data['code'] != 200 || data['data'] == null) return [];
+
+      final list = data['data'] as List<dynamic>;
+      return list
+          .map((s) => _songToModel(s as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      log('NetEase getTopSongs error: $e');
+      return [];
+    }
+  }
+
+  Future<List<NeteasePlaylistBrief>> getPersonalized({int limit = 6}) async {
+    try {
+      final res = await _provider.getPersonalized(limit: limit);
+      final data = res.data;
+      if (data['code'] != 200 || data['result'] == null) return [];
+
+      final list = data['result'] as List<dynamic>;
+      return list.map((item) {
+        final m = item as Map<String, dynamic>;
+        return NeteasePlaylistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['picUrl'] as String? ?? '',
+          playCount: m['playCount'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getPersonalized error: $e');
+      return [];
+    }
+  }
+}

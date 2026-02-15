@@ -59,48 +59,101 @@ class SearchResultCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.play_arrow,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          _formatPlay(video.play),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
-                                  ),
-                        ),
-                        const SizedBox(width: 12),
-                        Icon(
-                          Icons.comment_outlined,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                        const SizedBox(width: 2),
-                        Text(
-                          _formatPlay(video.danmaku),
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
-                                  ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          video.duration,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.outline,
-                                  ),
-                        ),
-                      ],
-                    ),
+                    video.isNetease
+                        ? Row(
+                            children: [
+                              Icon(
+                                Icons.album,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: Text(
+                                  video.description,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                video.duration,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline,
+                                    ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Icon(
+                                Icons.play_arrow,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  _formatPlay(video.play),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.comment_outlined,
+                                size: 14,
+                                color: Theme.of(context).colorScheme.outline,
+                              ),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  _formatPlay(video.danmaku),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .outline,
+                                      ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                video.duration,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .outline,
+                                    ),
+                              ),
+                            ],
+                          ),
                   ],
                 ),
               ),

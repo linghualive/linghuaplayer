@@ -90,7 +90,7 @@ class PlayQueueSheet extends GetView<PlayerController> {
                   final item = controller.queue[index];
                   final isCurrent = index == controller.currentIndex.value;
                   return ListTile(
-                    key: ValueKey(item.video.bvid),
+                    key: ValueKey(item.video.uniqueId),
                     leading: isCurrent
                         ? Icon(
                             Icons.music_note,

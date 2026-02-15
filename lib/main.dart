@@ -10,6 +10,7 @@ import 'app/routes/app_routes.dart';
 import 'app/theme/app_theme.dart';
 import 'app/theme/theme_controller.dart';
 import 'core/http/http_client.dart';
+import 'core/http/netease_http_client.dart';
 import 'core/storage/storage_service.dart';
 
 void main() async {
@@ -22,8 +23,9 @@ void main() async {
   await storageService.init();
   Get.put(storageService, permanent: true);
 
-  // Initialize HTTP client
+  // Initialize HTTP clients
   await HttpClient.instance.init();
+  NeteaseHttpClient.instance.init();
 
   // Initialize theme controller
   Get.put(ThemeController(), permanent: true);

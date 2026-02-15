@@ -30,21 +30,22 @@ class VideoActionColumn extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           padding: EdgeInsets.zero,
         ),
-        IconButton(
-          icon: const Icon(Icons.favorite_border, size: 20),
-          tooltip: '收藏',
-          onPressed: () {
-            final storage = Get.find<StorageService>();
-            if (!storage.isLoggedIn) {
-              Get.snackbar('提示', '请先登录',
-                  snackPosition: SnackPosition.BOTTOM);
-              return;
-            }
-            FavPanel.show(context, video.id);
-          },
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          padding: EdgeInsets.zero,
-        ),
+        if (!video.isNetease)
+          IconButton(
+            icon: const Icon(Icons.favorite_border, size: 20),
+            tooltip: '收藏',
+            onPressed: () {
+              final storage = Get.find<StorageService>();
+              if (!storage.isLoggedIn) {
+                Get.snackbar('提示', '请先登录',
+                    snackPosition: SnackPosition.BOTTOM);
+                return;
+              }
+              FavPanel.show(context, video.id);
+            },
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+          ),
       ],
     );
   }
@@ -70,21 +71,22 @@ class VideoActionRow extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           padding: EdgeInsets.zero,
         ),
-        IconButton(
-          icon: const Icon(Icons.favorite_border, size: 20),
-          tooltip: '收藏',
-          onPressed: () {
-            final storage = Get.find<StorageService>();
-            if (!storage.isLoggedIn) {
-              Get.snackbar('提示', '请先登录',
-                  snackPosition: SnackPosition.BOTTOM);
-              return;
-            }
-            FavPanel.show(context, video.id);
-          },
-          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-          padding: EdgeInsets.zero,
-        ),
+        if (!video.isNetease)
+          IconButton(
+            icon: const Icon(Icons.favorite_border, size: 20),
+            tooltip: '收藏',
+            onPressed: () {
+              final storage = Get.find<StorageService>();
+              if (!storage.isLoggedIn) {
+                Get.snackbar('提示', '请先登录',
+                    snackPosition: SnackPosition.BOTTOM);
+                return;
+              }
+              FavPanel.show(context, video.id);
+            },
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+          ),
       ],
     );
   }

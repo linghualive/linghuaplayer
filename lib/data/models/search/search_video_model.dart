@@ -1,3 +1,5 @@
+enum MusicSource { bilibili, netease }
+
 class SearchVideoModel {
   final int id;
   final String author;
@@ -10,20 +12,28 @@ class SearchVideoModel {
   final String duration;
   final String bvid;
   final String arcurl;
+  final MusicSource source;
 
   SearchVideoModel({
     required this.id,
     required this.author,
-    required this.mid,
+    this.mid = 0,
     required this.title,
-    required this.description,
-    required this.pic,
-    required this.play,
-    required this.danmaku,
+    this.description = '',
+    this.pic = '',
+    this.play = 0,
+    this.danmaku = 0,
     required this.duration,
-    required this.bvid,
-    required this.arcurl,
+    this.bvid = '',
+    this.arcurl = '',
+    this.source = MusicSource.bilibili,
   });
+
+  String get uniqueId =>
+      source == MusicSource.netease ? 'netease_$id' : bvid;
+
+  bool get isNetease => source == MusicSource.netease;
+  bool get isBilibili => source == MusicSource.bilibili;
 
   factory SearchVideoModel.fromJson(Map<String, dynamic> json) {
     return SearchVideoModel(

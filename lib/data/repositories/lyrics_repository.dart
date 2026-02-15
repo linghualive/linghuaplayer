@@ -7,10 +7,12 @@ import '../../core/crypto/wbi_sign.dart';
 import '../models/player/lyrics_model.dart';
 import '../providers/lyrics_provider.dart';
 import '../providers/search_provider.dart';
+import 'netease_repository.dart';
 
 class LyricsRepository {
   final _lyricsProvider = Get.find<LyricsProvider>();
   final _searchProvider = Get.find<SearchProvider>();
+  final _neteaseRepo = Get.find<NeteaseRepository>();
 
   // Common separators between artist and song name in bilibili titles
   static final _separatorPattern = RegExp(r'\s*[-–—/|]\s*');
@@ -192,6 +194,27 @@ class LyricsRepository {
     }
 
     return null;
+  }
+
+  /// Fetch lyrics from NetEase Cloud Music API.
+  Future<LyricsData?> getNeteaseLyrics(int songId) async {
+    try {
+      final lrcText = await _neteaseRepo.getLrcLyrics(songId);
+      if (lrcText == null || lrcText.isEmpty) return null;
+
+      final parsed = LyricsData.fromLrc(lrcText);
+      if (parsed != null) {
+        log('NetEase: found synced lyrics (${parsed.lines.length} lines)');
+        return parsed;
+      }
+
+      // If LRC parsing fails, return as plain text
+      log('NetEase: LRC parse failed, returning plain text');
+      return LyricsData(lines: [], plainLyrics: lrcText);
+    } catch (e) {
+      log('NetEase lyrics fetch error: $e');
+      return null;
+    }
   }
 
   Future<LyricsData?> _fetchBilibiliSubtitle(String bvid) async {

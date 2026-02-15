@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -5,6 +7,8 @@ import '../../core/storage/storage_service.dart';
 import '../../data/models/search/hot_search_model.dart';
 import '../../data/models/search/search_result_model.dart';
 import '../../data/models/search/search_suggest_model.dart';
+import '../../data/models/search/search_video_model.dart';
+import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/search_repository.dart';
 import '../../shared/utils/debouncer.dart';
 
@@ -12,6 +16,7 @@ enum SearchState { hot, suggesting, results, empty }
 
 class SearchController extends GetxController {
   final _searchRepo = Get.find<SearchRepository>();
+  final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();
   final searchTextController = TextEditingController();
   final focusNode = FocusNode();
@@ -25,7 +30,9 @@ class SearchController extends GetxController {
   final isLoadingMore = false.obs;
   final isLoading = false.obs;
   final currentKeyword = ''.obs;
+  final searchSource = MusicSource.bilibili.obs;
   int _currentPage = 1;
+  int _neteaseOffset = 0;
   bool _hasMore = true;
 
   final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
@@ -85,6 +92,14 @@ class SearchController extends GetxController {
     } catch (_) {}
   }
 
+  void switchSource(MusicSource source) {
+    if (searchSource.value == source) return;
+    searchSource.value = source;
+    if (currentKeyword.value.isNotEmpty) {
+      search(currentKeyword.value);
+    }
+  }
+
   Future<void> search(String keyword) async {
     if (keyword.trim().isEmpty) return;
 
@@ -94,6 +109,7 @@ class SearchController extends GetxController {
     currentKeyword.value = keyword.trim();
     searchTextController.text = keyword.trim();
     _currentPage = 1;
+    _neteaseOffset = 0;
     _hasMore = true;
     allResults.clear();
     state.value = SearchState.results;
@@ -105,18 +121,35 @@ class SearchController extends GetxController {
     loadSearchHistory();
 
     try {
-      final result = await _searchRepo.searchVideos(
-        keyword: currentKeyword.value,
-        page: _currentPage,
-      );
-      if (result != null && result.results.isNotEmpty) {
-        allResults.assignAll(result.results);
-        _hasMore = result.hasMore;
+      if (searchSource.value == MusicSource.netease) {
+        final result = await _neteaseRepo.searchSongs(
+          keyword: currentKeyword.value,
+          limit: 30,
+          offset: 0,
+        );
+        if (result.songs.isNotEmpty) {
+          allResults.assignAll(result.songs);
+          _neteaseOffset = result.songs.length;
+          _hasMore = result.songs.length >= 30;
+        } else {
+          state.value = SearchState.empty;
+        }
       } else {
-        state.value = SearchState.empty;
+        final result = await _searchRepo.searchVideos(
+          keyword: currentKeyword.value,
+          page: _currentPage,
+        );
+        if (result != null && result.results.isNotEmpty) {
+          allResults.assignAll(result.results);
+          _hasMore = result.hasMore;
+        } else {
+          state.value = SearchState.empty;
+        }
       }
-    } catch (_) {
+    } catch (e) {
+      log('Search error: $e');
       state.value = SearchState.empty;
+      Get.snackbar('搜索失败', '$e', snackPosition: SnackPosition.BOTTOM);
     }
     isLoading.value = false;
     _isSearching = false;
@@ -125,21 +158,36 @@ class SearchController extends GetxController {
   Future<void> loadMore() async {
     if (isLoadingMore.value || !_hasMore) return;
     isLoadingMore.value = true;
-    _currentPage++;
 
     try {
-      final result = await _searchRepo.searchVideos(
-        keyword: currentKeyword.value,
-        page: _currentPage,
-      );
-      if (result != null && result.results.isNotEmpty) {
-        allResults.addAll(result.results);
-        _hasMore = result.hasMore;
+      if (searchSource.value == MusicSource.netease) {
+        final result = await _neteaseRepo.searchSongs(
+          keyword: currentKeyword.value,
+          limit: 30,
+          offset: _neteaseOffset,
+        );
+        if (result.songs.isNotEmpty) {
+          allResults.addAll(result.songs);
+          _neteaseOffset += result.songs.length;
+          _hasMore = result.songs.length >= 30;
+        } else {
+          _hasMore = false;
+        }
       } else {
-        _hasMore = false;
+        _currentPage++;
+        final result = await _searchRepo.searchVideos(
+          keyword: currentKeyword.value,
+          page: _currentPage,
+        );
+        if (result != null && result.results.isNotEmpty) {
+          allResults.addAll(result.results);
+          _hasMore = result.hasMore;
+        } else {
+          _hasMore = false;
+        }
       }
     } catch (_) {
-      _currentPage--;
+      if (searchSource.value == MusicSource.bilibili) _currentPage--;
     }
     isLoadingMore.value = false;
   }

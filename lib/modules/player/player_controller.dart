@@ -16,7 +16,9 @@ import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/lyrics_repository.dart';
 import '../../data/repositories/music_repository.dart';
+import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/player_repository.dart';
+import '../../data/repositories/search_repository.dart';
 
 enum PlayMode { sequential, shuffle, repeatOne }
 
@@ -38,7 +40,9 @@ class QueueItem {
 
 class PlayerController extends GetxController {
   final _playerRepo = Get.find<PlayerRepository>();
+  final _searchRepo = Get.find<SearchRepository>();
   final _lyricsRepo = Get.find<LyricsRepository>();
+  final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -173,7 +177,9 @@ class PlayerController extends GetxController {
     }
 
     try {
-      if (_storage.enableVideo) {
+      if (video.isNetease) {
+        await _playNetease(video);
+      } else if (_storage.enableVideo) {
         await _playWithVideo(video);
       } else {
         await _playAudioOnly(video);
@@ -305,7 +311,7 @@ class PlayerController extends GetxController {
     );
 
     final existingIndex =
-        queue.indexWhere((item) => item.video.bvid == video.bvid);
+        queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
     if (existingIndex >= 0) {
       currentIndex.value = existingIndex;
     } else {
@@ -315,7 +321,11 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _playQueueItem(QueueItem item) async {
-    if (item.videoUrl != null && _storage.enableVideo) {
+    if (item.video.isNetease) {
+      isVideoMode.value = false;
+      videoQualityLabel.value = '';
+      await _playAudioUrlDirect(item.audioUrl);
+    } else if (item.videoUrl != null && _storage.enableVideo) {
       _ensureMediaKitPlayer();
       isVideoMode.value = true;
       videoQualityLabel.value = item.videoQualityLabel ?? '';
@@ -361,10 +371,94 @@ class PlayerController extends GetxController {
     }
   }
 
+  Future<void> _playNetease(SearchVideoModel video) async {
+    if (isVideoMode.value) {
+      _mediaKitPlayer?.stop();
+    }
+    isVideoMode.value = false;
+
+    final url = await _neteaseRepo.getSongUrl(video.id);
+    if (url != null && url.isNotEmpty) {
+      await _playAudioUrlDirect(url);
+      audioQualityLabel.value = '网易云';
+      videoQualityLabel.value = '';
+      _addToQueue(
+        video: video,
+        audioUrl: url,
+        qualityLabel: '网易云',
+      );
+      return;
+    }
+
+    // Fallback: search on Bilibili and play the top result
+    log('NetEase URL unavailable for "${video.title}", falling back to Bilibili');
+    await _fallbackToBilibili(video);
+  }
+
+  /// Search for a song on Bilibili by title+author and play the top result.
+  Future<void> _fallbackToBilibili(SearchVideoModel neteaseVideo) async {
+    final keyword = '${neteaseVideo.title} ${neteaseVideo.author}'.trim();
+    Get.snackbar('提示', '网易云链接不可用，正在从B站换源播放...',
+        snackPosition: SnackPosition.BOTTOM);
+
+    final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
+    if (result == null || result.results.isEmpty) {
+      throw Exception('B站换源搜索无结果');
+    }
+
+    final fallbackVideo = result.results.first;
+    log('Fallback to Bilibili: "${fallbackVideo.title}" (${fallbackVideo.bvid})');
+    currentVideo.value = fallbackVideo;
+
+    if (_storage.enableVideo) {
+      await _playWithVideo(fallbackVideo);
+    } else {
+      await _playAudioOnly(fallbackVideo);
+    }
+    _fetchLyrics(fallbackVideo);
+  }
+
+  /// Search Bilibili for a fallback video matching a NetEase song.
+  /// Returns the top result or null if not found.
+  Future<SearchVideoModel?> _searchBilibiliFallback(
+      SearchVideoModel neteaseVideo) async {
+    final keyword = '${neteaseVideo.title} ${neteaseVideo.author}'.trim();
+    log('Searching Bilibili fallback for: "$keyword"');
+    try {
+      final result =
+          await _searchRepo.searchVideos(keyword: keyword, page: 1);
+      if (result != null && result.results.isNotEmpty) {
+        return result.results.first;
+      }
+    } catch (e) {
+      log('Bilibili fallback search failed: $e');
+    }
+    return null;
+  }
+
+  Future<void> _playAudioUrlDirect(String url) async {
+    log('Playing direct audio URL: $url');
+    try {
+      await _audioPlayer.setAudioSource(
+        AudioSource.uri(Uri.parse(url)),
+      );
+      _audioPlayer.play();
+    } catch (e) {
+      log('Direct audio source error: $e');
+      rethrow;
+    }
+  }
+
   /// Switch the current track between video and audio-only mode.
   Future<void> toggleVideoMode() async {
     if (currentIndex.value < 0 || currentIndex.value >= queue.length) return;
     final item = queue[currentIndex.value];
+
+    if (item.video.isNetease) {
+      Get.snackbar('提示', '网易云音乐暂不支持视频模式',
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
     final currentPos = position.value;
 
     if (isVideoMode.value) {
@@ -607,16 +701,19 @@ class PlayerController extends GetxController {
     currentLyricsIndex.value = -1;
     lyricsLoading.value = true;
 
-    _lyricsRepo
-        .getLyrics(video.title, video.author, video.duration, bvid: video.bvid)
-        .then((result) {
-      if (currentVideo.value?.bvid == video.bvid) {
+    final fetchFuture = video.isNetease
+        ? _lyricsRepo.getNeteaseLyrics(video.id)
+        : _lyricsRepo.getLyrics(video.title, video.author, video.duration,
+            bvid: video.bvid);
+
+    fetchFuture.then((result) {
+      if (currentVideo.value?.uniqueId == video.uniqueId) {
         lyrics.value = result;
         lyricsLoading.value = false;
       }
     }).catchError((e) {
       log('Lyrics fetch error: $e');
-      if (currentVideo.value?.bvid == video.bvid) {
+      if (currentVideo.value?.uniqueId == video.uniqueId) {
         lyricsLoading.value = false;
       }
     });
@@ -713,11 +810,25 @@ class PlayerController extends GetxController {
   /// Returns true if added successfully, false if already in queue or failed.
   Future<bool> addToQueueSilent(SearchVideoModel video) async {
     final existingIndex =
-        queue.indexWhere((item) => item.video.bvid == video.bvid);
+        queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
     if (existingIndex >= 0) return false;
 
     try {
-      if (_storage.enableVideo) {
+      if (video.isNetease) {
+        final url = await _neteaseRepo.getSongUrl(video.id);
+        if (url != null && url.isNotEmpty) {
+          queue.add(QueueItem(
+            video: video,
+            audioUrl: url,
+            qualityLabel: '网易云',
+          ));
+        } else {
+          // Fallback to Bilibili
+          final fallback = await _searchBilibiliFallback(video);
+          if (fallback == null) return false;
+          return await addToQueueSilent(fallback);
+        }
+      } else if (_storage.enableVideo) {
         final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
         if (playUrl != null &&
             playUrl.videoStreams.isNotEmpty &&
@@ -790,7 +901,7 @@ class PlayerController extends GetxController {
   /// If nothing is currently playing, starts playback.
   Future<void> addToQueue(SearchVideoModel video) async {
     final existingIndex =
-        queue.indexWhere((item) => item.video.bvid == video.bvid);
+        queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
     if (existingIndex >= 0) {
       Get.snackbar('提示', '已在播放列表中',
           snackPosition: SnackPosition.BOTTOM);
@@ -798,7 +909,25 @@ class PlayerController extends GetxController {
     }
 
     try {
-      if (_storage.enableVideo) {
+      if (video.isNetease) {
+        final url = await _neteaseRepo.getSongUrl(video.id);
+        if (url != null && url.isNotEmpty) {
+          queue.add(QueueItem(
+            video: video,
+            audioUrl: url,
+            qualityLabel: '网易云',
+          ));
+        } else {
+          // Fallback to Bilibili
+          final fallback = await _searchBilibiliFallback(video);
+          if (fallback != null) {
+            Get.snackbar('提示', '网易云链接不可用，已从B站换源',
+                snackPosition: SnackPosition.BOTTOM);
+            await addToQueue(fallback);
+            return;
+          }
+        }
+      } else if (_storage.enableVideo) {
         final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
         if (playUrl != null &&
             playUrl.videoStreams.isNotEmpty &&

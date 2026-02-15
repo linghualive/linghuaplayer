@@ -68,7 +68,12 @@ class SearchPage extends GetView<app.SearchController> {
           case app.SearchState.suggesting:
             return const SearchSuggestionList();
           case app.SearchState.empty:
-            return const EmptyWidget(message: '未找到结果');
+            return Column(
+              children: [
+                _buildSourceChips(),
+                const Expanded(child: EmptyWidget(message: '未找到结果')),
+              ],
+            );
           case app.SearchState.results:
             return _buildResults();
         }
@@ -76,35 +81,69 @@ class SearchPage extends GetView<app.SearchController> {
     );
   }
 
+  Widget _buildSourceChips() {
+    return Obx(() => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              ChoiceChip(
+                label: const Text('B站'),
+                selected:
+                    controller.searchSource.value == MusicSource.bilibili,
+                onSelected: (_) =>
+                    controller.switchSource(MusicSource.bilibili),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
+                label: const Text('网易云'),
+                selected:
+                    controller.searchSource.value == MusicSource.netease,
+                onSelected: (_) =>
+                    controller.switchSource(MusicSource.netease),
+              ),
+            ],
+          ),
+        ));
+  }
+
   Widget _buildResults() {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollEndNotification &&
-            notification.metrics.pixels >=
-                notification.metrics.maxScrollExtent - 200) {
-          controller.loadMore();
-        }
-        return false;
-      },
-      child: Obx(() {
-        if (controller.isLoading.value && controller.allResults.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return ListView.builder(
-          itemCount: controller.allResults.length +
-              (controller.isLoadingMore.value ? 1 : 0),
-          itemBuilder: (context, index) {
-            if (index == controller.allResults.length) {
-              return const Padding(
-                padding: EdgeInsets.all(16),
-                child: Center(child: CircularProgressIndicator()),
+    return Column(
+      children: [
+        _buildSourceChips(),
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollEndNotification &&
+                  notification.metrics.pixels >=
+                      notification.metrics.maxScrollExtent - 200) {
+                controller.loadMore();
+              }
+              return false;
+            },
+            child: Obx(() {
+              if (controller.isLoading.value &&
+                  controller.allResults.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return ListView.builder(
+                itemCount: controller.allResults.length +
+                    (controller.isLoadingMore.value ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == controller.allResults.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final video =
+                      controller.allResults[index] as SearchVideoModel;
+                  return SearchResultCard(video: video);
+                },
               );
-            }
-            final video = controller.allResults[index] as SearchVideoModel;
-            return SearchResultCard(video: video);
-          },
-        );
-      }),
+            }),
+          ),
+        ),
+      ],
     );
   }
 }

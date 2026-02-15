@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../data/repositories/netease_repository.dart';
+import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/loading_widget.dart';
 import 'music_discovery_controller.dart';
 import 'widgets/hot_playlist_card.dart';
@@ -143,10 +145,165 @@ class MusicDiscoveryPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
+
+              // NetEase New Songs Section
+              if (controller.neteaseNewSongs.isNotEmpty) ...[
+                const SectionHeader(title: '网易云 · 新歌速递'),
+                SizedBox(
+                  height: 72,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: controller.neteaseNewSongs.length,
+                    itemBuilder: (context, index) {
+                      final song = controller.neteaseNewSongs[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: () =>
+                              controller.onNeteaseNewSongTap(song),
+                          child: SizedBox(
+                            width: 200,
+                            child: Row(
+                              children: [
+                                CachedImage(
+                                  imageUrl: song.pic,
+                                  width: 56,
+                                  height: 56,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        song.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        song.author,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color: theme.colorScheme.outline,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // NetEase Recommend Playlists Section
+              if (controller.neteaseRecommendPlaylists.isNotEmpty) ...[
+                const SectionHeader(title: '网易云 · 推荐歌单'),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.75,
+                    ),
+                    itemCount:
+                        controller.neteaseRecommendPlaylists.length,
+                    itemBuilder: (context, index) {
+                      final playlist =
+                          controller.neteaseRecommendPlaylists[index];
+                      return _NeteasePlaylistCard(playlist: playlist);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ],
           ),
         );
       }),
+    );
+  }
+}
+
+class _NeteasePlaylistCard extends StatelessWidget {
+  final NeteasePlaylistBrief playlist;
+
+  const _NeteasePlaylistCard({required this.playlist});
+
+  String _formatPlayCount(int count) {
+    if (count >= 100000000) {
+      return '${(count / 100000000).toStringAsFixed(1)}亿';
+    }
+    if (count >= 10000) {
+      return '${(count / 10000).toStringAsFixed(1)}万';
+    }
+    return count.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              CachedImage(
+                imageUrl: playlist.coverUrl,
+                width: double.infinity,
+                height: double.infinity,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _formatPlayCount(playlist.playCount),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          playlist.name,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodySmall,
+        ),
+      ],
     );
   }
 }

@@ -1,16 +1,110 @@
-# flamekit
+# FlameKit
 
-A new Flutter project.
+FlameKit 是一款基于 Flutter 开发的多源音乐播放器，目前支持 Bilibili 和网易云音乐两个音乐源。
 
-## Getting Started
+## 已完成功能
 
-This project is a starting point for a Flutter application.
+### 核心播放
 
-A few resources to get you started if this is your first Flutter project:
+- Bilibili 音频/视频播放（支持多清晰度切换）
+- 网易云音乐搜索与播放（原生 WEAPI/EAPI 加密，无需外部 API 服务）
+- 播放队列管理（添加、删除、拖拽排序）
+- 播放模式切换（顺序播放、随机播放、单曲循环）
+- 音视频模式切换
+- Mini 播放器与全屏播放器
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 搜索
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Bilibili 视频搜索（热搜、搜索建议、分页加载）
+- 网易云音乐歌曲搜索（分页加载）
+- 搜索源切换（B站 / 网易云）
+- 搜索历史记录
+
+### 歌词
+
+- LRCLIB 在线歌词匹配
+- Bilibili 字幕歌词回退
+- 网易云原生 LRC 歌词
+- 逐行歌词滚动显示
+
+### 音乐发现
+
+- Bilibili 热门音乐榜单
+- Bilibili 热门音乐 MV
+- 网易云新歌速递
+- 网易云推荐歌单
+
+### 收藏与播放列表
+
+- Bilibili 收藏夹管理（查看、添加、创建文件夹）
+- Bilibili 播放列表浏览与批量播放
+
+### 智能换源
+
+- 网易云歌曲无法获取音频链接时，自动从 B 站搜索同名歌曲并播放
+- 换源过程用户无感，自动完成
+
+### 其他
+
+- Material You 动态主题配色
+- Bilibili 扫码登录
+- 视频模式（media_kit + mpv）
+- 音频质量选择
+
+## 未完成功能
+
+- [ ] 网易云音乐账号登录（当前为游客模式，部分歌曲可能无法获取播放链接）
+- [ ] 网易云歌单详情页（点击推荐歌单查看歌曲列表）
+- [ ] 下载/离线缓存
+- [ ] 桌面歌词 / 状态栏歌词
+- [ ] iOS 支持
+- [ ] 均衡器 / 音效设置
+- [ ] 定时关闭
+- [ ] 歌曲评论查看
+- [ ] 跨设备同步播放列表
+- [ ] 更多音乐源接入（QQ 音乐、酷狗等）
+
+## 构建
+
+```bash
+# 安装依赖
+flutter pub get
+
+# Debug 运行
+flutter run
+
+# Release 构建
+flutter build apk --release
+```
+
+签名配置：在 `android/` 目录下创建 `key.properties` 文件：
+
+```properties
+storePassword=your_password
+keyPassword=your_password
+keyAlias=upload
+storeFile=upload-keystore.jks
+```
+
+## 免责声明
+
+### API 使用声明
+
+本项目仅供学习交流和个人使用，**请勿用于任何商业用途**。
+
+- 本项目通过逆向工程实现的网易云音乐 API 调用（WEAPI/EAPI 加密协议），**未经网易云音乐官方授权**。相关接口可能随时变更或失效，本项目不保证其可用性和稳定性。
+- 本项目调用的 Bilibili API 同样**未经哔哩哔哩官方授权**，所有接口均来源于公开的网络资料。
+- 所有音频、视频内容的版权归原作者和平台方所有，本项目不存储、不分发任何版权内容。
+- 使用本项目产生的一切法律责任由使用者自行承担，与项目开发者无关。
+
+### 风险提示
+
+- 频繁调用第三方 API 可能导致账号被限制或封禁，请合理使用。
+- 本项目不收集任何用户数据，所有登录凭证仅存储在用户本地设备上。
+- 网易云音乐部分歌曲因版权限制，在未登录状态下可能无法获取播放链接，此时会自动尝试从 B 站换源播放。
+
+**如果本项目侵犯了您的权益，请联系我们，我们将立即删除相关内容。**
+
+## License
+
+本项目仅供个人学习使用，不提供任何形式的担保。
