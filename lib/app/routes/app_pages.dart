@@ -32,6 +32,8 @@ import '../../modules/hot_playlists/hot_playlists_controller.dart';
 import '../../modules/mv_list/mv_list_page.dart';
 import '../../modules/mv_list/mv_list_controller.dart';
 import '../../modules/webview/webview_page.dart';
+import '../../modules/netease_playlist_detail/netease_playlist_detail_page.dart';
+import '../../modules/netease_playlist_detail/netease_playlist_detail_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -148,6 +150,13 @@ class AppPages {
     GetPage(
       name: AppRoutes.webview,
       page: () => const WebviewPage(),
+    ),
+    GetPage(
+      name: AppRoutes.neteasePlaylistDetail,
+      page: () => const NeteasePlaylistDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(NeteasePlaylistDetailController());
+      }),
     ),
   ];
 }

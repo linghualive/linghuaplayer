@@ -7,24 +7,36 @@ import 'package:get/get.dart';
 import 'package:gt3_flutter_plugin/gt3_flutter_plugin.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../core/storage/storage_service.dart';
 import '../../data/models/login/captcha_model.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/netease_repository.dart';
 import '../../modules/home/home_controller.dart';
+import '../../modules/music_discovery/music_discovery_controller.dart';
 import '../../modules/playlist/playlist_controller.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
   late final TabController tabController;
   final _authRepo = Get.find<AuthRepository>();
+  final _neteaseRepo = Get.find<NeteaseRepository>();
+  final _storage = Get.find<StorageService>();
 
   // GeeTest plugin instance
   final Gt3FlutterPlugin _captcha = Gt3FlutterPlugin();
 
-  // QR Login
+  // Bilibili QR Login
   final qrcodeUrl = ''.obs;
   final qrcodeKey = ''.obs;
   final qrStatus = ''.obs;
   Timer? _qrPollTimer;
   int _qrPollCount = 0;
+
+  // NetEase QR Login
+  final neteaseQrUrl = ''.obs;
+  final neteaseQrKey = ''.obs;
+  final neteaseQrStatus = ''.obs;
+  Timer? _neteaseQrPollTimer;
+  int _neteaseQrPollCount = 0;
 
   // SMS Login
   final phoneController = TextEditingController();
@@ -45,7 +57,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   @override
   void onInit() {
     super.onInit();
-    tabController = TabController(length: 3, vsync: this);
+    tabController = TabController(length: 4, vsync: this);
     tabController.addListener(_onTabChanged);
     _generateQrcode();
   }
@@ -54,6 +66,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   void onClose() {
     tabController.dispose();
     _qrPollTimer?.cancel();
+    _neteaseQrPollTimer?.cancel();
     _smsTimer?.cancel();
     phoneController.dispose();
     smsCodeController.dispose();
@@ -68,9 +81,14 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     } else {
       _qrPollTimer?.cancel();
     }
+    if (tabController.index == 3) {
+      _generateNeteaseQrcode();
+    } else {
+      _neteaseQrPollTimer?.cancel();
+    }
   }
 
-  // ── QR Login ────────────────────────────────────────
+  // ── Bilibili QR Login ────────────────────────────────
 
   Future<void> _generateQrcode() async {
     qrStatus.value = '正在加载二维码...';
@@ -113,6 +131,76 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
   void refreshQrcode() {
     _generateQrcode();
+  }
+
+  // ── NetEase QR Login ─────────────────────────────────
+
+  Future<void> _generateNeteaseQrcode() async {
+    neteaseQrStatus.value = '正在加载二维码...';
+    final unikey = await _neteaseRepo.getQrKey();
+    if (unikey != null) {
+      neteaseQrKey.value = unikey;
+      neteaseQrUrl.value = _neteaseRepo.buildQrUrl(unikey);
+      neteaseQrStatus.value = '请使用网易云音乐客户端扫码';
+      _startNeteaseQrPolling();
+    } else {
+      neteaseQrStatus.value = '二维码生成失败';
+    }
+  }
+
+  void _startNeteaseQrPolling() {
+    _neteaseQrPollCount = 0;
+    _neteaseQrPollTimer?.cancel();
+    _neteaseQrPollTimer =
+        Timer.periodic(const Duration(seconds: 2), (timer) async {
+      _neteaseQrPollCount++;
+      if (_neteaseQrPollCount > 150) {
+        timer.cancel();
+        neteaseQrStatus.value = '二维码已过期';
+        return;
+      }
+      if (neteaseQrKey.value.isEmpty) return;
+
+      final result = await _neteaseRepo.pollQrLogin(neteaseQrKey.value);
+      if (result.isSuccess) {
+        timer.cancel();
+        neteaseQrStatus.value = '登录成功！';
+        await _onNeteaseLoginSuccess();
+      } else if (result.isScanned) {
+        neteaseQrStatus.value = '已扫码，请在手机上确认';
+      } else if (result.isExpired) {
+        timer.cancel();
+        neteaseQrStatus.value = '二维码已过期';
+      }
+    });
+  }
+
+  void refreshNeteaseQrcode() {
+    _generateNeteaseQrcode();
+  }
+
+  Future<void> _onNeteaseLoginSuccess() async {
+    final userInfo = await _neteaseRepo.getAccountInfo();
+    if (userInfo != null) {
+      _storage.isNeteaseLoggedIn = true;
+      _storage.neteaseUserId = userInfo.userId.toString();
+      _storage.setNeteaseUserInfo(userInfo.toJson());
+    } else {
+      _storage.isNeteaseLoggedIn = true;
+    }
+
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().refreshLoginStatus();
+    }
+    if (Get.isRegistered<MusicDiscoveryController>()) {
+      Get.find<MusicDiscoveryController>().loadAll();
+    }
+    Get.back();
+    Get.snackbar(
+      '成功',
+      userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败',
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   // ── GeeTest Captcha ──────────────────────────────────

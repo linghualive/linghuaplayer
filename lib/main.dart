@@ -25,7 +25,7 @@ void main() async {
 
   // Initialize HTTP clients
   await HttpClient.instance.init();
-  NeteaseHttpClient.instance.init();
+  await NeteaseHttpClient.instance.init();
 
   // Initialize theme controller
   Get.put(ThemeController(), permanent: true);

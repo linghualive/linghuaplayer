@@ -58,4 +58,50 @@ class NeteaseProvider {
       'total': true,
     });
   }
+
+  // ── Auth: QR Login ──────────────────────────────────
+
+  Future<Response> getQrKey() {
+    return _client.weapiRequest('/api/login/qrcode/unikey', {
+      'type': 3,
+    });
+  }
+
+  Future<Response> pollQrLogin(String key) {
+    return _client.weapiRequest('/api/login/qrcode/client/login', {
+      'key': key,
+      'type': 3,
+    });
+  }
+
+  Future<Response> getAccountInfo() {
+    return _client.weapiRequest('/api/w/nuser/account/get', {});
+  }
+
+  // ── Personalized Recommendations (requires login) ──
+
+  Future<Response> getDailyRecommendSongs() {
+    return _client.weapiRequest('/api/v3/discovery/recommend/songs', {});
+  }
+
+  Future<Response> getDailyRecommendPlaylists() {
+    return _client.weapiRequest('/api/v1/discovery/recommend/resource', {});
+  }
+
+  // ── User Playlists & Detail ─────────────────────────
+
+  Future<Response> getUserPlaylists(int uid, {int limit = 30, int offset = 0}) {
+    return _client.weapiRequest('/api/user/playlist', {
+      'uid': uid,
+      'limit': limit,
+      'offset': offset,
+    });
+  }
+
+  Future<Response> getPlaylistDetail(int id) {
+    return _client.weapiRequest('/api/v6/playlist/detail', {
+      'id': id,
+      'n': 100000,
+    });
+  }
 }

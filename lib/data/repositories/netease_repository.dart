@@ -2,6 +2,8 @@ import 'dart:developer';
 
 import 'package:get/get.dart';
 
+import '../models/login/netease_qrcode_model.dart';
+import '../models/login/netease_user_info_model.dart';
 import '../models/search/search_video_model.dart';
 import '../providers/netease_provider.dart';
 
@@ -25,6 +27,28 @@ class NeteasePlaylistBrief {
     required this.name,
     required this.coverUrl,
     required this.playCount,
+  });
+}
+
+class NeteasePlaylistDetail {
+  final int id;
+  final String name;
+  final String coverUrl;
+  final String description;
+  final int playCount;
+  final int trackCount;
+  final String creatorName;
+  final List<SearchVideoModel> tracks;
+
+  NeteasePlaylistDetail({
+    required this.id,
+    required this.name,
+    required this.coverUrl,
+    required this.description,
+    required this.playCount,
+    required this.trackCount,
+    required this.creatorName,
+    required this.tracks,
   });
 }
 
@@ -160,6 +184,140 @@ class NeteaseRepository {
     } catch (e) {
       log('NetEase getPersonalized error: $e');
       return [];
+    }
+  }
+
+  // ── Auth Methods ──────────────────────────────────────
+
+  Future<String?> getQrKey() async {
+    try {
+      final res = await _provider.getQrKey();
+      final data = res.data;
+      if (data['code'] != 200) return null;
+      return data['unikey'] as String?;
+    } catch (e) {
+      log('NetEase getQrKey error: $e');
+      return null;
+    }
+  }
+
+  String buildQrUrl(String unikey) {
+    return 'https://music.163.com/login?codekey=$unikey';
+  }
+
+  Future<NeteaseQrcodePollResult> pollQrLogin(String key) async {
+    try {
+      final res = await _provider.pollQrLogin(key);
+      final data = res.data as Map<String, dynamic>;
+      return NeteaseQrcodePollResult.fromJson(data);
+    } catch (e) {
+      log('NetEase pollQrLogin error: $e');
+      return NeteaseQrcodePollResult(code: -1, message: e.toString());
+    }
+  }
+
+  Future<NeteaseUserInfoModel?> getAccountInfo() async {
+    try {
+      final res = await _provider.getAccountInfo();
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200 || data['profile'] == null) return null;
+      return NeteaseUserInfoModel.fromAccountResponse(data);
+    } catch (e) {
+      log('NetEase getAccountInfo error: $e');
+      return null;
+    }
+  }
+
+  // ── Personalized Recommendations ──────────────────────
+
+  Future<List<SearchVideoModel>> getDailyRecommendSongs() async {
+    try {
+      final res = await _provider.getDailyRecommendSongs();
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final dailySongs = data['data']?['dailySongs'] as List<dynamic>? ?? [];
+      return dailySongs
+          .map((s) => _songToModel(s as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      log('NetEase getDailyRecommendSongs error: $e');
+      return [];
+    }
+  }
+
+  Future<List<NeteasePlaylistBrief>> getDailyRecommendPlaylists() async {
+    try {
+      final res = await _provider.getDailyRecommendPlaylists();
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final recommend = data['recommend'] as List<dynamic>? ?? [];
+      return recommend.map((item) {
+        final m = item as Map<String, dynamic>;
+        return NeteasePlaylistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['picUrl'] as String? ?? '',
+          playCount: m['playcount'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getDailyRecommendPlaylists error: $e');
+      return [];
+    }
+  }
+
+  // ── Playlist Methods ──────────────────────────────────
+
+  Future<List<NeteasePlaylistBrief>> getUserPlaylists(int uid) async {
+    try {
+      final res = await _provider.getUserPlaylists(uid);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final playlist = data['playlist'] as List<dynamic>? ?? [];
+      return playlist.map((item) {
+        final m = item as Map<String, dynamic>;
+        return NeteasePlaylistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['coverImgUrl'] as String? ?? '',
+          playCount: m['playCount'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getUserPlaylists error: $e');
+      return [];
+    }
+  }
+
+  Future<NeteasePlaylistDetail?> getPlaylistDetail(int id) async {
+    try {
+      final res = await _provider.getPlaylistDetail(id);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200 || data['playlist'] == null) return null;
+
+      final pl = data['playlist'] as Map<String, dynamic>;
+      final tracks = (pl['tracks'] as List<dynamic>? ?? [])
+          .map((s) => _songToModel(s as Map<String, dynamic>))
+          .toList();
+
+      final creator = pl['creator'] as Map<String, dynamic>? ?? {};
+
+      return NeteasePlaylistDetail(
+        id: pl['id'] as int? ?? 0,
+        name: pl['name'] as String? ?? '',
+        coverUrl: pl['coverImgUrl'] as String? ?? '',
+        description: pl['description'] as String? ?? '',
+        playCount: pl['playCount'] as int? ?? 0,
+        trackCount: pl['trackCount'] as int? ?? 0,
+        creatorName: creator['nickname'] as String? ?? '',
+        tracks: tracks,
+      );
+    } catch (e) {
+      log('NetEase getPlaylistDetail error: $e');
+      return null;
     }
   }
 }

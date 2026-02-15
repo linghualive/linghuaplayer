@@ -1,6 +1,9 @@
 import 'dart:convert';
 
+import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../crypto/netease_crypto.dart';
 
@@ -12,6 +15,7 @@ class NeteaseHttpClient {
   static NeteaseHttpClient? _instance;
   late final Dio _weapiDio;
   late final Dio _eapiDio;
+  late final PersistCookieJar cookieJar;
 
   static const _baseUrl = 'https://music.163.com';
   static const _eapiBaseUrl = 'https://interface.music.163.com';
@@ -27,7 +31,14 @@ class NeteaseHttpClient {
     return _instance!;
   }
 
-  void init() {
+  Future<void> init() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final cookiePath = '${dir.path}/.netease_cookies/';
+    cookieJar = PersistCookieJar(
+      ignoreExpires: true,
+      storage: FileStorage(cookiePath),
+    );
+
     _weapiDio = Dio(BaseOptions(
       baseUrl: _baseUrl,
       connectTimeout: const Duration(seconds: 10),
@@ -40,6 +51,7 @@ class NeteaseHttpClient {
       contentType: Headers.formUrlEncodedContentType,
       responseType: ResponseType.plain,
     ));
+    _weapiDio.interceptors.add(CookieManager(cookieJar));
 
     _eapiDio = Dio(BaseOptions(
       baseUrl: _eapiBaseUrl,
@@ -53,6 +65,34 @@ class NeteaseHttpClient {
       contentType: Headers.formUrlEncodedContentType,
       responseType: ResponseType.plain,
     ));
+    _eapiDio.interceptors.add(CookieManager(cookieJar));
+  }
+
+  /// Extract `__csrf` token from cookies.
+  Future<String> getCsrfToken() async {
+    try {
+      final cookies =
+          await cookieJar.loadForRequest(Uri.parse(_baseUrl));
+      final csrf = cookies.where((c) => c.name == '__csrf');
+      if (csrf.isNotEmpty) return csrf.first.value;
+    } catch (_) {}
+    return '';
+  }
+
+  /// Extract `MUSIC_U` cookie value.
+  Future<String> getMusicUCookie() async {
+    try {
+      final cookies =
+          await cookieJar.loadForRequest(Uri.parse(_baseUrl));
+      final musicU = cookies.where((c) => c.name == 'MUSIC_U');
+      if (musicU.isNotEmpty) return musicU.first.value;
+    } catch (_) {}
+    return '';
+  }
+
+  /// Clear all stored cookies (for logout).
+  Future<void> clearCookies() async {
+    await cookieJar.deleteAll();
   }
 
   /// Send a WEAPI-encrypted POST request.
@@ -64,7 +104,7 @@ class NeteaseHttpClient {
     Map<String, dynamic> data,
   ) async {
     final weapiPath = apiPath.replaceFirst('/api/', '/weapi/');
-    data['csrf_token'] = '';
+    data['csrf_token'] = await getCsrfToken();
 
     final encrypted = NeteaseCrypto.weapi(data);
     final ip = NeteaseCrypto.generateRandomCNIP();
@@ -100,6 +140,9 @@ class NeteaseHttpClient {
   ) async {
     final eapiPath = apiPath.replaceFirst('/api/', '/eapi/');
 
+    final csrf = await getCsrfToken();
+    final musicU = await getMusicUCookie();
+
     // EAPI requires header and e_r fields in the encrypted data
     final now = DateTime.now().millisecondsSinceEpoch;
     data['header'] = {
@@ -109,8 +152,8 @@ class NeteaseHttpClient {
       'resolution': '1920x1080',
       'os': 'android',
       'requestId': '${now}_${(now % 10000).toString().padLeft(4, '0')}',
-      '__csrf': '',
-      'MUSIC_U': '',
+      '__csrf': csrf,
+      'MUSIC_U': musicU,
       'MUSIC_A': '',
       'channel': '',
       'osver': '',

@@ -23,102 +23,77 @@ class ProfilePage extends StatelessWidget {
         ],
       ),
       body: Obx(() {
-        if (!controller.isLoggedIn.value) {
-          return _buildLoggedOut(context);
-        }
-        return _buildLoggedIn(context, controller);
+        return ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          children: [
+            // Bilibili account card
+            _buildBilibiliCard(context, controller),
+            const SizedBox(height: 12),
+
+            // NetEase account card
+            _buildNeteaseCard(context, controller),
+            const SizedBox(height: 12),
+
+            // Media library (only if bilibili logged in)
+            if (controller.isLoggedIn.value) ...[
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.favorite_outline),
+                      title: const Text('我的收藏'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Get.toNamed(AppRoutes.favorites),
+                    ),
+                    const Divider(height: 1, indent: 56),
+                    ListTile(
+                      leading: const Icon(Icons.history),
+                      title: const Text('观看历史'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Get.toNamed(AppRoutes.watchHistory),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            // Settings
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('设置'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.settings),
+              ),
+            ),
+          ],
+        );
       }),
     );
   }
 
-  Widget _buildLoggedOut(BuildContext context) {
+  Widget _buildBilibiliCard(BuildContext context, HomeController controller) {
     final theme = Theme.of(context);
 
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      children: [
-        // Login card
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () => Get.toNamed(AppRoutes.login),
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 30,
-                    backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 32,
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '点击登录',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '登录后可使用更多功能',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.chevron_right,
-                    color: theme.colorScheme.outline,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Settings
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            leading: const Icon(Icons.settings_outlined),
-            title: const Text('设置'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Get.toNamed(AppRoutes.settings),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLoggedIn(BuildContext context, HomeController controller) {
-    final user = controller.userInfo.value;
-    final theme = Theme.of(context);
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      children: [
-        // User info card
-        Card(
-          clipBehavior: Clip.antiAlias,
+    if (!controller.isLoggedIn.value) {
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Get.toNamed(AppRoutes.login),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                ClipOval(
-                  child: CachedImage(
-                    imageUrl: user?.face,
-                    width: 60,
-                    height: 60,
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.smart_display_outlined,
+                    size: 24,
+                    color: theme.colorScheme.outline,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -127,10 +102,80 @@ class ProfilePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        user?.uname ?? '用户',
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        '哔哩哔哩',
+                        style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '点击登录',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.outline,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final user = controller.userInfo.value;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                ClipOval(
+                  child: CachedImage(
+                    imageUrl: user?.face,
+                    width: 48,
+                    height: 48,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            user?.uname ?? '用户',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '哔哩哔哩',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -172,13 +217,6 @@ class ProfilePage extends StatelessWidget {
                               ),
                             ),
                           ],
-                          const SizedBox(width: 8),
-                          Text(
-                            'UID: ${user?.mid ?? ''}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.outline,
-                            ),
-                          ),
                         ],
                       ),
                     ],
@@ -187,59 +225,165 @@ class ProfilePage extends StatelessWidget {
               ],
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        // Media library card
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.favorite_outline),
-                title: const Text('我的收藏'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppRoutes.favorites),
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: const Icon(Icons.history),
-                title: const Text('观看历史'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppRoutes.watchHistory),
-              ),
-            ],
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              '退出哔哩哔哩登录',
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+            dense: true,
+            onTap: () async {
+              await controller.logout();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNeteaseCard(BuildContext context, HomeController controller) {
+    final theme = Theme.of(context);
+
+    if (!controller.isNeteaseLoggedIn.value) {
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Get.toNamed(AppRoutes.login),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.cloud_outlined,
+                    size: 24,
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '网易云音乐',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '点击登录',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.outline,
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 12),
-        // Settings & logout card
-        Card(
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: const Text('设置'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Get.toNamed(AppRoutes.settings),
-              ),
-              const Divider(height: 1, indent: 56),
-              ListTile(
-                leading: Icon(
-                  Icons.logout,
-                  color: theme.colorScheme.error,
+      );
+    }
+
+    final neteaseUser = controller.neteaseUserInfo.value;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                ClipOval(
+                  child: CachedImage(
+                    imageUrl: neteaseUser?.avatarUrl,
+                    width: 48,
+                    height: 48,
+                  ),
                 ),
-                title: Text(
-                  '退出登录',
-                  style: TextStyle(color: theme.colorScheme.error),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            neteaseUser?.nickname ?? '网易云用户',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              '网易云',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (neteaseUser?.isVip ?? false) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade100,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'VIP',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.amber.shade800,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                onTap: () async {
-                  await controller.logout();
-                },
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              '退出网易云登录',
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+            dense: true,
+            onTap: () async {
+              await controller.logoutNetease();
+            },
+          ),
+        ],
+      ),
     );
   }
 }

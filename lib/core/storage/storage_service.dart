@@ -111,12 +111,36 @@ class StorageService extends GetxService {
   set skippedUpdateVersion(String? value) =>
       _box.write('skipped_update_version', value);
 
-  // Clear all auth data
+  // Clear all auth data (Bilibili only)
   void clearAuth() {
     _box.remove('user_info');
     _box.remove('is_logged_in');
     _box.remove('user_mid');
     _box.remove('access_key');
     _box.remove('access_key_mid');
+  }
+
+  // NetEase Cloud Music auth
+  bool get isNeteaseLoggedIn =>
+      _box.read<bool>('netease_is_logged_in') ?? false;
+
+  set isNeteaseLoggedIn(bool value) =>
+      _box.write('netease_is_logged_in', value);
+
+  String? get neteaseUserId => _box.read<String>('netease_user_id');
+
+  set neteaseUserId(String? value) => _box.write('netease_user_id', value);
+
+  Map<String, dynamic>? getNeteaseUserInfo() =>
+      _box.read<Map<String, dynamic>>('netease_user_info');
+
+  void setNeteaseUserInfo(Map<String, dynamic> info) {
+    _box.write('netease_user_info', info);
+  }
+
+  void clearNeteaseAuth() {
+    _box.remove('netease_user_info');
+    _box.remove('netease_is_logged_in');
+    _box.remove('netease_user_id');
   }
 }

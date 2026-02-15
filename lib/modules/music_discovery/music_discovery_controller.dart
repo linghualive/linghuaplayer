@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:get/get.dart';
 
+import '../../core/storage/storage_service.dart';
 import '../../data/models/music/hot_playlist_model.dart';
 import '../../data/models/music/music_rank_song_model.dart';
 import '../../data/models/music/mv_item_model.dart';
@@ -13,12 +14,17 @@ import '../player/player_controller.dart';
 class MusicDiscoveryController extends GetxController {
   final _musicRepo = Get.find<MusicRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
+  final _storage = Get.find<StorageService>();
 
   final rankSongs = <MusicRankSongModel>[].obs;
   final hotPlaylists = <HotPlaylistModel>[].obs;
   final mvList = <MvItemModel>[].obs;
   final neteaseNewSongs = <SearchVideoModel>[].obs;
   final neteaseRecommendPlaylists = <NeteasePlaylistBrief>[].obs;
+
+  // Personalized (requires NetEase login)
+  final dailyRecommendSongs = <SearchVideoModel>[].obs;
+  final dailyRecommendPlaylists = <NeteasePlaylistBrief>[].obs;
 
   final isLoading = false.obs;
   final rankTitle = ''.obs;
@@ -32,13 +38,21 @@ class MusicDiscoveryController extends GetxController {
   Future<void> loadAll() async {
     isLoading.value = true;
     try {
-      await Future.wait([
+      final futures = <Future>[
         _loadRankSongs(),
         _loadHotPlaylists(),
         _loadMvList(),
         _loadNeteaseNewSongs(),
         _loadNeteaseRecommendPlaylists(),
-      ]);
+      ];
+      if (_storage.isNeteaseLoggedIn) {
+        futures.add(_loadDailyRecommendSongs());
+        futures.add(_loadDailyRecommendPlaylists());
+      } else {
+        dailyRecommendSongs.clear();
+        dailyRecommendPlaylists.clear();
+      }
+      await Future.wait(futures);
     } catch (e) {
       log('Music discovery load error: $e');
     }
@@ -97,7 +111,30 @@ class MusicDiscoveryController extends GetxController {
     }
   }
 
+  Future<void> _loadDailyRecommendSongs() async {
+    try {
+      final songs = await _neteaseRepo.getDailyRecommendSongs();
+      dailyRecommendSongs.assignAll(songs.take(10));
+    } catch (e) {
+      log('Load daily recommend songs error: $e');
+    }
+  }
+
+  Future<void> _loadDailyRecommendPlaylists() async {
+    try {
+      final playlists = await _neteaseRepo.getDailyRecommendPlaylists();
+      dailyRecommendPlaylists.assignAll(playlists.take(6));
+    } catch (e) {
+      log('Load daily recommend playlists error: $e');
+    }
+  }
+
   void onNeteaseNewSongTap(SearchVideoModel song) {
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.playFromSearch(song);
+  }
+
+  void onDailyRecommendSongTap(SearchVideoModel song) {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(song);
   }
