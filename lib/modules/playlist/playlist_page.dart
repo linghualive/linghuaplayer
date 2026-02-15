@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../modules/home/home_controller.dart';
 import '../../data/models/user/fav_resource_model.dart';
 import '../../shared/widgets/cached_image.dart';
+import '../../shared/widgets/create_fav_dialog.dart';
 import '../../shared/widgets/video_action_buttons.dart';
 import 'playlist_controller.dart';
 import 'widgets/playlist_config_sheet.dart';
@@ -43,6 +44,11 @@ class PlaylistPage extends StatelessWidget {
             title: const Text('歌单'),
             actions: [
               IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: '新建歌单',
+                onPressed: () => CreateFavDialog.show(context),
+              ),
+              IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () => PlaylistConfigSheet.show(context),
               ),
@@ -58,6 +64,11 @@ class PlaylistPage extends StatelessWidget {
           appBar: AppBar(
             title: const Text('歌单'),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: '新建歌单',
+                onPressed: () => CreateFavDialog.show(context),
+              ),
               IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () => PlaylistConfigSheet.show(context),

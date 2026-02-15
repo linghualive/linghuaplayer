@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/user/fav_folder_model.dart';
 import '../../data/repositories/user_repository.dart';
+import 'create_fav_dialog.dart';
 
 class FavPanel extends StatefulWidget {
   final int aid;
@@ -89,10 +90,22 @@ class _FavPanelState extends State<FavPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              '收藏到',
-              style: Theme.of(context).textTheme.titleMedium,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Text(
+                  '收藏到',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    CreateFavDialog.show(context, onCreated: _loadFolders);
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('新建'),
+                ),
+              ],
             ),
           ),
           if (_loading)

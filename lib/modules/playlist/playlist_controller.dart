@@ -118,4 +118,16 @@ class PlaylistController extends GetxController {
     _storage.playlistVisibleFolderIds = visibleIds;
     _applyVisibleConfig();
   }
+
+  Future<bool> createFolder(String title, {String intro = '', int privacy = 0}) async {
+    final ok = await _repo.addFavFolder(
+      title: title,
+      intro: intro,
+      privacy: privacy,
+    );
+    if (ok) {
+      await loadFolders();
+    }
+    return ok;
+  }
 }
