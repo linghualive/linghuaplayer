@@ -1,0 +1,21 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Flutter build dependencies (with retry for transient mirror errors)
+RUN apt-get update && \
+    apt-get install -y --fix-missing \
+    curl git unzip xz-utils zip \
+    clang cmake ninja-build pkg-config \
+    libgtk-3-dev libmpv-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Flutter SDK
+RUN git clone https://github.com/flutter/flutter.git /opt/flutter -b stable --depth 1
+ENV PATH="/opt/flutter/bin:/opt/flutter/bin/cache/dart-sdk/bin:${PATH}"
+
+# Pre-cache Flutter Linux desktop artifacts
+RUN flutter precache --linux
+RUN flutter config --enable-linux-desktop
+
+WORKDIR /app
