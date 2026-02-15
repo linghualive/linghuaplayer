@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../data/models/user/history_model.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../shared/utils/app_toast.dart';
 import '../player/player_controller.dart';
 
 class WatchHistoryController extends GetxController {
@@ -51,8 +52,7 @@ class WatchHistoryController extends GetxController {
     if (success) {
       videos.removeAt(index);
     } else {
-      Get.snackbar('Error', 'Failed to delete',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('Failed to delete');
     }
   }
 
@@ -61,8 +61,7 @@ class WatchHistoryController extends GetxController {
     if (success) {
       videos.clear();
     } else {
-      Get.snackbar('Error', 'Failed to clear',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('Failed to clear');
     }
   }
 

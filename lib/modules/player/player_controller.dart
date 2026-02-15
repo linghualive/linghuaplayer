@@ -19,6 +19,7 @@ import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/player_repository.dart';
 import '../../data/repositories/search_repository.dart';
+import '../../shared/utils/app_toast.dart';
 
 enum PlayMode { sequential, shuffle, repeatOne }
 
@@ -186,8 +187,7 @@ class PlayerController extends GetxController {
       }
     } catch (e) {
       log('Playback failed: $e');
-      Get.snackbar('错误', '播放失败: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('播放失败: $e');
     }
     isLoading.value = false;
     _fetchLyrics(video);
@@ -202,8 +202,7 @@ class PlayerController extends GetxController {
 
     final streams = await _playerRepo.getAudioStreams(video.bvid);
     if (streams.isEmpty) {
-      Get.snackbar('错误', '获取音频流失败',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('获取音频流失败');
       isLoading.value = false;
       return;
     }
@@ -398,8 +397,7 @@ class PlayerController extends GetxController {
   /// Search for a song on Bilibili by title+author and play the top result.
   Future<void> _fallbackToBilibili(SearchVideoModel neteaseVideo) async {
     final keyword = '${neteaseVideo.title} ${neteaseVideo.author}'.trim();
-    Get.snackbar('提示', '网易云链接不可用，正在从B站换源播放...',
-        snackPosition: SnackPosition.BOTTOM);
+    AppToast.show('网易云链接不可用，正在从B站换源播放...');
 
     final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
     if (result == null || result.results.isEmpty) {
@@ -455,8 +453,7 @@ class PlayerController extends GetxController {
     final item = queue[currentIndex.value];
 
     if (item.video.isNetease) {
-      Get.snackbar('提示', '网易云音乐暂不支持视频模式',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('网易云音乐暂不支持视频模式');
       return;
     }
     final currentPos = position.value;
@@ -514,13 +511,11 @@ class PlayerController extends GetxController {
               _mediaKitPlayer?.seek(currentPos);
             }
           } else {
-            Get.snackbar('提示', '该视频无画面资源',
-                snackPosition: SnackPosition.BOTTOM);
+            AppToast.show('该视频无画面资源');
           }
         } catch (e) {
           log('Failed to fetch video: $e');
-          Get.snackbar('错误', '获取视频失败',
-              snackPosition: SnackPosition.BOTTOM);
+          AppToast.error('获取视频失败');
         }
       }
     }
@@ -794,12 +789,10 @@ class PlayerController extends GetxController {
         try {
           await _playAudioOnly(video);
         } catch (e2) {
-          Get.snackbar('错误', '播放失败: $e2',
-              snackPosition: SnackPosition.BOTTOM);
+          AppToast.error('播放失败: $e2');
         }
       } else {
-        Get.snackbar('错误', '播放失败: $e',
-            snackPosition: SnackPosition.BOTTOM);
+        AppToast.error('播放失败: $e');
       }
     }
     isLoading.value = false;
@@ -889,11 +882,9 @@ class PlayerController extends GetxController {
       if (success) added++;
     }
     if (added > 0) {
-      Get.snackbar('提示', '已添加 $added 首到播放列表',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('已添加 $added 首到播放列表');
     } else {
-      Get.snackbar('提示', '所有歌曲已在播放列表中',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('所有歌曲已在播放列表中');
     }
   }
 
@@ -903,8 +894,7 @@ class PlayerController extends GetxController {
     final existingIndex =
         queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
     if (existingIndex >= 0) {
-      Get.snackbar('提示', '已在播放列表中',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('已在播放列表中');
       return;
     }
 
@@ -921,8 +911,7 @@ class PlayerController extends GetxController {
           // Fallback to Bilibili
           final fallback = await _searchBilibiliFallback(video);
           if (fallback != null) {
-            Get.snackbar('提示', '网易云链接不可用，已从B站换源',
-                snackPosition: SnackPosition.BOTTOM);
+            AppToast.show('网易云链接不可用，已从B站换源');
             await addToQueue(fallback);
             return;
           }
@@ -963,8 +952,7 @@ class PlayerController extends GetxController {
         }
       }
 
-      Get.snackbar('提示', '已添加到播放列表',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('已添加到播放列表');
 
       // If nothing is currently playing, start playback
       if (!hasCurrentTrack) {
@@ -976,8 +964,7 @@ class PlayerController extends GetxController {
       }
     } catch (e) {
       log('Add to queue failed: $e');
-      Get.snackbar('错误', '添加失败: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('添加失败: $e');
     }
   }
 }

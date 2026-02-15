@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 import '../../data/repositories/auth_repository.dart';
+import '../../shared/utils/app_toast.dart';
 import '../home/home_controller.dart';
 
 /// A general-purpose WebView page.
@@ -84,8 +85,7 @@ class _WebviewPageState extends State<WebviewPage> {
     }
 
     Get.back();
-    Get.snackbar('成功', success ? '登录成功' : '登录成功，但获取用户信息失败',
-        snackPosition: SnackPosition.BOTTOM);
+    AppToast.success(success ? '登录成功' : '登录成功，但获取用户信息失败');
   }
 
   Future<void> _manualRefreshLogin() async {
@@ -96,10 +96,9 @@ class _WebviewPageState extends State<WebviewPage> {
         Get.find<HomeController>().refreshLoginStatus();
       }
       Get.back();
-      Get.snackbar('成功', '登录成功', snackPosition: SnackPosition.BOTTOM);
+      AppToast.success('登录成功');
     } else {
-      Get.snackbar('提示', '暂未检测到登录状态',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('暂未检测到登录状态');
     }
   }
 

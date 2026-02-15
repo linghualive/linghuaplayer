@@ -14,6 +14,7 @@ import '../../data/repositories/netease_repository.dart';
 import '../../modules/home/home_controller.dart';
 import '../../modules/music_discovery/music_discovery_controller.dart';
 import '../../modules/playlist/playlist_controller.dart';
+import '../../shared/utils/app_toast.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
   late final TabController bilibiliTabController;
@@ -222,15 +223,10 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
         Get.find<MusicDiscoveryController>().loadAll();
       }
       Get.back();
-      Get.snackbar(
-        '成功',
-        userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      AppToast.success(userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败');
     } catch (e) {
       log('NetEase QR: _onNeteaseLoginSuccess error: $e');
-      Get.snackbar('错误', '登录后处理失败: $e',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('登录后处理失败: $e');
     }
   }
 
@@ -245,8 +241,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     final captchaData = await _authRepo.getCaptcha();
     if (captchaData == null) {
       isLoading.value = false;
-      Get.snackbar('错误', '获取验证码失败',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('获取验证码失败');
       return;
     }
 
@@ -316,15 +311,14 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     } else {
       msg = '验证失败 ($code)';
     }
-    Get.snackbar('验证错误', msg, snackPosition: SnackPosition.BOTTOM);
+    AppToast.error(msg);
   }
 
   // ── SMS Login ───────────────────────────────────────
 
   Future<void> sendSmsCode() async {
     if (phoneController.text.isEmpty) {
-      Get.snackbar('错误', '请输入手机号',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('请输入手机号');
       return;
     }
 
@@ -338,11 +332,9 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       if (key != null) {
         captchaKey.value = key;
         _startSmsCountdown();
-        Get.snackbar('成功', '验证码已发送',
-            snackPosition: SnackPosition.BOTTOM);
+        AppToast.success('验证码已发送');
       } else {
-        Get.snackbar('错误', '验证码发送失败',
-            snackPosition: SnackPosition.BOTTOM);
+        AppToast.error('验证码发送失败');
       }
     });
   }
@@ -370,8 +362,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     if (success) {
       _onLoginSuccess();
     } else {
-      Get.snackbar('错误', '短信登录失败',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('短信登录失败');
     }
   }
 
@@ -379,8 +370,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
   Future<void> loginByPassword() async {
     if (usernameController.text.isEmpty || passwordController.text.isEmpty) {
-      Get.snackbar('错误', '请填写所有字段',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('请填写所有字段');
       return;
     }
 
@@ -405,8 +395,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
           'type': 'login',
         });
       } else {
-        Get.snackbar('错误', result.message ?? '密码登录失败',
-            snackPosition: SnackPosition.BOTTOM);
+        AppToast.error(result.message ?? '密码登录失败');
       }
     });
   }
@@ -422,7 +411,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       Get.find<PlaylistController>().loadFolders();
     }
     Get.back();
-    Get.snackbar('成功', success ? '登录成功' : '登录成功，但获取用户信息失败',
-        snackPosition: SnackPosition.BOTTOM);
+    AppToast.success(success ? '登录成功' : '登录成功，但获取用户信息失败');
   }
 }

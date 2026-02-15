@@ -4,6 +4,7 @@ import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/user/sub_folder_model.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../shared/utils/app_toast.dart';
 
 class SubscriptionsController extends GetxController {
   final _repo = Get.find<UserRepository>();
@@ -55,9 +56,9 @@ class SubscriptionsController extends GetxController {
     final success = await _repo.cancelSub(folder.id);
     if (success) {
       folders.remove(folder);
-      Get.snackbar('提示', '已取消订阅', snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('已取消订阅');
     } else {
-      Get.snackbar('错误', '取消订阅失败', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('取消订阅失败');
     }
   }
 }

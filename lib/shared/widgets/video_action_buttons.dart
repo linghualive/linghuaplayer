@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../modules/player/player_controller.dart';
+import '../utils/app_toast.dart';
 import 'fav_panel.dart';
 
 /// Reusable action buttons for adding a video to queue and opening the
@@ -37,8 +38,7 @@ class VideoActionColumn extends StatelessWidget {
             onPressed: () {
               final storage = Get.find<StorageService>();
               if (!storage.isLoggedIn) {
-                Get.snackbar('提示', '请先登录哔哩哔哩',
-                    snackPosition: SnackPosition.BOTTOM);
+                AppToast.show('请先登录哔哩哔哩');
                 return;
               }
               FavPanel.show(context, video.id);
@@ -78,8 +78,7 @@ class VideoActionRow extends StatelessWidget {
             onPressed: () {
               final storage = Get.find<StorageService>();
               if (!storage.isLoggedIn) {
-                Get.snackbar('提示', '请先登录哔哩哔哩',
-                    snackPosition: SnackPosition.BOTTOM);
+                AppToast.show('请先登录哔哩哔哩');
                 return;
               }
               FavPanel.show(context, video.id);

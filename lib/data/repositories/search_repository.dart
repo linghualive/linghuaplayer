@@ -61,10 +61,20 @@ class SearchRepository {
       'keyword': keyword,
       'page': page,
       'order': order,
+      'platform': 'web',
+      'web_location': 333.999,
     });
 
     final res = await _provider.searchByType(params);
-    if (res.data['code'] == 0 && res.data['data'] != null) {
+    // Check HTTP status first (412 from server-level risk control)
+    if (res.statusCode == 412) {
+      throw Exception('B站搜索触发风控，请稍后再试');
+    }
+    final code = res.data['code'];
+    if (code == -412) {
+      throw Exception('B站搜索触发风控，请稍后再试');
+    }
+    if (code == 0 && res.data['data'] != null) {
       final result = SearchResultModel.fromJson(
           res.data['data'] as Map<String, dynamic>);
 

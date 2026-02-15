@@ -124,7 +124,9 @@ class NeteaseHttpClient {
     await cookieJar.deleteAll();
   }
 
-  /// Send a WEAPI-encrypted POST request.
+  static const int _maxRetries = 2;
+
+  /// Send a WEAPI-encrypted POST request with automatic retry.
   ///
   /// [apiPath] should start with `/api/`, e.g. `/api/search/get`.
   /// It will be transformed to `/weapi/...` automatically.
@@ -135,28 +137,50 @@ class NeteaseHttpClient {
     final weapiPath = apiPath.replaceFirst('/api/', '/weapi/');
     data['csrf_token'] = await getCsrfToken();
 
-    final encrypted = NeteaseCrypto.weapi(data);
-    final ip = NeteaseCrypto.generateRandomCNIP();
+    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
+      try {
+        final encrypted = NeteaseCrypto.weapi(data);
+        // Use a fresh random IP for each attempt
+        final ip = NeteaseCrypto.generateRandomCNIP();
 
-    final res = await _weapiDio.post<String>(
-      weapiPath,
-      data: 'params=${Uri.encodeComponent(encrypted['params']!)}'
-          '&encSecKey=${Uri.encodeComponent(encrypted['encSecKey']!)}',
-      options: Options(
-        headers: {
-          'X-Real-IP': ip,
-          'X-Forwarded-For': ip,
-        },
-      ),
-    );
+        final res = await _weapiDio.post<String>(
+          weapiPath,
+          data: 'params=${Uri.encodeComponent(encrypted['params']!)}'
+              '&encSecKey=${Uri.encodeComponent(encrypted['encSecKey']!)}',
+          options: Options(
+            headers: {
+              'X-Real-IP': ip,
+              'X-Forwarded-For': ip,
+            },
+          ),
+        );
 
-    final parsed = jsonDecode(res.data!) as Map<String, dynamic>;
-    return Response<Map<String, dynamic>>(
-      data: parsed,
-      statusCode: res.statusCode,
-      requestOptions: res.requestOptions,
-      headers: res.headers,
-    );
+        final parsed = jsonDecode(res.data!) as Map<String, dynamic>;
+        final code = parsed['code'];
+
+        // Retry on risk control codes
+        if ((code == 405 || code == 301 || code == -462) &&
+            attempt < _maxRetries) {
+          log('NetEase WEAPI risk control (code=$code), retrying...');
+          await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+          continue;
+        }
+
+        return Response<Map<String, dynamic>>(
+          data: parsed,
+          statusCode: res.statusCode,
+          requestOptions: res.requestOptions,
+          headers: res.headers,
+        );
+      } on DioException catch (e) {
+        if (attempt >= _maxRetries) rethrow;
+        log('NetEase WEAPI request failed (attempt $attempt): $e');
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    }
+
+    // Should not reach here, but satisfy the compiler
+    throw Exception('NetEase WEAPI request failed after $_maxRetries retries');
   }
 
   /// Build the EAPI header map matching the api-enhanced reference implementation.
@@ -192,7 +216,7 @@ class NeteaseHttpClient {
         .join('; ');
   }
 
-  /// Send an EAPI-encrypted POST request.
+  /// Send an EAPI-encrypted POST request with automatic retry.
   ///
   /// [apiPath] should start with `/api/`, e.g. `/api/song/enhance/player/url/v1`.
   /// It will be transformed to `/eapi/...` for the URL.
@@ -202,34 +226,56 @@ class NeteaseHttpClient {
   ) async {
     final eapiPath = apiPath.replaceFirst('/api/', '/eapi/');
 
-    final header = await _buildEapiHeader();
+    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
+      try {
+        // Rebuild header each attempt for fresh requestId/timestamp
+        final header = await _buildEapiHeader();
 
-    // EAPI requires header and e_r fields in the encrypted data
-    data['header'] = header;
-    data['e_r'] = false;
+        // EAPI requires header and e_r fields in the encrypted data
+        final reqData = Map<String, dynamic>.from(data);
+        reqData['header'] = header;
+        reqData['e_r'] = false;
 
-    final encrypted = NeteaseCrypto.eapi(apiPath, data);
-    final ip = NeteaseCrypto.generateRandomCNIP();
+        final encrypted = NeteaseCrypto.eapi(apiPath, reqData);
+        final ip = NeteaseCrypto.generateRandomCNIP();
 
-    final res = await _eapiDio.post<String>(
-      eapiPath,
-      data: 'params=${Uri.encodeComponent(encrypted['params']!)}',
-      options: Options(
-        headers: {
-          'Cookie': _buildEapiCookieString(header),
-          'X-Real-IP': ip,
-          'X-Forwarded-For': ip,
-        },
-      ),
-    );
+        final res = await _eapiDio.post<String>(
+          eapiPath,
+          data: 'params=${Uri.encodeComponent(encrypted['params']!)}',
+          options: Options(
+            headers: {
+              'Cookie': _buildEapiCookieString(header),
+              'X-Real-IP': ip,
+              'X-Forwarded-For': ip,
+            },
+          ),
+        );
 
-    final parsed = jsonDecode(res.data!) as Map<String, dynamic>;
-    return Response<Map<String, dynamic>>(
-      data: parsed,
-      statusCode: res.statusCode,
-      requestOptions: res.requestOptions,
-      headers: res.headers,
-    );
+        final parsed = jsonDecode(res.data!) as Map<String, dynamic>;
+        final code = parsed['code'];
+
+        // Retry on risk control codes
+        if ((code == 405 || code == 301 || code == -462) &&
+            attempt < _maxRetries) {
+          log('NetEase EAPI risk control (code=$code), retrying...');
+          await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+          continue;
+        }
+
+        return Response<Map<String, dynamic>>(
+          data: parsed,
+          statusCode: res.statusCode,
+          requestOptions: res.requestOptions,
+          headers: res.headers,
+        );
+      } on DioException catch (e) {
+        if (attempt >= _maxRetries) rethrow;
+        log('NetEase EAPI request failed (attempt $attempt): $e');
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    }
+
+    throw Exception('NetEase EAPI request failed after $_maxRetries retries');
   }
 
   /// Sync auth cookies (MUSIC_U etc.) from interface.music.163.com to music.163.com.

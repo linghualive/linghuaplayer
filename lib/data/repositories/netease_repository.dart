@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../../core/http/netease_http_client.dart';
 import '../models/login/netease_qrcode_model.dart';
 import '../models/login/netease_user_info_model.dart';
+import '../models/search/hot_search_model.dart';
 import '../models/search/search_video_model.dart';
 import '../providers/netease_provider.dart';
 
@@ -179,6 +180,40 @@ class NeteasePlaylistSearchResult {
 
 class NeteaseRepository {
   final _provider = Get.find<NeteaseProvider>();
+
+  /// Get NetEase hot search keywords
+  Future<List<HotSearchModel>> getHotSearch() async {
+    try {
+      final res = await _provider.getHotSearchDetail();
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      List<dynamic> list = [];
+      if (data['data'] is Map) {
+        list = (data['data'] as Map<String, dynamic>)['list'] as List<dynamic>? ?? [];
+      } else if (data['data'] is List) {
+        list = data['data'] as List<dynamic>;
+      } else if (data['result'] is Map) {
+        list = (data['result'] as Map<String, dynamic>)['hots'] as List<dynamic>? ?? [];
+      }
+
+      return list.asMap().entries.map((entry) {
+        final item = entry.value as Map<String, dynamic>;
+        final keyword = item['searchWord'] as String?
+            ?? item['first'] as String?
+            ?? '';
+        return HotSearchModel(
+          keyword: keyword,
+          showName: keyword,
+          icon: item['iconUrl'] as String?,
+          position: entry.key,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase hot search error: $e');
+      return [];
+    }
+  }
 
   static String _formatDuration(int milliseconds) {
     final totalSeconds = milliseconds ~/ 1000;

@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:get/get.dart';
 
+import '../../shared/utils/app_toast.dart';
 import 'app_exception.dart';
 
 class ErrorHandler {
@@ -35,10 +35,6 @@ class ErrorHandler {
 
   static void showError(dynamic error) {
     final exception = handle(error);
-    Get.snackbar(
-      'Error',
-      exception.message,
-      snackPosition: SnackPosition.BOTTOM,
-    );
+    AppToast.error(exception.message);
   }
 }

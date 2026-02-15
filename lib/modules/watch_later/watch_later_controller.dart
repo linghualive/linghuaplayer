@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 
 import '../../data/models/user/watch_later_model.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../shared/utils/app_toast.dart';
 import '../player/player_controller.dart';
 
 class WatchLaterController extends GetxController {
@@ -29,7 +30,7 @@ class WatchLaterController extends GetxController {
     if (success) {
       videos.removeAt(index);
     } else {
-      Get.snackbar('错误', '删除失败', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('删除失败');
     }
   }
 
@@ -38,7 +39,7 @@ class WatchLaterController extends GetxController {
     if (success) {
       videos.clear();
     } else {
-      Get.snackbar('错误', '清空失败', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('清空失败');
     }
   }
 

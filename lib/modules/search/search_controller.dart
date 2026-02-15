@@ -10,6 +10,7 @@ import '../../data/models/search/search_suggest_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/search_repository.dart';
+import '../../shared/utils/app_toast.dart';
 import '../../shared/utils/debouncer.dart';
 
 enum SearchState { hot, suggesting, results, empty }
@@ -79,7 +80,7 @@ class SearchController extends GetxController {
   Future<void> loadHotSearch() async {
     isLoading.value = true;
     try {
-      final list = await _searchRepo.getHotSearch();
+      final list = await _neteaseRepo.getHotSearch();
       hotSearchList.assignAll(list);
     } catch (_) {}
     isLoading.value = false;
@@ -150,7 +151,7 @@ class SearchController extends GetxController {
     } catch (e) {
       log('Search error: $e');
       state.value = SearchState.empty;
-      Get.snackbar('搜索失败', '$e', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('搜索失败: $e');
     }
     isLoading.value = false;
     _isSearching = false;

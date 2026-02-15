@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/storage/storage_service.dart';
+import '../../shared/utils/app_toast.dart';
 import '../../shared/utils/duration_formatter.dart';
 import '../../shared/widgets/fav_panel.dart';
 import '../player/player_controller.dart';
@@ -160,9 +161,7 @@ class MvListPage extends StatelessWidget {
                                             final storage =
                                                 Get.find<StorageService>();
                                             if (!storage.isLoggedIn) {
-                                              Get.snackbar('提示', '请先登录哔哩哔哩',
-                                                  snackPosition:
-                                                      SnackPosition.BOTTOM);
+                                              AppToast.show('请先登录哔哩哔哩');
                                               return;
                                             }
                                             FavPanel.show(context, mv.id);

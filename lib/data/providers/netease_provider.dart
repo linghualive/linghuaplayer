@@ -9,6 +9,11 @@ import '../../core/http/netease_http_client.dart';
 class NeteaseProvider {
   final _client = NeteaseHttpClient.instance;
 
+  /// Get hot search list (detailed)
+  Future<Response> getHotSearchDetail() {
+    return _client.weapiRequest('/api/hotsearchlist/get', {});
+  }
+
   Future<Response> search(String keywords,
       {int type = 1, int limit = 30, int offset = 0}) {
     return _client.weapiRequest('/api/search/get', {

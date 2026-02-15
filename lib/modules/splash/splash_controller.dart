@@ -21,9 +21,10 @@ class SplashController extends GetxController {
 
   Future<void> _initialize() async {
     try {
-      // 1. Get/activate BUVID
+      // 1. Get/activate BUVID and ensure cross-domain cookies
       await BuvidUtil.getBuvid();
       await BuvidUtil.activate();
+      await HttpClient.instance.ensureVcDomainCookies();
 
       // 2. Restore Bilibili auth state if logged in
       if (_storage.isLoggedIn && _storage.userMid != null) {

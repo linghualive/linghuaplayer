@@ -2,10 +2,12 @@ import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../shared/utils/app_toast.dart';
 import '../storage/storage_service.dart';
 
 class UpdateInfo {
@@ -100,13 +102,11 @@ class UpdateService {
   static Future<void> manualCheck() async {
     final info = await checkForUpdate();
     if (info == null) {
-      Get.snackbar('检查更新', '无法连接到服务器',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('无法连接到服务器');
       return;
     }
     if (!info.hasUpdate) {
-      Get.snackbar('检查更新', '当前已是最新版本 (${info.currentVersion})',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('当前已是最新版本 (${info.currentVersion})');
       return;
     }
     _showUpdateDialog(info);
@@ -134,10 +134,18 @@ class UpdateService {
               const SizedBox(height: 4),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 300),
-                child: SingleChildScrollView(
-                  child: Text(
-                    info.releaseNotes,
-                    style: const TextStyle(fontSize: 13),
+                child: Scrollbar(
+                  child: SingleChildScrollView(
+                    child: MarkdownBody(
+                      data: info.releaseNotes,
+                      selectable: true,
+                      onTapLink: (text, href, title) {
+                        if (href != null) {
+                          launchUrl(Uri.parse(href),
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                    ),
                   ),
                 ),
               ),

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/user/fav_folder_model.dart';
 import '../../data/repositories/user_repository.dart';
+import '../utils/app_toast.dart';
 import 'create_fav_dialog.dart';
 
 class FavPanel extends StatefulWidget {
@@ -77,9 +78,9 @@ class _FavPanelState extends State<FavPanel> {
     );
     if (mounted) Navigator.pop(context);
     if (ok) {
-      Get.snackbar('提示', '收藏成功', snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('收藏成功');
     } else {
-      Get.snackbar('错误', '操作失败', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('操作失败');
     }
   }
 

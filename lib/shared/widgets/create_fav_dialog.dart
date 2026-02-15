@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../data/repositories/user_repository.dart';
 import '../../modules/playlist/playlist_controller.dart';
+import '../utils/app_toast.dart';
 
 class CreateFavDialog extends StatefulWidget {
   /// Optional callback after folder is created successfully.
@@ -38,8 +39,7 @@ class _CreateFavDialogState extends State<CreateFavDialog> {
   Future<void> _onCreate() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
-      Get.snackbar('提示', '请输入收藏夹名称',
-          snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('请输入收藏夹名称');
       return;
     }
 
@@ -56,7 +56,7 @@ class _CreateFavDialogState extends State<CreateFavDialog> {
 
     if (ok) {
       Navigator.pop(context);
-      Get.snackbar('提示', '创建成功', snackPosition: SnackPosition.BOTTOM);
+      AppToast.show('创建成功');
 
       // Refresh playlist page if it's registered
       if (Get.isRegistered<PlaylistController>()) {
@@ -66,7 +66,7 @@ class _CreateFavDialogState extends State<CreateFavDialog> {
       widget.onCreated?.call();
     } else {
       setState(() => _submitting = false);
-      Get.snackbar('错误', '创建失败', snackPosition: SnackPosition.BOTTOM);
+      AppToast.error('创建失败');
     }
   }
 

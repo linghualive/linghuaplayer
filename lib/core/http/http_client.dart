@@ -40,7 +40,7 @@ class HttpClient {
       validateStatus: (status) {
         if (status == null) return false;
         return status >= 200 && status < 300 ||
-            [302, 304, 307, 400, 401, 403, 404].contains(status);
+            [302, 304, 307, 400, 401, 403, 404, 405, 409, 412, 500, 503, 504, 509].contains(status);
       },
     ));
 
@@ -50,6 +50,12 @@ class HttpClient {
       ApiInterceptor(),
       CookieManager(cookieJar),
     ]);
+
+    // Always set these headers regardless of login status
+    // to reduce risk control (412) from Bilibili
+    dio.options.headers['env'] = 'prod';
+    dio.options.headers['app-key'] = 'android64';
+    dio.options.headers['x-bili-aurora-zone'] = 'sh001';
   }
 
   Future<String> getCsrf() async {
@@ -89,8 +95,18 @@ class HttpClient {
   void clearAuthHeaders() {
     dio.options.headers.remove('x-bili-mid');
     dio.options.headers.remove('x-bili-aurora-eid');
-    dio.options.headers.remove('env');
-    dio.options.headers.remove('app-key');
-    dio.options.headers.remove('x-bili-aurora-zone');
+    // Keep env, app-key, x-bili-aurora-zone as they help prevent 412 risk control
+  }
+
+  /// Ensure cookies exist for api.vc.bilibili.com.
+  /// Pilipala does this to maintain session across all Bilibili domains.
+  Future<void> ensureVcDomainCookies() async {
+    try {
+      final vcCookies = await cookieJar
+          .loadForRequest(Uri.parse(ApiConstants.tUrl));
+      if (vcCookies.isEmpty) {
+        await dio.get(ApiConstants.tUrl);
+      }
+    } catch (_) {}
   }
 }
