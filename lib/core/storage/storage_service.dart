@@ -105,6 +105,12 @@ class StorageService extends GetxService {
   set playlistVisibleFolderIds(List<int> value) =>
       _box.write('playlist_visible_folder_ids', value);
 
+  // Update
+  String? get skippedUpdateVersion =>
+      _box.read<String>('skipped_update_version');
+  set skippedUpdateVersion(String? value) =>
+      _box.write('skipped_update_version', value);
+
   // Clear all auth data
   void clearAuth() {
     _box.remove('user_info');

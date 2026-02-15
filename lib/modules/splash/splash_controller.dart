@@ -4,6 +4,7 @@ import '../../app/routes/app_routes.dart';
 import '../../core/crypto/aurora_eid.dart';
 import '../../core/crypto/buvid.dart';
 import '../../core/http/http_client.dart';
+import '../../core/services/update_service.dart';
 import '../../core/storage/storage_service.dart';
 
 class SplashController extends GetxController {
@@ -37,5 +38,10 @@ class SplashController extends GetxController {
     // Navigate to home
     await Future.delayed(const Duration(milliseconds: 500));
     Get.offAllNamed(AppRoutes.home);
+
+    // Check for updates after home loads (non-blocking)
+    Future.delayed(const Duration(seconds: 2), () {
+      UpdateService.checkAndNotify();
+    });
   }
 }

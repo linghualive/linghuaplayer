@@ -120,38 +120,6 @@ class SettingsPage extends GetView<SettingsController> {
 
           const Divider(),
 
-          // ── 主页设置 ──
-          _buildSectionHeader(theme, '主页设置'),
-
-          // Grid Columns
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: Text(
-              '推荐列数',
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: theme.colorScheme.primary,
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Obx(() => Row(
-                  children: [1, 2, 3].map((cols) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text('$cols'),
-                        selected: controller.gridColumns.value == cols,
-                        onSelected: (_) => controller.setGridColumns(cols),
-                      ),
-                    );
-                  }).toList(),
-                )),
-          ),
-          const SizedBox(height: 16),
-
-          const Divider(),
-
           // ── 播放设置 ──
           _buildSectionHeader(theme, '播放设置'),
 
@@ -161,6 +129,29 @@ class SettingsPage extends GetView<SettingsController> {
                 subtitle: const Text('开启后默认播放视频画面，可在播放页切换'),
                 value: controller.enableVideo.value,
                 onChanged: (v) => controller.setEnableVideo(v),
+              )),
+
+          const Divider(),
+
+          // ── 关于 ──
+          _buildSectionHeader(theme, '关于'),
+
+          Obx(() => ListTile(
+                leading: const Icon(Icons.system_update),
+                title: const Text('检查更新'),
+                subtitle: controller.appVersion.value.isNotEmpty
+                    ? Text('当前版本: ${controller.appVersion.value}')
+                    : null,
+                trailing: Obx(() => controller.isCheckingUpdate.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.chevron_right)),
+                onTap: controller.isCheckingUpdate.value
+                    ? null
+                    : controller.checkForUpdate,
               )),
 
           const SizedBox(height: 32),
