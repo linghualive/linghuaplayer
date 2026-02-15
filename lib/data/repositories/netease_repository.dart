@@ -193,8 +193,16 @@ class NeteaseRepository {
     try {
       final res = await _provider.getQrKey();
       final data = res.data;
-      if (data['code'] != 200) return null;
-      return data['unikey'] as String?;
+      log('NetEase getQrKey response: $data');
+      if (data['code'] != 200) {
+        log('NetEase getQrKey failed: code=${data['code']}');
+        return null;
+      }
+      // unikey may be at top level or nested in data
+      final unikey = data['unikey'] as String? ??
+          (data['data'] is Map ? data['data']['unikey'] as String? : null);
+      log('NetEase getQrKey: unikey=$unikey');
+      return unikey;
     } catch (e) {
       log('NetEase getQrKey error: $e');
       return null;
@@ -209,6 +217,7 @@ class NeteaseRepository {
     try {
       final res = await _provider.pollQrLogin(key);
       final data = res.data as Map<String, dynamic>;
+      log('NetEase pollQrLogin raw response: code=${data['code']}, keys=${data.keys.toList()}');
       return NeteaseQrcodePollResult.fromJson(data);
     } catch (e) {
       log('NetEase pollQrLogin error: $e');

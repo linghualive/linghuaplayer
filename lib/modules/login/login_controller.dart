@@ -76,6 +76,11 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   }
 
   void _onTabChanged() {
+    // TabController.addListener fires twice per tab switch
+    // (once when indexIsChanging=true, once when false).
+    // Only act on the final state to avoid generating duplicate QR codes.
+    if (tabController.indexIsChanging) return;
+
     if (tabController.index == 0) {
       _generateQrcode();
     } else {
@@ -137,7 +142,9 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
   Future<void> _generateNeteaseQrcode() async {
     neteaseQrStatus.value = '正在加载二维码...';
+    log('NetEase QR: generating unikey...');
     final unikey = await _neteaseRepo.getQrKey();
+    log('NetEase QR: unikey=${unikey != null ? '${unikey.substring(0, unikey.length > 20 ? 20 : unikey.length)}...' : 'null'}');
     if (unikey != null) {
       neteaseQrKey.value = unikey;
       neteaseQrUrl.value = _neteaseRepo.buildQrUrl(unikey);
@@ -162,6 +169,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       if (neteaseQrKey.value.isEmpty) return;
 
       final result = await _neteaseRepo.pollQrLogin(neteaseQrKey.value);
+      log('NetEase QR poll: code=${result.code}, msg=${result.message}');
       if (result.isSuccess) {
         timer.cancel();
         neteaseQrStatus.value = '登录成功！';
@@ -180,27 +188,35 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   }
 
   Future<void> _onNeteaseLoginSuccess() async {
-    final userInfo = await _neteaseRepo.getAccountInfo();
-    if (userInfo != null) {
-      _storage.isNeteaseLoggedIn = true;
-      _storage.neteaseUserId = userInfo.userId.toString();
-      _storage.setNeteaseUserInfo(userInfo.toJson());
-    } else {
-      _storage.isNeteaseLoggedIn = true;
-    }
+    try {
+      log('NetEase QR: login success, fetching account info...');
+      final userInfo = await _neteaseRepo.getAccountInfo();
+      log('NetEase QR: account info=${userInfo != null ? 'uid=${userInfo.userId}, name=${userInfo.nickname}' : 'null'}');
+      if (userInfo != null) {
+        _storage.isNeteaseLoggedIn = true;
+        _storage.neteaseUserId = userInfo.userId.toString();
+        _storage.setNeteaseUserInfo(userInfo.toJson());
+      } else {
+        _storage.isNeteaseLoggedIn = true;
+      }
 
-    if (Get.isRegistered<HomeController>()) {
-      Get.find<HomeController>().refreshLoginStatus();
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().refreshLoginStatus();
+      }
+      if (Get.isRegistered<MusicDiscoveryController>()) {
+        Get.find<MusicDiscoveryController>().loadAll();
+      }
+      Get.back();
+      Get.snackbar(
+        '成功',
+        userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      log('NetEase QR: _onNeteaseLoginSuccess error: $e');
+      Get.snackbar('错误', '登录后处理失败: $e',
+          snackPosition: SnackPosition.BOTTOM);
     }
-    if (Get.isRegistered<MusicDiscoveryController>()) {
-      Get.find<MusicDiscoveryController>().loadAll();
-    }
-    Get.back();
-    Get.snackbar(
-      '成功',
-      userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败',
-      snackPosition: SnackPosition.BOTTOM,
-    );
   }
 
   // ── GeeTest Captcha ──────────────────────────────────
