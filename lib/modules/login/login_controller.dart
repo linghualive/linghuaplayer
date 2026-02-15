@@ -63,7 +63,13 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     super.onInit();
     bilibiliTabController = TabController(length: 3, vsync: this);
     bilibiliTabController.addListener(_onBilibiliTabChanged);
-    _generateQrcode();
+
+    final args = Get.arguments;
+    if (args is Map && args['platform'] == 1) {
+      selectPlatform(1);
+    } else {
+      _generateQrcode();
+    }
   }
 
   @override
@@ -221,6 +227,9 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       }
       if (Get.isRegistered<MusicDiscoveryController>()) {
         Get.find<MusicDiscoveryController>().loadAll();
+      }
+      if (Get.isRegistered<PlaylistController>()) {
+        Get.find<PlaylistController>().loadNeteasePlaylists();
       }
       Get.back();
       AppToast.success(userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败');

@@ -1,13 +1,16 @@
 import 'package:get/get.dart';
 
 import '../../core/storage/storage_service.dart';
+import '../../data/models/search/search_video_model.dart';
 import '../../data/models/user/fav_folder_model.dart';
 import '../../data/models/user/fav_resource_model.dart';
+import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../player/player_controller.dart';
 
 class PlaylistController extends GetxController {
   final _repo = Get.find<UserRepository>();
+  final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();
 
   final folders = <FavFolderModel>[].obs;
@@ -20,10 +23,17 @@ class PlaylistController extends GetxController {
   final tabPage = <int, int>{}.obs;
   final tabLoading = <int, bool>{}.obs;
 
+  // Netease playlist state
+  final neteasePlaylists = <NeteasePlaylistBrief>[].obs;
+  final neteaseIsLoading = true.obs;
+  final neteasePlaylistTracks = <int, List<SearchVideoModel>>{}.obs;
+  final neteasePlaylistLoading = <int, bool>{}.obs;
+
   @override
   void onInit() {
     super.onInit();
     loadFolders();
+    loadNeteasePlaylists();
   }
 
   Future<void> loadFolders() async {
@@ -129,5 +139,52 @@ class PlaylistController extends GetxController {
       await loadFolders();
     }
     return ok;
+  }
+
+  // ── Netease Playlist Methods ──────────────────────────
+
+  Future<void> loadNeteasePlaylists() async {
+    neteaseIsLoading.value = true;
+    final uid = int.tryParse(_storage.neteaseUserId ?? '') ?? 0;
+    if (uid == 0) {
+      neteaseIsLoading.value = false;
+      return;
+    }
+    try {
+      final list = await _neteaseRepo.getUserPlaylists(uid);
+      neteasePlaylists.assignAll(list);
+    } catch (_) {}
+    neteaseIsLoading.value = false;
+  }
+
+  Future<void> loadTracksForPlaylist(int playlistId) async {
+    if (neteasePlaylistLoading[playlistId] == true) return;
+    neteasePlaylistLoading[playlistId] = true;
+    try {
+      final detail = await _neteaseRepo.getPlaylistDetail(playlistId);
+      if (detail != null) {
+        neteasePlaylistTracks[playlistId] = detail.tracks;
+      } else {
+        neteasePlaylistTracks[playlistId] = [];
+      }
+    } catch (_) {
+      neteasePlaylistTracks[playlistId] = [];
+    }
+    neteasePlaylistLoading[playlistId] = false;
+  }
+
+  void playNeteaseSong(SearchVideoModel song) {
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.playFromSearch(song);
+  }
+
+  Future<void> playAllNetease(int playlistId) async {
+    final tracks = neteasePlaylistTracks[playlistId];
+    if (tracks == null || tracks.isEmpty) return;
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.playFromSearch(tracks.first);
+    if (tracks.length > 1) {
+      playerCtrl.addAllToQueue(tracks.sublist(1));
+    }
   }
 }

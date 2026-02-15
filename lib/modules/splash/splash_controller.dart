@@ -2,7 +2,6 @@ import 'dart:developer';
 
 import 'package:get/get.dart';
 
-import '../../app/routes/app_routes.dart';
 import '../../core/crypto/aurora_eid.dart';
 import '../../core/crypto/buvid.dart';
 import '../../core/http/http_client.dart';
@@ -12,6 +11,7 @@ import '../../data/repositories/netease_repository.dart';
 
 class SplashController extends GetxController {
   final _storage = Get.find<StorageService>();
+  final isReady = false.obs;
 
   @override
   void onInit() {
@@ -44,9 +44,8 @@ class SplashController extends GetxController {
       // Non-fatal initialization errors
     }
 
-    // Navigate to home
-    await Future.delayed(const Duration(milliseconds: 500));
-    Get.offAllNamed(AppRoutes.home);
+    // Signal ready — page handles navigation with exit animation
+    isReady.value = true;
 
     // Check for updates after home loads (non-blocking)
     Future.delayed(const Duration(seconds: 2), () {
