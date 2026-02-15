@@ -14,6 +14,8 @@ import '../../shared/utils/debouncer.dart';
 
 enum SearchState { hot, suggesting, results, empty }
 
+enum NeteaseSearchType { song, artist, album, playlist }
+
 class SearchController extends GetxController {
   final _searchRepo = Get.find<SearchRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
@@ -30,7 +32,8 @@ class SearchController extends GetxController {
   final isLoadingMore = false.obs;
   final isLoading = false.obs;
   final currentKeyword = ''.obs;
-  final searchSource = MusicSource.bilibili.obs;
+  final searchSource = MusicSource.netease.obs;
+  final neteaseSearchType = NeteaseSearchType.song.obs;
   int _currentPage = 1;
   int _neteaseOffset = 0;
   bool _hasMore = true;
@@ -100,6 +103,15 @@ class SearchController extends GetxController {
     }
   }
 
+  void switchNeteaseSearchType(NeteaseSearchType type) {
+    if (neteaseSearchType.value == type) return;
+    neteaseSearchType.value = type;
+    if (currentKeyword.value.isNotEmpty &&
+        searchSource.value == MusicSource.netease) {
+      search(currentKeyword.value);
+    }
+  }
+
   Future<void> search(String keyword) async {
     if (keyword.trim().isEmpty) return;
 
@@ -122,18 +134,7 @@ class SearchController extends GetxController {
 
     try {
       if (searchSource.value == MusicSource.netease) {
-        final result = await _neteaseRepo.searchSongs(
-          keyword: currentKeyword.value,
-          limit: 30,
-          offset: 0,
-        );
-        if (result.songs.isNotEmpty) {
-          allResults.assignAll(result.songs);
-          _neteaseOffset = result.songs.length;
-          _hasMore = result.songs.length >= 30;
-        } else {
-          state.value = SearchState.empty;
-        }
+        await _searchNetease(currentKeyword.value, 0);
       } else {
         final result = await _searchRepo.searchVideos(
           keyword: currentKeyword.value,
@@ -155,24 +156,78 @@ class SearchController extends GetxController {
     _isSearching = false;
   }
 
+  Future<void> _searchNetease(String keyword, int offset) async {
+    switch (neteaseSearchType.value) {
+      case NeteaseSearchType.song:
+        final result = await _neteaseRepo.searchSongs(
+          keyword: keyword,
+          limit: 30,
+          offset: offset,
+        );
+        if (offset == 0) {
+          allResults.assignAll(result.songs);
+        } else {
+          allResults.addAll(result.songs);
+        }
+        _neteaseOffset = offset + result.songs.length;
+        _hasMore = result.songs.length >= 30;
+        if (allResults.isEmpty) state.value = SearchState.empty;
+        break;
+      case NeteaseSearchType.artist:
+        final result = await _neteaseRepo.searchArtists(
+          keyword: keyword,
+          limit: 30,
+          offset: offset,
+        );
+        if (offset == 0) {
+          allResults.assignAll(result.artists);
+        } else {
+          allResults.addAll(result.artists);
+        }
+        _neteaseOffset = offset + result.artists.length;
+        _hasMore = result.artists.length >= 30;
+        if (allResults.isEmpty) state.value = SearchState.empty;
+        break;
+      case NeteaseSearchType.album:
+        final result = await _neteaseRepo.searchAlbums(
+          keyword: keyword,
+          limit: 30,
+          offset: offset,
+        );
+        if (offset == 0) {
+          allResults.assignAll(result.albums);
+        } else {
+          allResults.addAll(result.albums);
+        }
+        _neteaseOffset = offset + result.albums.length;
+        _hasMore = result.albums.length >= 30;
+        if (allResults.isEmpty) state.value = SearchState.empty;
+        break;
+      case NeteaseSearchType.playlist:
+        final result = await _neteaseRepo.searchPlaylists(
+          keyword: keyword,
+          limit: 30,
+          offset: offset,
+        );
+        if (offset == 0) {
+          allResults.assignAll(result.playlists);
+        } else {
+          allResults.addAll(result.playlists);
+        }
+        _neteaseOffset = offset + result.playlists.length;
+        _hasMore = result.playlists.length >= 30;
+        if (allResults.isEmpty) state.value = SearchState.empty;
+        break;
+    }
+  }
+
   Future<void> loadMore() async {
     if (isLoadingMore.value || !_hasMore) return;
     isLoadingMore.value = true;
 
     try {
       if (searchSource.value == MusicSource.netease) {
-        final result = await _neteaseRepo.searchSongs(
-          keyword: currentKeyword.value,
-          limit: 30,
-          offset: _neteaseOffset,
-        );
-        if (result.songs.isNotEmpty) {
-          allResults.addAll(result.songs);
-          _neteaseOffset += result.songs.length;
-          _hasMore = result.songs.length >= 30;
-        } else {
-          _hasMore = false;
-        }
+        await _searchNetease(currentKeyword.value, _neteaseOffset);
       } else {
         _currentPage++;
         final result = await _searchRepo.searchVideos(

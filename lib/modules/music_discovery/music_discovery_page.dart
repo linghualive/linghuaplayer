@@ -61,7 +61,9 @@ class MusicDiscoveryPage extends StatelessWidget {
           onRefresh: controller.loadAll,
           child: ListView(
             children: [
-              // Daily Recommend Songs (NetEase login only)
+              // ── 网易云内容 ──────────────────────────────
+
+              // 每日推荐 (NetEase login only)
               if (controller.dailyRecommendSongs.isNotEmpty) ...[
                 const SectionHeader(title: '每日推荐'),
                 SizedBox(
@@ -125,9 +127,9 @@ class MusicDiscoveryPage extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
 
-              // Daily Recommend Playlists (NetEase login only)
+              // 每日推荐歌单 (NetEase login only)
               if (controller.dailyRecommendPlaylists.isNotEmpty) ...[
-                const SectionHeader(title: '推荐歌单'),
+                const SectionHeader(title: '每日推荐歌单'),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.builder(
@@ -158,92 +160,7 @@ class MusicDiscoveryPage extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
 
-              // Music Ranking Section
-              if (controller.rankSongs.isNotEmpty) ...[
-                Obx(() => SectionHeader(
-                      title: controller.rankTitle.value.isNotEmpty
-                          ? '音乐排行榜 · ${controller.rankTitle.value}'
-                          : '音乐排行榜',
-                      onViewAll: () =>
-                          Get.toNamed(AppRoutes.musicRanking),
-                    )),
-                SizedBox(
-                  height: 64,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.rankSongs.length,
-                    itemBuilder: (context, index) {
-                      final song = controller.rankSongs[index];
-                      return RankSongCard(
-                        song: song,
-                        onTap: () => controller.onRankSongTap(song),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // Hot Playlists Section
-              if (controller.hotPlaylists.isNotEmpty) ...[
-                SectionHeader(
-                  title: '热门歌单',
-                  onViewAll: () => Get.toNamed(AppRoutes.hotPlaylists),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount: controller.hotPlaylists.length,
-                    itemBuilder: (context, index) {
-                      final playlist = controller.hotPlaylists[index];
-                      return HotPlaylistCard(
-                        playlist: playlist,
-                        onTap: () => Get.toNamed(
-                          AppRoutes.audioPlaylistDetail,
-                          arguments: playlist,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // MV Section
-              if (controller.mvList.isNotEmpty) ...[
-                SectionHeader(
-                  title: '音乐视频',
-                  onViewAll: () => Get.toNamed(AppRoutes.mvList),
-                ),
-                SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.mvList.length,
-                    itemBuilder: (context, index) {
-                      final mv = controller.mvList[index];
-                      return MvCard(
-                        mv: mv,
-                        onTap: () => controller.onMvTap(mv),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // NetEase New Songs Section
+              // 新歌速递 (NetEase)
               if (controller.neteaseNewSongs.isNotEmpty) ...[
                 const SectionHeader(title: '新歌速递'),
                 SizedBox(
@@ -307,9 +224,64 @@ class MusicDiscoveryPage extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
 
-              // NetEase Recommend Playlists Section
+              // 网易云排行榜
+              if (controller.neteaseToplistPreview.isNotEmpty) ...[
+                SectionHeader(
+                  title: '网易云排行榜',
+                  onViewAll: () => Get.toNamed(AppRoutes.neteaseToplist),
+                ),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: controller.neteaseToplistPreview.length,
+                    itemBuilder: (context, index) {
+                      final toplist =
+                          controller.neteaseToplistPreview[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: () => Get.toNamed(
+                            AppRoutes.neteasePlaylistDetail,
+                            arguments: toplist.id,
+                          ),
+                          child: SizedBox(
+                            width: 80,
+                            child: Column(
+                              children: [
+                                CachedImage(
+                                  imageUrl: toplist.coverUrl,
+                                  width: 60,
+                                  height: 60,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  toplist.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodySmall,
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 推荐歌单 (NetEase)
               if (controller.neteaseRecommendPlaylists.isNotEmpty) ...[
-                const SectionHeader(title: '推荐歌单'),
+                SectionHeader(
+                  title: '推荐歌单',
+                  onViewAll: () =>
+                      Get.toNamed(AppRoutes.neteaseHotPlaylists),
+                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.builder(
@@ -333,6 +305,157 @@ class MusicDiscoveryPage extends StatelessWidget {
                           AppRoutes.neteasePlaylistDetail,
                           arguments: playlist,
                         ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ── B站内容 ───────────────────────────────
+
+              // 音乐排行榜 (B站)
+              if (controller.rankSongs.isNotEmpty) ...[
+                Obx(() => SectionHeader(
+                      title: controller.rankTitle.value.isNotEmpty
+                          ? '音乐排行榜 · ${controller.rankTitle.value}'
+                          : '音乐排行榜',
+                      onViewAll: () =>
+                          Get.toNamed(AppRoutes.musicRanking),
+                    )),
+                SizedBox(
+                  height: 64,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: controller.rankSongs.length,
+                    itemBuilder: (context, index) {
+                      final song = controller.rankSongs[index];
+                      return RankSongCard(
+                        song: song,
+                        onTap: () => controller.onRankSongTap(song),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // B站音乐热榜
+              if (controller.biliMusicRanking.isNotEmpty) ...[
+                const SectionHeader(title: 'B站音乐热榜'),
+                SizedBox(
+                  height: 72,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: controller.biliMusicRanking.length,
+                    itemBuilder: (context, index) {
+                      final video = controller.biliMusicRanking[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: () =>
+                              controller.onBiliMusicRankingTap(video),
+                          child: SizedBox(
+                            width: 200,
+                            child: Row(
+                              children: [
+                                CachedImage(
+                                  imageUrl: video.pic,
+                                  width: 56,
+                                  height: 56,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        video.title,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodyMedium,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        video.author,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                          color: theme.colorScheme.outline,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 热门歌单 (B站)
+              if (controller.hotPlaylists.isNotEmpty) ...[
+                SectionHeader(
+                  title: '热门歌单',
+                  onViewAll: () => Get.toNamed(AppRoutes.hotPlaylists),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 0.75,
+                    ),
+                    itemCount: controller.hotPlaylists.length,
+                    itemBuilder: (context, index) {
+                      final playlist = controller.hotPlaylists[index];
+                      return HotPlaylistCard(
+                        playlist: playlist,
+                        onTap: () => Get.toNamed(
+                          AppRoutes.audioPlaylistDetail,
+                          arguments: playlist,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 音乐视频 (B站)
+              if (controller.mvList.isNotEmpty) ...[
+                SectionHeader(
+                  title: '音乐视频',
+                  onViewAll: () => Get.toNamed(AppRoutes.mvList),
+                ),
+                SizedBox(
+                  height: 160,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: controller.mvList.length,
+                    itemBuilder: (context, index) {
+                      final mv = controller.mvList[index];
+                      return MvCard(
+                        mv: mv,
+                        onTap: () => controller.onMvTap(mv),
                       );
                     },
                   ),

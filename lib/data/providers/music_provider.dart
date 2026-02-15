@@ -78,4 +78,12 @@ class MusicProvider {
       queryParameters: {'pn': pn, 'ps': ps, 'order': order},
     );
   }
+
+  /// Get partition ranking (e.g. music zone rid=3)
+  Future<Response> getPartitionRanking(Map<String, dynamic> params) {
+    return _dio.get(
+      ApiConstants.partitionRanking,
+      queryParameters: params,
+    );
+  }
 }

@@ -53,6 +53,130 @@ class NeteasePlaylistDetail {
   });
 }
 
+class NeteaseArtistBrief {
+  final int id;
+  final String name;
+  final String picUrl;
+  final int musicSize;
+  final int albumSize;
+
+  NeteaseArtistBrief({
+    required this.id,
+    required this.name,
+    required this.picUrl,
+    required this.musicSize,
+    required this.albumSize,
+  });
+}
+
+class NeteaseArtistDetail {
+  final int id;
+  final String name;
+  final String picUrl;
+  final String briefDesc;
+  final int musicSize;
+  final int albumSize;
+  final List<SearchVideoModel> hotSongs;
+
+  NeteaseArtistDetail({
+    required this.id,
+    required this.name,
+    required this.picUrl,
+    required this.briefDesc,
+    required this.musicSize,
+    required this.albumSize,
+    required this.hotSongs,
+  });
+}
+
+class NeteaseAlbumBrief {
+  final int id;
+  final String name;
+  final String picUrl;
+  final String artistName;
+  final int publishTime;
+  final int size;
+
+  NeteaseAlbumBrief({
+    required this.id,
+    required this.name,
+    required this.picUrl,
+    required this.artistName,
+    required this.publishTime,
+    required this.size,
+  });
+}
+
+class NeteaseAlbumDetail {
+  final int id;
+  final String name;
+  final String picUrl;
+  final String artistName;
+  final int publishTime;
+  final String description;
+  final List<SearchVideoModel> tracks;
+
+  NeteaseAlbumDetail({
+    required this.id,
+    required this.name,
+    required this.picUrl,
+    required this.artistName,
+    required this.publishTime,
+    required this.description,
+    required this.tracks,
+  });
+}
+
+class NeteaseToplistItem {
+  final int id;
+  final String name;
+  final String coverUrl;
+  final String updateFrequency;
+  final List<String> trackPreviews;
+
+  NeteaseToplistItem({
+    required this.id,
+    required this.name,
+    required this.coverUrl,
+    required this.updateFrequency,
+    required this.trackPreviews,
+  });
+}
+
+class NeteasePlaylistCategory {
+  final String name;
+  final bool hot;
+  final int category;
+
+  NeteasePlaylistCategory({
+    required this.name,
+    required this.hot,
+    required this.category,
+  });
+}
+
+class NeteaseAlbumSearchResult {
+  final List<NeteaseAlbumBrief> albums;
+  final int albumCount;
+
+  NeteaseAlbumSearchResult({required this.albums, required this.albumCount});
+}
+
+class NeteaseArtistSearchResult {
+  final List<NeteaseArtistBrief> artists;
+  final int artistCount;
+
+  NeteaseArtistSearchResult({required this.artists, required this.artistCount});
+}
+
+class NeteasePlaylistSearchResult {
+  final List<NeteasePlaylistBrief> playlists;
+  final int playlistCount;
+
+  NeteasePlaylistSearchResult(
+      {required this.playlists, required this.playlistCount});
+}
+
 class NeteaseRepository {
   final _provider = Get.find<NeteaseProvider>();
 
@@ -89,7 +213,8 @@ class NeteaseRepository {
     int limit = 30,
     int offset = 0,
   }) async {
-    final res = await _provider.search(keyword, limit: limit, offset: offset);
+    final res =
+        await _provider.search(keyword, type: 1, limit: limit, offset: offset);
     final data = res.data;
     log('NetEase search response code: ${data['code']}');
     if (data['code'] != 200 || data['result'] == null) {
@@ -127,6 +252,14 @@ class NeteaseRepository {
 
       final item = list.first as Map<String, dynamic>;
       final url = item['url'] as String?;
+
+      // Detect 30-second trial (non-VIP): freeTrialInfo is non-null
+      final freeTrialInfo = item['freeTrialInfo'];
+      if (freeTrialInfo != null) {
+        log('NetEase getSongUrl: song $songId is a trial (freeTrialInfo=$freeTrialInfo), rejecting');
+        return null;
+      }
+
       log('NetEase getSongUrl: url=${url != null ? '${url.substring(0, url.length > 60 ? 60 : url.length)}...' : 'null'}, code=${item['code']}, type=${item['type']}');
       return url;
     } catch (e) {
@@ -369,6 +502,304 @@ class NeteaseRepository {
     } catch (e) {
       log('NetEase getPlaylistDetail error: $e');
       return null;
+    }
+  }
+
+  // ── Multi-type Search ─────────────────────────────────
+
+  Future<NeteaseAlbumSearchResult> searchAlbums({
+    required String keyword,
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    try {
+      final res = await _provider.search(keyword,
+          type: 10, limit: limit, offset: offset);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200 || data['result'] == null) {
+        return NeteaseAlbumSearchResult(albums: [], albumCount: 0);
+      }
+      final result = data['result'] as Map<String, dynamic>;
+      final albumCount = result['albumCount'] as int? ?? 0;
+      final albumList = result['albums'] as List<dynamic>? ?? [];
+      final albums = albumList.map((a) {
+        final m = a as Map<String, dynamic>;
+        final artist = m['artist'] as Map<String, dynamic>?;
+        return NeteaseAlbumBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          picUrl: m['picUrl'] as String? ?? '',
+          artistName: artist?['name'] as String? ?? '',
+          publishTime: m['publishTime'] as int? ?? 0,
+          size: m['size'] as int? ?? 0,
+        );
+      }).toList();
+      return NeteaseAlbumSearchResult(albums: albums, albumCount: albumCount);
+    } catch (e) {
+      log('NetEase searchAlbums error: $e');
+      return NeteaseAlbumSearchResult(albums: [], albumCount: 0);
+    }
+  }
+
+  Future<NeteaseArtistSearchResult> searchArtists({
+    required String keyword,
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    try {
+      final res = await _provider.search(keyword,
+          type: 100, limit: limit, offset: offset);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200 || data['result'] == null) {
+        return NeteaseArtistSearchResult(artists: [], artistCount: 0);
+      }
+      final result = data['result'] as Map<String, dynamic>;
+      final artistCount = result['artistCount'] as int? ?? 0;
+      final artistList = result['artists'] as List<dynamic>? ?? [];
+      final artists = artistList.map((a) {
+        final m = a as Map<String, dynamic>;
+        return NeteaseArtistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          picUrl: m['picUrl'] as String? ?? m['img1v1Url'] as String? ?? '',
+          musicSize: m['musicSize'] as int? ?? 0,
+          albumSize: m['albumSize'] as int? ?? 0,
+        );
+      }).toList();
+      return NeteaseArtistSearchResult(
+          artists: artists, artistCount: artistCount);
+    } catch (e) {
+      log('NetEase searchArtists error: $e');
+      return NeteaseArtistSearchResult(artists: [], artistCount: 0);
+    }
+  }
+
+  Future<NeteasePlaylistSearchResult> searchPlaylists({
+    required String keyword,
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    try {
+      final res = await _provider.search(keyword,
+          type: 1000, limit: limit, offset: offset);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200 || data['result'] == null) {
+        return NeteasePlaylistSearchResult(playlists: [], playlistCount: 0);
+      }
+      final result = data['result'] as Map<String, dynamic>;
+      final playlistCount = result['playlistCount'] as int? ?? 0;
+      final playlistList = result['playlists'] as List<dynamic>? ?? [];
+      final playlists = playlistList.map((p) {
+        final m = p as Map<String, dynamic>;
+        return NeteasePlaylistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['coverImgUrl'] as String? ?? '',
+          playCount: m['playCount'] as int? ?? 0,
+        );
+      }).toList();
+      return NeteasePlaylistSearchResult(
+          playlists: playlists, playlistCount: playlistCount);
+    } catch (e) {
+      log('NetEase searchPlaylists error: $e');
+      return NeteasePlaylistSearchResult(playlists: [], playlistCount: 0);
+    }
+  }
+
+  // ── Artist Detail ─────────────────────────────────────
+
+  Future<NeteaseArtistDetail?> getArtistDetail(int id) async {
+    try {
+      final res = await _provider.getArtistDetail(id);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return null;
+
+      final artist = data['artist'] as Map<String, dynamic>? ?? {};
+      final hotSongList = data['hotSongs'] as List<dynamic>? ?? [];
+      final hotSongs = hotSongList
+          .map((s) => _songToModel(s as Map<String, dynamic>))
+          .toList();
+
+      return NeteaseArtistDetail(
+        id: artist['id'] as int? ?? id,
+        name: artist['name'] as String? ?? '',
+        picUrl: artist['picUrl'] as String? ?? '',
+        briefDesc: artist['briefDesc'] as String? ?? '',
+        musicSize: artist['musicSize'] as int? ?? 0,
+        albumSize: artist['albumSize'] as int? ?? 0,
+        hotSongs: hotSongs,
+      );
+    } catch (e) {
+      log('NetEase getArtistDetail error: $e');
+      return null;
+    }
+  }
+
+  Future<List<NeteaseAlbumBrief>> getArtistAlbums(int id,
+      {int limit = 30, int offset = 0}) async {
+    try {
+      final res =
+          await _provider.getArtistAlbums(id, limit: limit, offset: offset);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final albumList = data['hotAlbums'] as List<dynamic>? ?? [];
+      return albumList.map((a) {
+        final m = a as Map<String, dynamic>;
+        final artist = m['artist'] as Map<String, dynamic>?;
+        return NeteaseAlbumBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          picUrl: m['picUrl'] as String? ?? '',
+          artistName: artist?['name'] as String? ?? '',
+          publishTime: m['publishTime'] as int? ?? 0,
+          size: m['size'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getArtistAlbums error: $e');
+      return [];
+    }
+  }
+
+  // ── Album Detail ──────────────────────────────────────
+
+  Future<NeteaseAlbumDetail?> getAlbumDetail(int id) async {
+    try {
+      final res = await _provider.getAlbumDetail(id);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return null;
+
+      final album = data['album'] as Map<String, dynamic>? ?? {};
+      final songList = data['songs'] as List<dynamic>? ?? [];
+      final tracks = songList
+          .map((s) => _songToModel(s as Map<String, dynamic>))
+          .toList();
+      final artist = album['artist'] as Map<String, dynamic>?;
+
+      return NeteaseAlbumDetail(
+        id: album['id'] as int? ?? id,
+        name: album['name'] as String? ?? '',
+        picUrl: album['picUrl'] as String? ?? '',
+        artistName: artist?['name'] as String? ?? '',
+        publishTime: album['publishTime'] as int? ?? 0,
+        description: album['description'] as String? ?? '',
+        tracks: tracks,
+      );
+    } catch (e) {
+      log('NetEase getAlbumDetail error: $e');
+      return null;
+    }
+  }
+
+  // ── Toplist ───────────────────────────────────────────
+
+  Future<List<NeteaseToplistItem>> getToplist() async {
+    try {
+      final res = await _provider.getToplistDetail();
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200 || data['list'] == null) return [];
+
+      final list = data['list'] as List<dynamic>;
+      return list.map((item) {
+        final m = item as Map<String, dynamic>;
+        final tracks = m['tracks'] as List<dynamic>? ?? [];
+        final previews = tracks.take(3).map((t) {
+          final tm = t as Map<String, dynamic>;
+          final first = tm['first'] as String? ?? '';
+          final second = tm['second'] as String? ?? '';
+          return '$first - $second';
+        }).toList();
+
+        return NeteaseToplistItem(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['coverImgUrl'] as String? ?? '',
+          updateFrequency: m['updateFrequency'] as String? ?? '',
+          trackPreviews: previews,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getToplist error: $e');
+      return [];
+    }
+  }
+
+  // ── Hot Playlists & Categories ────────────────────────
+
+  Future<List<NeteasePlaylistBrief>> getHotPlaylistsByCategory({
+    String cat = '全部',
+    String order = 'hot',
+    int limit = 30,
+    int offset = 0,
+  }) async {
+    try {
+      final res = await _provider.getHotPlaylists(
+          cat: cat, order: order, limit: limit, offset: offset);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final playlists = data['playlists'] as List<dynamic>? ?? [];
+      return playlists.map((p) {
+        final m = p as Map<String, dynamic>;
+        return NeteasePlaylistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['coverImgUrl'] as String? ?? '',
+          playCount: m['playCount'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getHotPlaylistsByCategory error: $e');
+      return [];
+    }
+  }
+
+  Future<List<NeteasePlaylistCategory>> getPlaylistCategories() async {
+    try {
+      final res = await _provider.getPlaylistCategories();
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final sub = data['sub'] as List<dynamic>? ?? [];
+      return sub.map((item) {
+        final m = item as Map<String, dynamic>;
+        return NeteasePlaylistCategory(
+          name: m['name'] as String? ?? '',
+          hot: m['hot'] as bool? ?? false,
+          category: m['category'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getPlaylistCategories error: $e');
+      return [];
+    }
+  }
+
+  Future<List<NeteasePlaylistBrief>> getHighQualityPlaylists({
+    String cat = '全部',
+    int limit = 30,
+    int lasttime = 0,
+  }) async {
+    try {
+      final res = await _provider.getHighQualityPlaylists(
+          cat: cat, limit: limit, lasttime: lasttime);
+      final data = res.data as Map<String, dynamic>;
+      if (data['code'] != 200) return [];
+
+      final playlists = data['playlists'] as List<dynamic>? ?? [];
+      return playlists.map((p) {
+        final m = p as Map<String, dynamic>;
+        return NeteasePlaylistBrief(
+          id: m['id'] as int? ?? 0,
+          name: m['name'] as String? ?? '',
+          coverUrl: m['coverImgUrl'] as String? ?? '',
+          playCount: m['playCount'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('NetEase getHighQualityPlaylists error: $e');
+      return [];
     }
   }
 }

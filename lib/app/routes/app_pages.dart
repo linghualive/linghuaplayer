@@ -34,6 +34,14 @@ import '../../modules/mv_list/mv_list_controller.dart';
 import '../../modules/webview/webview_page.dart';
 import '../../modules/netease_playlist_detail/netease_playlist_detail_page.dart';
 import '../../modules/netease_playlist_detail/netease_playlist_detail_controller.dart';
+import '../../modules/netease_artist_detail/netease_artist_detail_page.dart';
+import '../../modules/netease_artist_detail/netease_artist_detail_controller.dart';
+import '../../modules/netease_album_detail/netease_album_detail_page.dart';
+import '../../modules/netease_album_detail/netease_album_detail_controller.dart';
+import '../../modules/netease_toplist/netease_toplist_page.dart';
+import '../../modules/netease_toplist/netease_toplist_controller.dart';
+import '../../modules/netease_hot_playlists/netease_hot_playlists_page.dart';
+import '../../modules/netease_hot_playlists/netease_hot_playlists_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -156,6 +164,34 @@ class AppPages {
       page: () => const NeteasePlaylistDetailPage(),
       binding: BindingsBuilder(() {
         Get.put(NeteasePlaylistDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.neteaseArtistDetail,
+      page: () => const NeteaseArtistDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(NeteaseArtistDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.neteaseAlbumDetail,
+      page: () => const NeteaseAlbumDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(NeteaseAlbumDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.neteaseToplist,
+      page: () => const NeteaseToplistPage(),
+      binding: BindingsBuilder(() {
+        Get.put(NeteaseToplistController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.neteaseHotPlaylists,
+      page: () => const NeteaseHotPlaylistsPage(),
+      binding: BindingsBuilder(() {
+        Get.put(NeteaseHotPlaylistsController());
       }),
     ),
   ];

@@ -104,4 +104,7 @@ class ApiConstants {
 
   // MV List endpoint (base: api.bilibili.com)
   static const String mvList = '/x/mv/list';
+
+  // Partition ranking (base: api.bilibili.com, needs WBI)
+  static const String partitionRanking = '/x/web-interface/ranking/v2';
 }

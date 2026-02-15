@@ -9,10 +9,11 @@ import '../../core/http/netease_http_client.dart';
 class NeteaseProvider {
   final _client = NeteaseHttpClient.instance;
 
-  Future<Response> search(String keywords, {int limit = 30, int offset = 0}) {
+  Future<Response> search(String keywords,
+      {int type = 1, int limit = 30, int offset = 0}) {
     return _client.weapiRequest('/api/search/get', {
       's': keywords,
-      'type': 1, // 1: songs
+      'type': type, // 1: songs, 10: albums, 100: artists, 1000: playlists
       'limit': limit,
       'offset': offset,
     });
@@ -102,6 +103,64 @@ class NeteaseProvider {
     return _client.weapiRequest('/api/v6/playlist/detail', {
       'id': id,
       'n': 100000,
+    });
+  }
+
+  // ── Artist & Album Detail ─────────────────────────────
+
+  Future<Response> getArtistDetail(int id) {
+    return _client.weapiRequest('/api/artist/$id', {});
+  }
+
+  Future<Response> getArtistAlbums(int id, {int limit = 30, int offset = 0}) {
+    return _client.weapiRequest('/api/artist/albums/$id', {
+      'limit': limit,
+      'offset': offset,
+      'total': true,
+    });
+  }
+
+  Future<Response> getAlbumDetail(int id) {
+    return _client.weapiRequest('/api/v1/album/$id', {});
+  }
+
+  // ── Toplist ───────────────────────────────────────────
+
+  Future<Response> getToplistDetail() {
+    return _client.weapiRequest('/api/toplist/detail', {});
+  }
+
+  // ── Hot Playlists & Categories ────────────────────────
+
+  Future<Response> getHotPlaylists({
+    String cat = '全部',
+    String order = 'hot',
+    int limit = 30,
+    int offset = 0,
+  }) {
+    return _client.weapiRequest('/api/playlist/list', {
+      'cat': cat,
+      'order': order,
+      'limit': limit,
+      'offset': offset,
+      'total': true,
+    });
+  }
+
+  Future<Response> getPlaylistCategories() {
+    return _client.weapiRequest('/api/playlist/catalogue', {});
+  }
+
+  Future<Response> getHighQualityPlaylists({
+    String cat = '全部',
+    int limit = 30,
+    int lasttime = 0,
+  }) {
+    return _client.weapiRequest('/api/playlist/highquality/list', {
+      'cat': cat,
+      'limit': limit,
+      'lasttime': lasttime,
+      'total': true,
     });
   }
 }

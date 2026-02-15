@@ -26,6 +26,12 @@ class MusicDiscoveryController extends GetxController {
   final dailyRecommendSongs = <SearchVideoModel>[].obs;
   final dailyRecommendPlaylists = <NeteasePlaylistBrief>[].obs;
 
+  // NetEase toplist (top 4 for preview)
+  final neteaseToplistPreview = <NeteaseToplistItem>[].obs;
+
+  // B站 music zone ranking
+  final biliMusicRanking = <SearchVideoModel>[].obs;
+
   final isLoading = false.obs;
   final rankTitle = ''.obs;
 
@@ -44,6 +50,8 @@ class MusicDiscoveryController extends GetxController {
         _loadMvList(),
         _loadNeteaseNewSongs(),
         _loadNeteaseRecommendPlaylists(),
+        _loadNeteaseToplistPreview(),
+        _loadBiliMusicRanking(),
       ];
       if (_storage.isNeteaseLoggedIn) {
         futures.add(_loadDailyRecommendSongs());
@@ -129,6 +137,24 @@ class MusicDiscoveryController extends GetxController {
     }
   }
 
+  Future<void> _loadNeteaseToplistPreview() async {
+    try {
+      final toplists = await _neteaseRepo.getToplist();
+      neteaseToplistPreview.assignAll(toplists.take(4));
+    } catch (e) {
+      log('Load NetEase toplist preview error: $e');
+    }
+  }
+
+  Future<void> _loadBiliMusicRanking() async {
+    try {
+      final videos = await _musicRepo.getPartitionRanking();
+      biliMusicRanking.assignAll(videos.take(10));
+    } catch (e) {
+      log('Load B站 music ranking error: $e');
+    }
+  }
+
   void onNeteaseNewSongTap(SearchVideoModel song) {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(song);
@@ -147,5 +173,10 @@ class MusicDiscoveryController extends GetxController {
   void onMvTap(MvItemModel mv) {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(mv.toSearchVideoModel());
+  }
+
+  void onBiliMusicRankingTap(SearchVideoModel video) {
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.playFromSearch(video);
   }
 }
