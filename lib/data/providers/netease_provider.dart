@@ -59,16 +59,16 @@ class NeteaseProvider {
     });
   }
 
-  // ── Auth: QR Login ──────────────────────────────────
+  // ── Auth: QR Login (EAPI, matching api-enhanced) ────
 
   Future<Response> getQrKey() {
-    return _client.weapiRequest('/api/login/qrcode/unikey', {
+    return _client.eapiRequest('/api/login/qrcode/unikey', {
       'type': 3,
     });
   }
 
   Future<Response> pollQrLogin(String key) {
-    return _client.weapiRequest('/api/login/qrcode/client/login', {
+    return _client.eapiRequest('/api/login/qrcode/client/login', {
       'key': key,
       'type': 3,
     });

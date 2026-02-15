@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:get/get.dart';
 
+import '../../core/http/netease_http_client.dart';
 import '../models/login/netease_qrcode_model.dart';
 import '../models/login/netease_user_info_model.dart';
 import '../models/search/search_video_model.dart';
@@ -218,7 +219,16 @@ class NeteaseRepository {
       final res = await _provider.pollQrLogin(key);
       final data = res.data as Map<String, dynamic>;
       log('NetEase pollQrLogin raw response: code=${data['code']}, keys=${data.keys.toList()}');
-      return NeteaseQrcodePollResult.fromJson(data);
+      final result = NeteaseQrcodePollResult.fromJson(data);
+
+      // On success, sync cookies from EAPI domain to WEAPI domain
+      if (result.isSuccess) {
+        log('NetEase QR login success, syncing cookies...');
+        await NeteaseHttpClient.instance.syncCookiesToWeapiDomain();
+        await NeteaseHttpClient.instance.debugPrintCookies();
+      }
+
+      return result;
     } catch (e) {
       log('NetEase pollQrLogin error: $e');
       return NeteaseQrcodePollResult(code: -1, message: e.toString());
@@ -227,10 +237,42 @@ class NeteaseRepository {
 
   Future<NeteaseUserInfoModel?> getAccountInfo() async {
     try {
+      log('NetEase getAccountInfo: fetching...');
+      await NeteaseHttpClient.instance.debugPrintCookies();
+
       final res = await _provider.getAccountInfo();
       final data = res.data as Map<String, dynamic>;
-      if (data['code'] != 200 || data['profile'] == null) return null;
-      return NeteaseUserInfoModel.fromAccountResponse(data);
+      log('NetEase getAccountInfo response: code=${data['code']}, keys=${data.keys.toList()}');
+
+      if (data['code'] != 200) {
+        log('NetEase getAccountInfo: bad code ${data['code']}');
+        return null;
+      }
+
+      // The response can have profile at top level or nested in account/profile
+      if (data['profile'] != null) {
+        return NeteaseUserInfoModel.fromAccountResponse(data);
+      }
+
+      // Try nested structure: { account: {...}, profile: {...} }
+      if (data['account'] != null) {
+        final account = data['account'] as Map<String, dynamic>;
+        log('NetEase getAccountInfo: found account, id=${account['id']}');
+        // Profile might be at top level alongside account
+        if (data['profile'] != null) {
+          return NeteaseUserInfoModel.fromAccountResponse(data);
+        }
+        // Construct minimal info from account
+        return NeteaseUserInfoModel(
+          userId: account['id'] as int? ?? 0,
+          nickname: account['userName'] as String? ?? '',
+          avatarUrl: '',
+          vipType: account['vipType'] as int? ?? 0,
+        );
+      }
+
+      log('NetEase getAccountInfo: no profile or account found in response');
+      return null;
     } catch (e) {
       log('NetEase getAccountInfo error: $e');
       return null;

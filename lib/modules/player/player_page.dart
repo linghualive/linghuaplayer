@@ -36,7 +36,7 @@ class PlayerPage extends GetView<PlayerController> {
               onPressed: () {
                 final storage = Get.find<StorageService>();
                 if (!storage.isLoggedIn) {
-                  Get.snackbar('提示', '请先登录',
+                  Get.snackbar('提示', '请先登录哔哩哔哩',
                       snackPosition: SnackPosition.BOTTOM);
                   return;
                 }

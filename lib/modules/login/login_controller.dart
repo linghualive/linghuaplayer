@@ -16,13 +16,16 @@ import '../../modules/music_discovery/music_discovery_controller.dart';
 import '../../modules/playlist/playlist_controller.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
-  late final TabController tabController;
+  late final TabController bilibiliTabController;
   final _authRepo = Get.find<AuthRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();
 
   // GeeTest plugin instance
   final Gt3FlutterPlugin _captcha = Gt3FlutterPlugin();
+
+  // Platform selection: 0 = Bilibili, 1 = NetEase
+  final selectedPlatform = 0.obs;
 
   // Bilibili QR Login
   final qrcodeUrl = ''.obs;
@@ -57,14 +60,14 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   @override
   void onInit() {
     super.onInit();
-    tabController = TabController(length: 4, vsync: this);
-    tabController.addListener(_onTabChanged);
+    bilibiliTabController = TabController(length: 3, vsync: this);
+    bilibiliTabController.addListener(_onBilibiliTabChanged);
     _generateQrcode();
   }
 
   @override
   void onClose() {
-    tabController.dispose();
+    bilibiliTabController.dispose();
     _qrPollTimer?.cancel();
     _neteaseQrPollTimer?.cancel();
     _smsTimer?.cancel();
@@ -75,21 +78,33 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     super.onClose();
   }
 
-  void _onTabChanged() {
-    // TabController.addListener fires twice per tab switch
-    // (once when indexIsChanging=true, once when false).
-    // Only act on the final state to avoid generating duplicate QR codes.
-    if (tabController.indexIsChanging) return;
+  void selectPlatform(int index) {
+    if (selectedPlatform.value == index) return;
+    selectedPlatform.value = index;
 
-    if (tabController.index == 0) {
+    // Stop all polling when switching platforms
+    _qrPollTimer?.cancel();
+    _neteaseQrPollTimer?.cancel();
+
+    if (index == 0) {
+      // Bilibili selected - start QR if on QR tab
+      if (bilibiliTabController.index == 0) {
+        _generateQrcode();
+      }
+    } else {
+      // NetEase selected
+      _generateNeteaseQrcode();
+    }
+  }
+
+  void _onBilibiliTabChanged() {
+    if (bilibiliTabController.indexIsChanging) return;
+    if (selectedPlatform.value != 0) return;
+
+    if (bilibiliTabController.index == 0) {
       _generateQrcode();
     } else {
       _qrPollTimer?.cancel();
-    }
-    if (tabController.index == 3) {
-      _generateNeteaseQrcode();
-    } else {
-      _neteaseQrPollTimer?.cancel();
     }
   }
 

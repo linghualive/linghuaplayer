@@ -28,7 +28,7 @@ class PlaylistPage extends StatelessWidget {
       if (!homeController.isLoggedIn.value) {
         return Scaffold(
           appBar: AppBar(title: const Text('歌单')),
-          body: const Center(child: Text('请先登录')),
+          body: const Center(child: Text('请先登录哔哩哔哩')),
         );
       }
       if (controller.isLoading.value) {
