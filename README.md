@@ -6,6 +6,36 @@
 
 FlameKit 是一款基于 Flutter 开发的多源音乐播放器，支持 Bilibili 和网易云音乐两个音乐源，提供跨平台的音视频播放体验。
 
+## Screenshots
+
+### Desktop
+
+<div align="center">
+  <img src="docs/preview/desktop.png" alt="Desktop Screenshot" width="100%" style="max-width: 1200px">
+</div>
+
+### Mobile
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <img src="docs/preview/mobile1.jpg" alt="Mobile Screenshot 1" width="100%">
+      <br>
+      <sub><b>播放界面</b></sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/preview/mobile2.jpg" alt="Mobile Screenshot 2" width="100%">
+      <br>
+      <sub><b>搜索界面</b></sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="docs/preview/mobile3.jpg" alt="Mobile Screenshot 3" width="100%">
+      <br>
+      <sub><b>播放列表</b></sub>
+    </td>
+  </tr>
+</table>
+
 ## Features
 
 ### Core Playback
