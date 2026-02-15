@@ -17,13 +17,15 @@ import '../../modules/playlist/playlist_controller.dart';
 import '../../shared/utils/app_toast.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
+  static bool get isMobile => Platform.isAndroid || Platform.isIOS;
+
   late final TabController bilibiliTabController;
   final _authRepo = Get.find<AuthRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();
 
-  // GeeTest plugin instance
-  final Gt3FlutterPlugin _captcha = Gt3FlutterPlugin();
+  // GeeTest plugin instance (only available on mobile)
+  Gt3FlutterPlugin? _captcha;
 
   // Platform selection: 0 = Bilibili, 1 = NetEase
   final selectedPlatform = 0.obs;
@@ -61,7 +63,8 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   @override
   void onInit() {
     super.onInit();
-    bilibiliTabController = TabController(length: 3, vsync: this);
+    if (isMobile) _captcha = Gt3FlutterPlugin();
+    bilibiliTabController = TabController(length: isMobile ? 3 : 1, vsync: this);
     bilibiliTabController.addListener(_onBilibiliTabChanged);
 
     final args = Get.arguments;
@@ -245,6 +248,11 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   /// On success, [onComplete] is called with the validated [CaptchaModel].
   Future<void> _getCaptchaAndDo(
       Future<void> Function(CaptchaModel) onComplete) async {
+    if (_captcha == null) {
+      AppToast.error('当前平台不支持验证码，请使用扫码登录');
+      return;
+    }
+
     isLoading.value = true;
 
     final captchaData = await _authRepo.getCaptcha();
@@ -260,7 +268,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       success: true,
     );
 
-    _captcha.addEventHandler(
+    _captcha!.addEventHandler(
       onShow: (Map<String, dynamic> message) async {
         isLoading.value = false;
       },
@@ -288,7 +296,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       },
     );
 
-    _captcha.startCaptcha(registerData);
+    _captcha!.startCaptcha(registerData);
   }
 
   void _handleGeeTestError(String code) {

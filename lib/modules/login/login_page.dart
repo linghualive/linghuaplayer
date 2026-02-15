@@ -55,6 +55,9 @@ class LoginPage extends GetView<LoginController> {
   }
 
   Widget _buildBilibiliContent() {
+    if (!LoginController.isMobile) {
+      return const QrLoginTab();
+    }
     return Column(
       children: [
         TabBar(
