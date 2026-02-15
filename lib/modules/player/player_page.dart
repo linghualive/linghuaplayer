@@ -6,6 +6,7 @@ import '../../shared/widgets/fav_panel.dart';
 import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
+import 'widgets/player_lyrics.dart';
 import 'widgets/player_video.dart';
 import 'widgets/play_queue_sheet.dart';
 
@@ -72,9 +73,17 @@ class PlayerPage extends GetView<PlayerController> {
                 const SizedBox(height: 16),
                 Expanded(
                   flex: 5,
-                  child: Obx(() => controller.isVideoMode.value
-                      ? const PlayerVideo()
-                      : const PlayerArtwork()),
+                  child: Obx(() {
+                    if (controller.isVideoMode.value) {
+                      return const PlayerVideo();
+                    }
+                    return GestureDetector(
+                      onTap: () => controller.toggleLyricsView(),
+                      child: controller.showLyrics.value
+                          ? const PlayerLyrics()
+                          : const PlayerArtwork(),
+                    );
+                  }),
                 ),
                 const SizedBox(height: 24),
                 const Expanded(flex: 4, child: PlayerControls()),

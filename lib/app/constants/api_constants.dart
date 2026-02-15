@@ -59,6 +59,7 @@ class ApiConstants {
   // Player endpoints
   static const String pagelist = '/x/player/pagelist';
   static const String playUrl = '/x/player/wbi/playurl';
+  static const String playerInfo = '/x/player/wbi/v2';
 
   // Favorites endpoints
   static const String favFolderList = '/x/v3/fav/folder/created/list';

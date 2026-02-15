@@ -5,11 +5,13 @@ import '../../data/repositories/search_repository.dart';
 import '../../data/repositories/player_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/repositories/music_repository.dart';
+import '../../data/repositories/lyrics_repository.dart';
 import '../../data/providers/login_provider.dart';
 import '../../data/providers/search_provider.dart';
 import '../../data/providers/player_provider.dart';
 import '../../data/providers/user_provider.dart';
 import '../../data/providers/music_provider.dart';
+import '../../data/providers/lyrics_provider.dart';
 import '../../modules/player/player_controller.dart';
 
 class InitialBinding extends Bindings {
@@ -21,6 +23,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => PlayerProvider(), fenix: true);
     Get.lazyPut(() => UserProvider(), fenix: true);
     Get.lazyPut(() => MusicProvider(), fenix: true);
+    Get.lazyPut(() => LyricsProvider(), fenix: true);
 
     // Repositories
     Get.lazyPut(() => AuthRepository(), fenix: true);
@@ -28,6 +31,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => PlayerRepository(), fenix: true);
     Get.lazyPut(() => UserRepository(), fenix: true);
     Get.lazyPut(() => MusicRepository(), fenix: true);
+    Get.lazyPut(() => LyricsRepository(), fenix: true);
 
     // Global persistent controller
     Get.put(PlayerController(), permanent: true);

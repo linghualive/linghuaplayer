@@ -12,7 +12,9 @@ import '../../app/constants/app_constants.dart';
 import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/music/audio_song_model.dart';
+import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
+import '../../data/repositories/lyrics_repository.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/player_repository.dart';
 
@@ -36,6 +38,7 @@ class QueueItem {
 
 class PlayerController extends GetxController {
   final _playerRepo = Get.find<PlayerRepository>();
+  final _lyricsRepo = Get.find<LyricsRepository>();
   final _storage = Get.find<StorageService>();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -66,6 +69,12 @@ class PlayerController extends GetxController {
   final audioQualityLabel = ''.obs;
   final videoQualityLabel = ''.obs;
 
+  // Lyrics
+  final lyrics = Rxn<LyricsData>();
+  final currentLyricsIndex = (-1).obs;
+  final showLyrics = false.obs;
+  final lyricsLoading = false.obs;
+
   AudioPlayer get audioPlayer => _audioPlayer;
   mkv.VideoController? get videoController => _videoController;
 
@@ -93,7 +102,10 @@ class PlayerController extends GetxController {
     });
 
     _audioPlayer.positionStream.listen((pos) {
-      if (!isVideoMode.value) position.value = pos;
+      if (!isVideoMode.value) {
+        position.value = pos;
+        _updateLyricsIndex(pos);
+      }
     });
 
     _audioPlayer.durationStream.listen((dur) {
@@ -131,7 +143,10 @@ class PlayerController extends GetxController {
     });
 
     _mediaKitPlayer!.stream.position.listen((pos) {
-      if (isVideoMode.value) position.value = pos;
+      if (isVideoMode.value) {
+        position.value = pos;
+        _updateLyricsIndex(pos);
+      }
     });
 
     _mediaKitPlayer!.stream.duration.listen((dur) {
@@ -169,6 +184,7 @@ class PlayerController extends GetxController {
           snackPosition: SnackPosition.BOTTOM);
     }
     isLoading.value = false;
+    _fetchLyrics(video);
   }
 
   Future<void> _playAudioOnly(SearchVideoModel video) async {
@@ -478,6 +494,7 @@ class PlayerController extends GetxController {
       audioQualityLabel.value = item.qualityLabel;
 
       await _playQueueItem(item);
+      _fetchLyrics(item.video);
     }
   }
 
@@ -491,6 +508,7 @@ class PlayerController extends GetxController {
       audioQualityLabel.value = item.qualityLabel;
 
       await _playQueueItem(item);
+      _fetchLyrics(item.video);
     } else {
       seekTo(Duration.zero);
     }
@@ -517,6 +535,7 @@ class PlayerController extends GetxController {
     currentVideo.value = item.video;
     audioQualityLabel.value = item.qualityLabel;
     await _playQueueItem(item);
+    _fetchLyrics(item.video);
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
@@ -575,6 +594,59 @@ class PlayerController extends GetxController {
     currentVideo.value = null;
     position.value = Duration.zero;
     duration.value = Duration.zero;
+    lyrics.value = null;
+    currentLyricsIndex.value = -1;
+    showLyrics.value = false;
+    lyricsLoading.value = false;
+  }
+
+  // -- Lyrics --
+
+  void _fetchLyrics(SearchVideoModel video) {
+    lyrics.value = null;
+    currentLyricsIndex.value = -1;
+    lyricsLoading.value = true;
+
+    _lyricsRepo
+        .getLyrics(video.title, video.author, video.duration, bvid: video.bvid)
+        .then((result) {
+      if (currentVideo.value?.bvid == video.bvid) {
+        lyrics.value = result;
+        lyricsLoading.value = false;
+      }
+    }).catchError((e) {
+      log('Lyrics fetch error: $e');
+      if (currentVideo.value?.bvid == video.bvid) {
+        lyricsLoading.value = false;
+      }
+    });
+  }
+
+  void _updateLyricsIndex(Duration pos) {
+    final data = lyrics.value;
+    if (data == null || !data.hasSyncedLyrics) return;
+
+    final lines = data.lines;
+    // Binary search for the last line whose timestamp <= pos
+    int lo = 0, hi = lines.length - 1;
+    int result = -1;
+    while (lo <= hi) {
+      final mid = (lo + hi) ~/ 2;
+      if (lines[mid].timestamp <= pos) {
+        result = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    if (result != currentLyricsIndex.value) {
+      currentLyricsIndex.value = result;
+    }
+  }
+
+  void toggleLyricsView() {
+    showLyrics.value = !showLyrics.value;
   }
 
   bool get hasCurrentTrack => currentVideo.value != null;
@@ -634,6 +706,7 @@ class PlayerController extends GetxController {
       }
     }
     isLoading.value = false;
+    _fetchLyrics(video);
   }
 
   /// Add a video to the queue silently (no snackbar).
