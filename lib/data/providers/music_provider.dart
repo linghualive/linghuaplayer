@@ -86,4 +86,20 @@ class MusicProvider {
       queryParameters: params,
     );
   }
+
+  /// Get related videos for a given bvid
+  Future<Response> getRelatedVideos(String bvid) {
+    return _dio.get(
+      ApiConstants.relatedVideos,
+      queryParameters: {'bvid': bvid},
+    );
+  }
+
+  /// Get member archive (user's uploaded videos), params should be WBI-signed
+  Future<Response> getMemberArchive(Map<String, dynamic> params) {
+    return _dio.get(
+      ApiConstants.memberArchive,
+      queryParameters: params,
+    );
+  }
 }

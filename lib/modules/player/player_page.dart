@@ -9,7 +9,7 @@ import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
 import 'widgets/player_lyrics.dart';
 import 'widgets/player_video.dart';
-import 'widgets/play_queue_sheet.dart';
+import 'widgets/related_music_sheet.dart';
 
 class PlayerPage extends GetView<PlayerController> {
   const PlayerPage({super.key});
@@ -45,8 +45,9 @@ class PlayerPage extends GetView<PlayerController> {
             );
           }),
           IconButton(
-            icon: const Icon(Icons.queue_music),
-            onPressed: PlayQueueSheet.show,
+            icon: const Icon(Icons.explore),
+            tooltip: '相关推荐',
+            onPressed: RelatedMusicSheet.show,
           ),
           const SizedBox(width: 4),
         ],

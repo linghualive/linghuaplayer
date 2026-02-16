@@ -112,6 +112,69 @@ class MusicRepository {
     return [];
   }
 
+  /// Get related videos for a given bvid
+  Future<List<SearchVideoModel>> getRelatedVideos(String bvid) async {
+    final res = await _provider.getRelatedVideos(bvid);
+    if (res.data['code'] == 0 && res.data['data'] != null) {
+      final list = res.data['data'] as List<dynamic>? ?? [];
+      return list.map((e) {
+        final m = e as Map<String, dynamic>;
+        final owner = m['owner'] as Map<String, dynamic>? ?? {};
+        final stat = m['stat'] as Map<String, dynamic>? ?? {};
+        final dur = m['duration'] as int? ?? 0;
+        final minutes = dur ~/ 60;
+        final seconds = dur % 60;
+        return SearchVideoModel(
+          id: m['aid'] as int? ?? 0,
+          author: owner['name'] as String? ?? '',
+          mid: owner['mid'] as int? ?? 0,
+          title: m['title'] as String? ?? '',
+          description: m['desc'] as String? ?? '',
+          pic: m['pic'] as String? ?? '',
+          play: stat['view'] as int? ?? 0,
+          danmaku: stat['danmaku'] as int? ?? 0,
+          duration: '$minutes:${seconds.toString().padLeft(2, '0')}',
+          bvid: m['bvid'] as String? ?? '',
+        );
+      }).toList();
+    }
+    return [];
+  }
+
+  /// Get member archive (user's uploaded videos)
+  Future<List<SearchVideoModel>> getMemberArchive(int mid,
+      {String order = 'pubdate', int pn = 1, int ps = 30}) async {
+    final params = await WbiSign.makSign({
+      'mid': mid,
+      'pn': pn,
+      'ps': ps,
+      'order': order,
+    });
+    final res = await _provider.getMemberArchive(params);
+    if (res.data['code'] == 0 && res.data['data'] != null) {
+      final data = res.data['data'] as Map<String, dynamic>;
+      final listData = data['list'] as Map<String, dynamic>? ?? {};
+      final vlist = listData['vlist'] as List<dynamic>? ?? [];
+      return vlist.map((e) {
+        final m = e as Map<String, dynamic>;
+        final dur = m['length'] as String? ?? '0:00';
+        return SearchVideoModel(
+          id: m['aid'] as int? ?? 0,
+          author: m['author'] as String? ?? '',
+          mid: m['mid'] as int? ?? 0,
+          title: m['title'] as String? ?? '',
+          description: m['description'] as String? ?? '',
+          pic: m['pic'] as String? ?? '',
+          play: m['play'] as int? ?? 0,
+          danmaku: m['video_review'] as int? ?? 0,
+          duration: dur,
+          bvid: m['bvid'] as String? ?? '',
+        );
+      }).toList();
+    }
+    return [];
+  }
+
   /// Get B站 music zone ranking (rid=3)
   Future<List<SearchVideoModel>> getPartitionRanking() async {
     final params = await WbiSign.makSign({

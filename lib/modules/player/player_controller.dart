@@ -44,6 +44,7 @@ class PlayerController extends GetxController {
   final _searchRepo = Get.find<SearchRepository>();
   final _lyricsRepo = Get.find<LyricsRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
+  final _musicRepo = Get.find<MusicRepository>();
   final _storage = Get.find<StorageService>();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -73,6 +74,10 @@ class PlayerController extends GetxController {
   // Audio quality
   final audioQualityLabel = ''.obs;
   final videoQualityLabel = ''.obs;
+
+  // Related music
+  final relatedMusic = <SearchVideoModel>[].obs;
+  final relatedMusicLoading = false.obs;
 
   // Lyrics
   final lyrics = Rxn<LyricsData>();
@@ -191,6 +196,7 @@ class PlayerController extends GetxController {
     }
     isLoading.value = false;
     _fetchLyrics(video);
+    _loadRelatedMusic(video);
   }
 
   Future<void> _playAudioOnly(SearchVideoModel video) async {
@@ -584,6 +590,7 @@ class PlayerController extends GetxController {
 
       await _playQueueItem(item);
       _fetchLyrics(item.video);
+      _loadRelatedMusic(item.video);
     }
   }
 
@@ -598,6 +605,7 @@ class PlayerController extends GetxController {
 
       await _playQueueItem(item);
       _fetchLyrics(item.video);
+      _loadRelatedMusic(item.video);
     } else {
       seekTo(Duration.zero);
     }
@@ -625,6 +633,7 @@ class PlayerController extends GetxController {
     audioQualityLabel.value = item.qualityLabel;
     await _playQueueItem(item);
     _fetchLyrics(item.video);
+    _loadRelatedMusic(item.video);
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
@@ -687,6 +696,56 @@ class PlayerController extends GetxController {
     currentLyricsIndex.value = -1;
     showLyrics.value = false;
     lyricsLoading.value = false;
+    relatedMusic.clear();
+    relatedMusicLoading.value = false;
+  }
+
+  // -- Related Music --
+
+  void _loadRelatedMusic(SearchVideoModel video) {
+    relatedMusic.clear();
+    relatedMusicLoading.value = true;
+
+    final Future<List<SearchVideoModel>> fetchFuture;
+    if (video.isNetease) {
+      fetchFuture = _neteaseRepo
+          .searchSongs(keyword: video.title, limit: 20)
+          .then((result) =>
+              result.songs.where((s) => s.id != video.id).toList());
+    } else {
+      fetchFuture = _musicRepo.getRelatedVideos(video.bvid);
+    }
+
+    fetchFuture.then((results) {
+      if (currentVideo.value?.uniqueId == video.uniqueId) {
+        relatedMusic.assignAll(results);
+        relatedMusicLoading.value = false;
+      }
+    }).catchError((e) {
+      log('Related music fetch error: $e');
+      if (currentVideo.value?.uniqueId == video.uniqueId) {
+        relatedMusicLoading.value = false;
+      }
+    });
+  }
+
+  Future<List<SearchVideoModel>> loadUploaderWorks() async {
+    final video = currentVideo.value;
+    if (video == null) return [];
+
+    try {
+      if (video.isNetease) {
+        final result =
+            await _neteaseRepo.searchSongs(keyword: video.author, limit: 30);
+        return result.songs;
+      } else {
+        if (video.mid <= 0) return [];
+        return await _musicRepo.getMemberArchive(video.mid);
+      }
+    } catch (e) {
+      log('Uploader works fetch error: $e');
+      return [];
+    }
   }
 
   // -- Lyrics --
@@ -797,6 +856,7 @@ class PlayerController extends GetxController {
     }
     isLoading.value = false;
     _fetchLyrics(video);
+    _loadRelatedMusic(video);
   }
 
   /// Add a video to the queue silently (no snackbar).

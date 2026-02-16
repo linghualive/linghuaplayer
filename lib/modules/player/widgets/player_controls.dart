@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../player_controller.dart';
 import 'play_queue_sheet.dart';
+import 'uploader_works_sheet.dart';
 
 class PlayerControls extends GetView<PlayerController> {
   const PlayerControls({super.key});
@@ -34,13 +35,43 @@ class PlayerControls extends GetView<PlayerController> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Flexible(
-                  child: Text(
-                    controller.currentVideo.value?.author ?? '',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.outline,
+                  child: GestureDetector(
+                    onTap: () {
+                      final author =
+                          controller.currentVideo.value?.author ?? '';
+                      if (author.isNotEmpty) {
+                        UploaderWorksSheet.show();
+                      }
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            controller.currentVideo.value?.author ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.outline,
+                                ),
+                          ),
                         ),
+                        if ((controller.currentVideo.value?.author ?? '')
+                            .isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 2),
+                            child: Icon(
+                              Icons.chevron_right,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 if (controller.audioQualityLabel.value.isNotEmpty) ...[

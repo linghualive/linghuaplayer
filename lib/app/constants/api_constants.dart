@@ -107,4 +107,10 @@ class ApiConstants {
 
   // Partition ranking (base: api.bilibili.com, needs WBI)
   static const String partitionRanking = '/x/web-interface/ranking/v2';
+
+  // Related videos
+  static const String relatedVideos = '/x/web-interface/archive/related';
+
+  // Member archive (needs WBI)
+  static const String memberArchive = '/x/space/wbi/arc/search';
 }
