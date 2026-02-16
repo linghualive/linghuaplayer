@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/loading_widget.dart';
-import '../search/search_controller.dart' as app;
-import '../search/widgets/voice_fab.dart';
 import 'music_discovery_controller.dart';
 import 'widgets/hot_playlist_card.dart';
 import 'widgets/mv_card.dart';
@@ -19,14 +18,9 @@ class MusicDiscoveryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MusicDiscoveryController>();
-    final searchCtrl = Get.find<app.SearchController>();
     final theme = Theme.of(context);
 
     return Scaffold(
-      floatingActionButton: Obx(() {
-        if (!searchCtrl.showVoiceButton) return const SizedBox.shrink();
-        return const VoiceFab();
-      }),
       appBar: AppBar(
         title: GestureDetector(
           onTap: () => Get.toNamed(AppRoutes.search),
@@ -67,91 +61,24 @@ class MusicDiscoveryPage extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: controller.loadAll,
           child: ListView(
+            padding: const EdgeInsets.only(top: 4),
             children: [
-              // ── 网易云内容 ──────────────────────────────
-
-              // 每日推荐 (NetEase login only)
-              if (controller.dailyRecommendSongs.isNotEmpty) ...[
-                const SectionHeader(title: '每日推荐'),
-                SizedBox(
-                  height: 72,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.dailyRecommendSongs.length,
-                    itemBuilder: (context, index) {
-                      final song = controller.dailyRecommendSongs[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () =>
-                              controller.onDailyRecommendSongTap(song),
-                          child: SizedBox(
-                            width: 200,
-                            child: Row(
-                              children: [
-                                CachedImage(
-                                  imageUrl: song.pic,
-                                  width: 56,
-                                  height: 56,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        song.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        song.author,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                          color: theme.colorScheme.outline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
+              // ── 分组 A: 个性推荐 (网易云登录) ──
+              if (controller.dailyRecommendSongs.isNotEmpty ||
+                  controller.dailyRecommendPlaylists.isNotEmpty) ...[
+                if (controller.dailyRecommendSongs.isNotEmpty) ...[
+                  const SectionHeader(title: '每日推荐'),
+                  _buildHorizontalSongList(
+                    songs: controller.dailyRecommendSongs,
+                    onTap: controller.onDailyRecommendSongTap,
+                    theme: theme,
                   ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // 每日推荐歌单 (NetEase login only)
-              if (controller.dailyRecommendPlaylists.isNotEmpty) ...[
-                const SectionHeader(title: '每日推荐歌单'),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount:
-                        controller.dailyRecommendPlaylists.length,
-                    itemBuilder: (context, index) {
+                ],
+                if (controller.dailyRecommendPlaylists.isNotEmpty) ...[
+                  const SectionHeader(title: '每日推荐歌单'),
+                  _buildPlaylistGrid(
+                    itemCount: controller.dailyRecommendPlaylists.length,
+                    itemBuilder: (index) {
                       final playlist =
                           controller.dailyRecommendPlaylists[index];
                       return _NeteasePlaylistCard(
@@ -163,75 +90,19 @@ class MusicDiscoveryPage extends StatelessWidget {
                       );
                     },
                   ),
-                ),
-                const SizedBox(height: 16),
+                ],
+                const SizedBox(height: 24),
               ],
 
-              // 新歌速递 (NetEase)
+              // ── 分组 B: 新歌 & 排行 ──
               if (controller.neteaseNewSongs.isNotEmpty) ...[
                 const SectionHeader(title: '新歌速递'),
-                SizedBox(
-                  height: 72,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.neteaseNewSongs.length,
-                    itemBuilder: (context, index) {
-                      final song = controller.neteaseNewSongs[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () =>
-                              controller.onNeteaseNewSongTap(song),
-                          child: SizedBox(
-                            width: 200,
-                            child: Row(
-                              children: [
-                                CachedImage(
-                                  imageUrl: song.pic,
-                                  width: 56,
-                                  height: 56,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        song.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        song.author,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                          color: theme.colorScheme.outline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                _buildHorizontalSongList(
+                  songs: controller.neteaseNewSongs,
+                  onTap: controller.onNeteaseNewSongTap,
+                  theme: theme,
                 ),
-                const SizedBox(height: 16),
               ],
-
-              // 网易云排行榜
               if (controller.neteaseToplistPreview.isNotEmpty) ...[
                 SectionHeader(
                   title: '网易云排行榜',
@@ -279,49 +150,7 @@ class MusicDiscoveryPage extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
               ],
-
-              // 推荐歌单 (NetEase)
-              if (controller.neteaseRecommendPlaylists.isNotEmpty) ...[
-                SectionHeader(
-                  title: '推荐歌单',
-                  onViewAll: () =>
-                      Get.toNamed(AppRoutes.neteaseHotPlaylists),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount:
-                        controller.neteaseRecommendPlaylists.length,
-                    itemBuilder: (context, index) {
-                      final playlist =
-                          controller.neteaseRecommendPlaylists[index];
-                      return _NeteasePlaylistCard(
-                        playlist: playlist,
-                        onTap: () => Get.toNamed(
-                          AppRoutes.neteasePlaylistDetail,
-                          arguments: playlist,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // ── B站内容 ───────────────────────────────
-
-              // 音乐排行榜 (B站)
               if (controller.rankSongs.isNotEmpty) ...[
                 Obx(() => SectionHeader(
                       title: controller.rankTitle.value.isNotEmpty
@@ -345,108 +174,68 @@ class MusicDiscoveryPage extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
               ],
-
-              // B站音乐热榜
               if (controller.biliMusicRanking.isNotEmpty) ...[
                 const SectionHeader(title: 'B站音乐热榜'),
-                SizedBox(
-                  height: 72,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.biliMusicRanking.length,
-                    itemBuilder: (context, index) {
-                      final video = controller.biliMusicRanking[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () =>
-                              controller.onBiliMusicRankingTap(video),
-                          child: SizedBox(
-                            width: 200,
-                            child: Row(
-                              children: [
-                                CachedImage(
-                                  imageUrl: video.pic,
-                                  width: 56,
-                                  height: 56,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Column(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        video.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodyMedium,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        video.author,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                          color: theme.colorScheme.outline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                _buildHorizontalSongList(
+                  songs: controller.biliMusicRanking,
+                  onTap: controller.onBiliMusicRankingTap,
+                  theme: theme,
                 ),
-                const SizedBox(height: 16),
               ],
+              if (controller.neteaseNewSongs.isNotEmpty ||
+                  controller.neteaseToplistPreview.isNotEmpty ||
+                  controller.rankSongs.isNotEmpty ||
+                  controller.biliMusicRanking.isNotEmpty)
+                const SizedBox(height: 24),
 
-              // 热门歌单 (B站)
+              // ── 分组 C: 推荐歌单 ──
+              if (controller.neteaseRecommendPlaylists.isNotEmpty) ...[
+                SectionHeader(
+                  title: '推荐歌单',
+                  onViewAll: () =>
+                      Get.toNamed(AppRoutes.neteaseHotPlaylists),
+                ),
+                _buildPlaylistGrid(
+                  itemCount:
+                      controller.neteaseRecommendPlaylists.length,
+                  itemBuilder: (index) {
+                    final playlist =
+                        controller.neteaseRecommendPlaylists[index];
+                    return _NeteasePlaylistCard(
+                      playlist: playlist,
+                      onTap: () => Get.toNamed(
+                        AppRoutes.neteasePlaylistDetail,
+                        arguments: playlist,
+                      ),
+                    );
+                  },
+                ),
+              ],
               if (controller.hotPlaylists.isNotEmpty) ...[
                 SectionHeader(
                   title: '热门歌单',
                   onViewAll: () => Get.toNamed(AppRoutes.hotPlaylists),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 0.75,
-                    ),
-                    itemCount: controller.hotPlaylists.length,
-                    itemBuilder: (context, index) {
-                      final playlist = controller.hotPlaylists[index];
-                      return HotPlaylistCard(
-                        playlist: playlist,
-                        onTap: () => Get.toNamed(
-                          AppRoutes.audioPlaylistDetail,
-                          arguments: playlist,
-                        ),
-                      );
-                    },
-                  ),
+                _buildPlaylistGrid(
+                  itemCount: controller.hotPlaylists.length,
+                  itemBuilder: (index) {
+                    final playlist = controller.hotPlaylists[index];
+                    return HotPlaylistCard(
+                      playlist: playlist,
+                      onTap: () => Get.toNamed(
+                        AppRoutes.audioPlaylistDetail,
+                        arguments: playlist,
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 16),
               ],
+              if (controller.neteaseRecommendPlaylists.isNotEmpty ||
+                  controller.hotPlaylists.isNotEmpty)
+                const SizedBox(height: 24),
 
-              // 音乐视频 (B站)
+              // ── 分组 D: 音乐视频 ──
               if (controller.mvList.isNotEmpty) ...[
                 SectionHeader(
                   title: '音乐视频',
@@ -473,12 +262,98 @@ class MusicDiscoveryPage extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 16),
               ],
+
+              // 底部留白，避开底部导航栏
+              const SizedBox(height: 64),
             ],
           ),
         );
       }),
+    );
+  }
+
+  /// 通用水平歌曲列表（复用于每日推荐、新歌速递、B站热榜）
+  Widget _buildHorizontalSongList({
+    required List<SearchVideoModel> songs,
+    required void Function(SearchVideoModel) onTap,
+    required ThemeData theme,
+  }) {
+    return SizedBox(
+      height: 72,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: songs.length,
+        itemBuilder: (context, index) {
+          final song = songs[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => onTap(song),
+              child: SizedBox(
+                width: 200,
+                child: Row(
+                  children: [
+                    CachedImage(
+                      imageUrl: song.pic,
+                      width: 56,
+                      height: 56,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            song.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            song.author,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 通用歌单网格（复用于推荐歌单、热门歌单、每日推荐歌单）
+  Widget _buildPlaylistGrid({
+    required int itemCount,
+    required Widget Function(int index) itemBuilder,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: itemCount,
+        itemBuilder: (context, index) => itemBuilder(index),
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@ import '../../app/routes/app_routes.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../player/player_controller.dart';
 import 'discover_controller.dart';
+import 'widgets/genre_picker_sheet.dart';
 
 class DiscoverPage extends GetView<DiscoverController> {
   const DiscoverPage({super.key});
@@ -102,6 +103,11 @@ class DiscoverPage extends GetView<DiscoverController> {
               ),
             ),
             const Spacer(),
+            TextButton.icon(
+              onPressed: () => GenrePickerSheet.show(context),
+              icon: const Icon(Icons.style, size: 16),
+              label: const Text('选择风格'),
+            ),
             Obx(() => controller.isGeneratingTags.value
                 ? const SizedBox(
                     width: 20,

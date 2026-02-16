@@ -138,27 +138,66 @@ class PlayerHomeTab extends StatelessWidget {
   }
 
   Widget _buildPlayerUI(BuildContext context, PlayerController playerCtrl) {
+    if (PlatformUtils.isDesktop) {
+      return _buildDesktopPlayerUI(context, playerCtrl);
+    }
+    return _buildMobilePlayerUI(context, playerCtrl);
+  }
+
+  Widget _buildMobilePlayerUI(
+      BuildContext context, PlayerController playerCtrl) {
     return Column(
       children: [
         const SizedBox(height: 16),
         Expanded(
           flex: 5,
-          child: Obx(() {
-            if (playerCtrl.isVideoMode.value) {
-              return const PlayerVideo();
-            }
-            return GestureDetector(
-              onTap: () => playerCtrl.toggleLyricsView(),
-              child: playerCtrl.showLyrics.value
-                  ? const PlayerLyrics()
-                  : const PlayerArtwork(),
-            );
-          }),
+          child: _buildArtworkArea(playerCtrl),
         ),
         const SizedBox(height: 24),
         const Expanded(flex: 4, child: PlayerControls()),
         const SizedBox(height: 16),
       ],
     );
+  }
+
+  Widget _buildDesktopPlayerUI(
+      BuildContext context, PlayerController playerCtrl) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: Row(
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: _buildArtworkArea(playerCtrl),
+            ),
+          ),
+          const SizedBox(width: 32),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: const PlayerControls(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArtworkArea(PlayerController playerCtrl) {
+    return Obx(() {
+      if (playerCtrl.isVideoMode.value) {
+        return const PlayerVideo();
+      }
+      return GestureDetector(
+        onTap: () => playerCtrl.toggleLyricsView(),
+        child: playerCtrl.showLyrics.value
+            ? const PlayerLyrics()
+            : const PlayerArtwork(),
+      );
+    });
   }
 }

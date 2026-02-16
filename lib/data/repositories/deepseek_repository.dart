@@ -59,11 +59,12 @@ class DeepSeekRepository {
 
       final res = await _provider.chatCompletion(
         systemPrompt:
-            '你是一个音乐推荐专家。根据用户的音乐偏好标签，推荐具体的歌曲。'
-            '每条推荐格式为"歌手名 歌曲名"，这样方便在B站搜索到对应的音乐视频。'
-            '推荐5-10首不同歌手的经典或热门歌曲，风格要匹配用户偏好。'
+            '你是一个音乐搜索词生成专家。根据用户的音乐偏好标签，生成适合在B站搜索的音乐关键词。'
+            '关键词应以风格、流派、情绪、场景为主，而不是具体的歌手和歌曲名。'
+            '关键词要多样化，可以组合风格+情绪、风格+场景、风格+年代等维度。'
+            '生成6-10个搜索关键词。'
             '只输出一个JSON数组，不要输出其他任何内容。'
-            '例如: ["周杰伦 晴天","陈奕迅 富士山下","YOASOBI アイドル","赵雷 成都","邓紫棋 光年之外"]',
+            '例如: ["华语R&B慢歌","深夜日系City Pop","粤语经典情歌","独立民谣吉他","韩系R&B节奏感","90年代港乐","电子氛围轻音乐","说唱freestyle"]',
         userPrompt: '用户偏好标签: ${tags.join(", ")}$avoidPart',
         temperature: 0.9,
         maxTokens: 400,
@@ -86,42 +87,19 @@ class DeepSeekRepository {
 
       final res = await _provider.chatCompletion(
         systemPrompt:
-            '你是一个音乐推荐专家。请随机推荐不同风格、不同语种的热门好听歌曲。'
-            '涵盖华语、欧美、日韩等，风格多样化（流行、R&B、摇滚、民谣、电子等）。'
-            '每条格式为"歌手名 歌曲名"，方便在B站搜索。'
-            '推荐8-12首歌曲。'
-            '只输出一个JSON数组，不要输出其他任何内容。',
-        userPrompt: '请随机推荐一些好听的歌曲$avoidPart',
+            '你是一个音乐搜索词生成专家。请生成适合在B站搜索的多样化音乐关键词。'
+            '关键词应以风格、流派、情绪、场景为主，覆盖不同语种和风格。'
+            '可以组合风格+情绪、风格+场景、风格+年代等维度，让搜索结果丰富多样。'
+            '生成8-12个搜索关键词。'
+            '只输出一个JSON数组，不要输出其他任何内容。'
+            '例如: ["华语流行新歌","日系治愈轻音乐","欧美indie pop","深夜R&B","古风国风纯音乐","韩语慢歌","民谣弹唱","电子舞曲EDM"]',
+        userPrompt: '请生成一组多样化的音乐搜索关键词$avoidPart',
         temperature: 1.0,
         maxTokens: 400,
       );
       return _parseJsonArray(_extractContent(res));
     } catch (e) {
       log('generateRandomQueries error: $e');
-      rethrow;
-    }
-  }
-
-  Future<List<String>> analyzeVoiceIntent(String speechText) async {
-    try {
-      final res = await _provider.chatCompletion(
-        systemPrompt:
-            '你是一个音乐推荐助手。用户通过语音告诉你他想听什么音乐，'
-            '请分析用户的意图，提取出音乐偏好标签。'
-            '标签可以是：音乐风格（流行、摇滚、民谣、电子、R&B、说唱、古风、爵士等）、'
-            '情感（伤感、欢快、治愈、浪漫、燃等）、'
-            '场景（睡前、运动、学习、开车等）、'
-            '语种（华语、粤语、英文、日语、韩语等）、'
-            '或具体的歌手/风格描述。'
-            '只输出一个JSON数组，包含3-6个标签，不要输出其他任何内容。'
-            '例如: ["华语流行","伤感","慢歌","女声"]',
-        userPrompt: speechText,
-        temperature: 0.3,
-        maxTokens: 200,
-      );
-      return _parseJsonArray(_extractContent(res));
-    } catch (e) {
-      log('analyzeVoiceIntent error: $e');
       rethrow;
     }
   }

@@ -221,7 +221,6 @@ class PlayerControls extends GetView<PlayerController> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
           // Heart mode + MV toggle
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

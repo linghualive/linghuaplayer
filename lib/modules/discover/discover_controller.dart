@@ -75,6 +75,11 @@ class DiscoverController extends GetxController {
     _storage.preferenceTags = preferenceTags.toList();
   }
 
+  void saveTagsToStorage(List<String> tags) {
+    preferenceTags.assignAll(tags);
+    _storage.preferenceTags = tags;
+  }
+
   Future<void> loadRecommendations() async {
     if (!hasApiKey.value) return;
 
