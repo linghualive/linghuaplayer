@@ -49,5 +49,8 @@ android/key.properties
 android/app/upload-keystore.jks
 *.jks
 
+# Claude Code
+.claude/
+
 # Skill packaging artifacts
 *.skill
