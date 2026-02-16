@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../modules/player/widgets/mini_player_bar.dart';
-import '../../modules/playlist/playlist_controller.dart';
-import '../../modules/playlist/playlist_page.dart';
-import '../../modules/profile/profile_page.dart';
-import '../../modules/profile/profile_controller.dart';
-import '../../modules/music_discovery/music_discovery_page.dart';
-import '../../modules/music_discovery/music_discovery_controller.dart';
+import '../../shared/utils/platform_utils.dart';
+import '../desktop/widgets/desktop_navigation_rail.dart';
+import '../desktop/widgets/desktop_player_bar.dart';
 import 'home_controller.dart';
 
 class HomePage extends GetView<HomeController> {
@@ -15,20 +12,18 @@ class HomePage extends GetView<HomeController> {
 
   @override
   Widget build(BuildContext context) {
-    // Ensure sub-controllers are created
-    Get.put(MusicDiscoveryController());
-    Get.put(PlaylistController());
-    Get.put(ProfileController());
+    if (PlatformUtils.isDesktop) {
+      return _buildDesktopLayout(context);
+    }
+    return _buildMobileLayout(context);
+  }
 
+  Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       body: Obx(() {
         return IndexedStack(
           index: controller.currentIndex.value,
-          children: const [
-            MusicDiscoveryPage(),
-            PlaylistPage(),
-            ProfilePage(),
-          ],
+          children: controller.pages,
         );
       }),
       bottomNavigationBar: Column(
@@ -56,6 +51,47 @@ class HomePage extends GetView<HomeController> {
                   ),
                 ],
               )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout(BuildContext context) {
+    final extended = MediaQuery.of(context).size.width >= 1200;
+
+    return Scaffold(
+      body: Column(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                // NavigationRail
+                Obx(() => DesktopNavigationRail(
+                      selectedIndex: controller.selectedIndex.value,
+                      onDestinationSelected:
+                          controller.onNavigationChanged,
+                      extended: extended,
+                    )),
+                // Vertical divider
+                VerticalDivider(
+                  width: 1,
+                  thickness: 1,
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+                // Content area
+                Expanded(
+                  child: Obx(() {
+                    return IndexedStack(
+                      index: controller.selectedIndex.value,
+                      children: controller.pages,
+                    );
+                  }),
+                ),
+              ],
+            ),
+          ),
+          // Desktop player bar
+          const DesktopPlayerBar(),
         ],
       ),
     );

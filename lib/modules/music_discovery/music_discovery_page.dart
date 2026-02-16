@@ -453,9 +453,15 @@ class MusicDiscoveryPage extends StatelessWidget {
                     itemCount: controller.mvList.length,
                     itemBuilder: (context, index) {
                       final mv = controller.mvList[index];
-                      return MvCard(
-                        mv: mv,
-                        onTap: () => controller.onMvTap(mv),
+                      return SizedBox(
+                        width: 200,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: MvCard(
+                            mv: mv,
+                            onTap: () => controller.onMvTap(mv),
+                          ),
+                        ),
                       );
                     },
                   ),

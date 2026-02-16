@@ -49,9 +49,6 @@ android/key.properties
 android/app/upload-keystore.jks
 *.jks
 
-# Desktop platform folders (tracked on desktop-material3 branch)
-macos/
-linux/
 
 # Claude Code
 .claude/

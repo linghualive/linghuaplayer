@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
 import '../../data/repositories/netease_repository.dart';
+import '../../shared/responsive/breakpoints.dart';
 import '../../shared/widgets/cached_image.dart';
 import 'netease_hot_playlists_controller.dart';
 
@@ -110,13 +111,19 @@ class NeteaseHotPlaylistsPage extends StatelessWidget {
                 },
                 child: RefreshIndicator(
                   onRefresh: controller.reload,
-                  child: GridView.builder(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns = Breakpoints.getGridColumns(
+                              constraints.maxWidth)
+                          .clamp(3, 6);
+
+                      return GridView.builder(
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
                       childAspectRatio: 0.75,
                     ),
                     itemCount: controller.playlists.length +
@@ -139,6 +146,8 @@ class NeteaseHotPlaylistsPage extends StatelessWidget {
                           arguments: playlist,
                         ),
                       );
+                    },
+                  );
                     },
                   ),
                 ),

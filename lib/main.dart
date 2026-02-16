@@ -1,13 +1,17 @@
+import 'dart:io';
+
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:window_manager/window_manager.dart';
 
 import 'app/bindings/initial_binding.dart';
 import 'app/routes/app_pages.dart';
 import 'app/routes/app_routes.dart';
 import 'app/theme/app_theme.dart';
+import 'app/theme/desktop_theme.dart';
 import 'app/theme/theme_controller.dart';
 import 'core/http/http_client.dart';
 import 'core/http/netease_http_client.dart';
@@ -16,6 +20,22 @@ import 'core/storage/storage_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+
+  // Desktop window configuration
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      size: Size(1280, 800),
+      minimumSize: Size(1000, 600),
+      center: true,
+      title: 'FlameKit',
+      titleBarStyle: TitleBarStyle.normal,
+    );
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
 
   // Initialize storage
   await GetStorage.init();
@@ -46,15 +66,47 @@ class FlameKitApp extends StatelessWidget {
           ThemeData lightTheme;
           ThemeData darkTheme;
 
+          // Check if running on desktop
+          final isDesktop =
+              Platform.isWindows || Platform.isMacOS || Platform.isLinux;
+
           if (themeCtrl.dynamicColor.value &&
               lightDynamic != null &&
               darkDynamic != null) {
-            lightTheme = AppTheme.lightThemeFromScheme(lightDynamic.harmonized());
-            darkTheme = AppTheme.darkThemeFromScheme(darkDynamic.harmonized());
+            if (isDesktop) {
+              lightTheme = DesktopTheme.createDesktopTheme(
+                colorScheme: lightDynamic.harmonized(),
+              );
+              darkTheme = DesktopTheme.createDesktopTheme(
+                colorScheme: darkDynamic.harmonized(),
+              );
+            } else {
+              lightTheme =
+                  AppTheme.lightThemeFromScheme(lightDynamic.harmonized());
+              darkTheme =
+                  AppTheme.darkThemeFromScheme(darkDynamic.harmonized());
+            }
           } else {
             final seed = themeCtrl.seedColor;
-            lightTheme = AppTheme.lightTheme(seed);
-            darkTheme = AppTheme.darkTheme(seed);
+            if (isDesktop) {
+              final lightColorScheme = ColorScheme.fromSeed(
+                seedColor: seed,
+                brightness: Brightness.light,
+              );
+              final darkColorScheme = ColorScheme.fromSeed(
+                seedColor: seed,
+                brightness: Brightness.dark,
+              );
+              lightTheme = DesktopTheme.createDesktopTheme(
+                colorScheme: lightColorScheme,
+              );
+              darkTheme = DesktopTheme.createDesktopTheme(
+                colorScheme: darkColorScheme,
+              );
+            } else {
+              lightTheme = AppTheme.lightTheme(seed);
+              darkTheme = AppTheme.darkTheme(seed);
+            }
           }
 
           return GetMaterialApp(

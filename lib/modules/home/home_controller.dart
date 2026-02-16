@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/http/netease_http_client.dart';
@@ -5,9 +6,20 @@ import '../../core/storage/storage_service.dart';
 import '../../data/models/login/netease_user_info_model.dart';
 import '../../data/models/login/user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../shared/utils/platform_utils.dart';
+import '../desktop/music_discovery/desktop_music_discovery_page.dart';
+import '../music_discovery/music_discovery_controller.dart';
+import '../music_discovery/music_discovery_page.dart';
+import '../playlist/playlist_controller.dart';
+import '../playlist/playlist_page.dart';
+import '../profile/profile_controller.dart';
+import '../profile/profile_page.dart';
 
 class HomeController extends GetxController {
   final currentIndex = 0.obs;
+
+  // For desktop navigation
+  final selectedIndex = 0.obs;
 
   // Bilibili login state
   final isLoggedIn = false.obs;
@@ -19,14 +31,46 @@ class HomeController extends GetxController {
 
   final _storage = Get.find<StorageService>();
 
+  // Pages list for navigation
+  late final List<Widget> pages;
+
   @override
   void onInit() {
     super.onInit();
     refreshLoginStatus();
+    _initializeControllers();
+    _initializePages();
+  }
+
+  void _initializePages() {
+    if (PlatformUtils.isDesktop) {
+      pages = [
+        const DesktopMusicDiscoveryPage(),
+        const PlaylistPage(),
+        const ProfilePage(),
+      ];
+    } else {
+      pages = [
+        const MusicDiscoveryPage(),
+        const PlaylistPage(),
+        const ProfilePage(),
+      ];
+    }
+  }
+
+  void _initializeControllers() {
+    Get.put(MusicDiscoveryController());
+    Get.put(PlaylistController());
+    Get.put(ProfileController());
   }
 
   void onTabChanged(int index) {
     currentIndex.value = index;
+  }
+
+  // For desktop navigation
+  void onNavigationChanged(int index) {
+    selectedIndex.value = index;
   }
 
   void refreshLoginStatus() {

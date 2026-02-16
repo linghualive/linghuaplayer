@@ -173,7 +173,9 @@ class _FolderTabState extends State<_FolderTab> {
   void initState() {
     super.initState();
     if (widget.controller.tabVideos[widget.folderId] == null) {
-      widget.controller.loadVideosForFolder(widget.folderId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.controller.loadVideosForFolder(widget.folderId);
+      });
     }
   }
 
@@ -378,7 +380,9 @@ class _NeteasePlaylistTabState extends State<_NeteasePlaylistTab> {
   void initState() {
     super.initState();
     if (widget.controller.neteasePlaylistTracks[widget.playlistId] == null) {
-      widget.controller.loadTracksForPlaylist(widget.playlistId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        widget.controller.loadTracksForPlaylist(widget.playlistId);
+      });
     }
   }
 

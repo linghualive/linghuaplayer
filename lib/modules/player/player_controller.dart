@@ -52,6 +52,9 @@ class PlayerController extends GetxController {
   mk.Player? _mediaKitPlayer;
   mkv.VideoController? _videoController;
 
+  // Guard flag: true while opening new media to suppress spurious completed events
+  bool _isSwitchingTrack = false;
+
   // Reactive state
   final currentVideo = Rxn<SearchVideoModel>();
   final isPlaying = false.obs;
@@ -148,27 +151,38 @@ class PlayerController extends GetxController {
     );
 
     // Listen to media_kit player streams
+    // On macOS/Linux, media_kit is used for audio too (just_audio unsupported)
     _mediaKitPlayer!.stream.playing.listen((playing) {
-      if (isVideoMode.value) isPlaying.value = playing;
+      if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
+        isPlaying.value = playing;
+      }
     });
 
     _mediaKitPlayer!.stream.position.listen((pos) {
-      if (isVideoMode.value) {
+      if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
         position.value = pos;
         _updateLyricsIndex(pos);
       }
     });
 
     _mediaKitPlayer!.stream.duration.listen((dur) {
-      if (isVideoMode.value) duration.value = dur;
+      if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
+        duration.value = dur;
+      }
     });
 
     _mediaKitPlayer!.stream.buffer.listen((buf) {
-      if (isVideoMode.value) buffered.value = buf;
+      if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
+        buffered.value = buf;
+      }
     });
 
     _mediaKitPlayer!.stream.completed.listen((completed) {
-      if (completed && isVideoMode.value) _playNext();
+      if (completed &&
+          !_isSwitchingTrack &&
+          (isVideoMode.value || Platform.isMacOS || Platform.isLinux)) {
+        _playNext();
+      }
     });
   }
 
@@ -200,6 +214,12 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _playAudioOnly(SearchVideoModel video) async {
+    // On macOS/Linux, use media_kit for audio (just_audio unsupported)
+    if (Platform.isMacOS || Platform.isLinux) {
+      await _playWithMediaKit(video, audioOnly: true);
+      return;
+    }
+
     // Stop media_kit if it was playing
     if (isVideoMode.value) {
       _mediaKitPlayer?.stop();
@@ -327,6 +347,9 @@ class PlayerController extends GetxController {
 
   Future<void> _playQueueItem(QueueItem item) async {
     if (item.video.isNetease) {
+      if (Platform.isMacOS || Platform.isLinux) {
+        _ensureMediaKitPlayer();
+      }
       isVideoMode.value = false;
       videoQualityLabel.value = '';
       await _playAudioUrlDirect(item.audioUrl);
@@ -336,6 +359,9 @@ class PlayerController extends GetxController {
       videoQualityLabel.value = item.videoQualityLabel ?? '';
       await _openVideoWithAudio(item.videoUrl!, item.audioUrl);
     } else {
+      if (Platform.isMacOS || Platform.isLinux) {
+        _ensureMediaKitPlayer();
+      }
       isVideoMode.value = false;
       videoQualityLabel.value = '';
       await _playAudioUrl(item.audioUrl);
@@ -343,21 +369,34 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _openVideoWithAudio(String videoUrl, String audioUrl) async {
-    final nativePlayer = _mediaKitPlayer!.platform as mk.NativePlayer;
+    _isSwitchingTrack = true;
+    try {
+      final nativePlayer = _mediaKitPlayer!.platform as mk.NativePlayer;
 
-    // mpv uses ':' (or ';' on Windows) as separator for multiple files in
-    // audio-files. Escape them so the URL is not split incorrectly.
-    final escapedAudio = Platform.isWindows
-        ? audioUrl.replaceAll(';', r'\;')
-        : audioUrl.replaceAll(':', r'\:');
-    await nativePlayer.setProperty('audio-files', escapedAudio);
+      // mpv uses ':' (or ';' on Windows) as separator for multiple files in
+      // audio-files. Escape them so the URL is not split incorrectly.
+      final escapedAudio = Platform.isWindows
+          ? audioUrl.replaceAll(';', r'\;')
+          : audioUrl.replaceAll(':', r'\:');
+      await nativePlayer.setProperty('audio-files', escapedAudio);
 
-    await _mediaKitPlayer!.open(
-      mk.Media(videoUrl, httpHeaders: _httpHeaders),
-    );
+      await _mediaKitPlayer!.open(
+        mk.Media(videoUrl, httpHeaders: _httpHeaders),
+      );
+      _isSwitchingTrack = false;
+    } catch (e) {
+      _isSwitchingTrack = false;
+      rethrow;
+    }
   }
 
   Future<void> _playAudioUrl(String url) async {
+    // On macOS/Linux, use media_kit as just_audio doesn't support it
+    if (Platform.isMacOS || Platform.isLinux) {
+      await _playAudioWithMediaKit(url);
+      return;
+    }
+
     log('Playing audio URL: $url');
     try {
       await _audioPlayer.setAudioSource(
@@ -441,6 +480,12 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _playAudioUrlDirect(String url) async {
+    // On macOS/Linux, use media_kit as just_audio doesn't support it
+    if (Platform.isMacOS || Platform.isLinux) {
+      await _playAudioWithMediaKit(url);
+      return;
+    }
+
     log('Playing direct audio URL: $url');
     try {
       await _audioPlayer.setAudioSource(
@@ -449,6 +494,83 @@ class PlayerController extends GetxController {
       _audioPlayer.play();
     } catch (e) {
       log('Direct audio source error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _playWithMediaKit(SearchVideoModel video,
+      {bool audioOnly = false}) async {
+    _ensureMediaKitPlayer();
+
+    if (!audioOnly && _storage.enableVideo) {
+      await _playWithVideo(video);
+      return;
+    }
+
+    // Audio-only mode with media_kit (for macOS/Linux)
+    final streams = await _playerRepo.getAudioStreams(video.bvid);
+    if (streams.isEmpty) {
+      AppToast.error('获取音频流失败');
+      isLoading.value = false;
+      return;
+    }
+
+    String? playedUrl;
+    String playedQuality = '';
+
+    for (final stream in streams) {
+      log('Trying ${stream.qualityLabel} with media_kit');
+      try {
+        await _playAudioWithMediaKit(stream.baseUrl);
+        playedUrl = stream.baseUrl;
+        playedQuality = stream.qualityLabel;
+        break;
+      } catch (e) {
+        log('${stream.qualityLabel} baseUrl failed: $e');
+        if (stream.backupUrl != null && stream.backupUrl!.isNotEmpty) {
+          try {
+            await _playAudioWithMediaKit(stream.backupUrl!);
+            playedUrl = stream.backupUrl!;
+            playedQuality = stream.qualityLabel;
+            break;
+          } catch (e2) {
+            log('${stream.qualityLabel} backupUrl failed: $e2');
+          }
+        }
+      }
+    }
+
+    if (playedUrl == null) {
+      throw Exception('All audio quality tiers failed');
+    }
+
+    log('Playing with media_kit quality: $playedQuality');
+    audioQualityLabel.value = playedQuality;
+    videoQualityLabel.value = '';
+    isVideoMode.value = false;
+
+    _addToQueue(
+      video: video,
+      audioUrl: playedUrl,
+      qualityLabel: playedQuality,
+    );
+  }
+
+  Future<void> _playAudioWithMediaKit(String url) async {
+    log('Playing audio with media_kit: $url');
+    _isSwitchingTrack = true;
+    try {
+      _audioPlayer.stop();
+      _ensureMediaKitPlayer();
+
+      await _mediaKitPlayer!.open(
+        mk.Media(url, httpHeaders: _httpHeaders),
+      );
+      _isSwitchingTrack = false;
+      await _mediaKitPlayer!.play();
+    } catch (e) {
+      _isSwitchingTrack = false;
+      log('Media kit audio playback error: $e');
       rethrow;
     }
   }
@@ -528,7 +650,8 @@ class PlayerController extends GetxController {
   }
 
   void togglePlay() {
-    if (isVideoMode.value && _mediaKitPlayer != null) {
+    if ((isVideoMode.value || Platform.isMacOS || Platform.isLinux) &&
+        _mediaKitPlayer != null) {
       _mediaKitPlayer!.playOrPause();
     } else {
       if (_audioPlayer.playing) {
@@ -540,7 +663,8 @@ class PlayerController extends GetxController {
   }
 
   void seekTo(Duration pos) {
-    if (isVideoMode.value && _mediaKitPlayer != null) {
+    if ((isVideoMode.value || Platform.isMacOS || Platform.isLinux) &&
+        _mediaKitPlayer != null) {
       _mediaKitPlayer!.seek(pos);
     } else {
       _audioPlayer.seek(pos);
@@ -551,7 +675,7 @@ class PlayerController extends GetxController {
     switch (playMode.value) {
       case PlayMode.repeatOne:
         seekTo(Duration.zero);
-        if (isVideoMode.value) {
+        if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
           _mediaKitPlayer?.play();
         } else {
           _audioPlayer.play();
@@ -580,7 +704,7 @@ class PlayerController extends GetxController {
   }
 
   void _stopPlayback() {
-    if (isVideoMode.value) {
+    if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
       _mediaKitPlayer?.stop();
     } else {
       _audioPlayer.stop();
@@ -747,7 +871,7 @@ class PlayerController extends GetxController {
   }
 
   void clearQueue() {
-    if (isVideoMode.value) {
+    if (isVideoMode.value || Platform.isMacOS || Platform.isLinux) {
       _mediaKitPlayer?.stop();
     } else {
       _audioPlayer.stop();
