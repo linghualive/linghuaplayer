@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../app/theme/desktop_theme.dart';
 import '../../../shared/widgets/cached_image.dart';
+import '../../home/home_controller.dart';
 import '../../player/player_controller.dart';
 import '../../player/widgets/play_queue_sheet.dart';
 
@@ -78,7 +79,11 @@ class DesktopPlayerBar extends GetView<PlayerController> {
 
   Widget _buildTrackInfo(BuildContext context, dynamic video) {
     return InkWell(
-      onTap: () => Get.toNamed('/player'),
+      onTap: () {
+        final homeCtrl = Get.find<HomeController>();
+        homeCtrl.selectedIndex.value = 0;
+        homeCtrl.currentIndex.value = 0;
+      },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -240,6 +245,22 @@ class DesktopPlayerBar extends GetView<PlayerController> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
+        // Heart mode button
+        IconButton(
+          icon: Icon(
+            controller.isHeartMode.value
+                ? Icons.favorite
+                : Icons.favorite_border,
+          ),
+          onPressed: controller.isHeartMode.value
+              ? controller.deactivateHeartMode
+              : null,
+          color: controller.isHeartMode.value ? Colors.pink : null,
+          iconSize: 20,
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(),
+          tooltip: controller.isHeartMode.value ? '退出心动模式' : '心动模式',
+        ),
         // Play mode button
         IconButton(
           icon: Icon(
@@ -277,7 +298,11 @@ class DesktopPlayerBar extends GetView<PlayerController> {
         // Full screen button
         IconButton(
           icon: const Icon(Icons.open_in_full),
-          onPressed: () => Get.toNamed('/player'),
+          onPressed: () {
+            final homeCtrl = Get.find<HomeController>();
+            homeCtrl.selectedIndex.value = 0;
+            homeCtrl.currentIndex.value = 0;
+          },
           tooltip: '全屏播放器',
           iconSize: 20,
           padding: const EdgeInsets.all(8),

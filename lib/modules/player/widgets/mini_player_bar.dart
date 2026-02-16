@@ -45,6 +45,17 @@ class MiniPlayerBar extends GetView<PlayerController> {
                     const EdgeInsets.fromLTRB(10, 8, 4, 6),
                 child: Row(
                   children: [
+                    // Heart mode indicator
+                    if (controller.isHeartMode.value)
+                      Container(
+                        width: 3,
+                        height: 44,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.pink,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     // Cover art
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),

@@ -122,10 +122,11 @@ class WatchHistoryPage extends StatelessWidget {
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: SizedBox(
-                              height: 100,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 100),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     video.title,
@@ -135,7 +136,7 @@ class WatchHistoryPage extends StatelessWidget {
                                         .textTheme
                                         .bodyMedium,
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(height: 4),
                                   Text(
                                     video.authorName,
                                     style: Theme.of(context)
@@ -152,16 +153,19 @@ class WatchHistoryPage extends StatelessWidget {
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Text(
-                                        video.relativeTime,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .outline,
-                                            ),
+                                      Flexible(
+                                        child: Text(
+                                          video.relativeTime,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .outline,
+                                              ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                       if (video.progressStr.isNotEmpty) ...[
                                         const SizedBox(width: 8),

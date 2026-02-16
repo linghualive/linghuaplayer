@@ -6,14 +6,14 @@ import '../../core/storage/storage_service.dart';
 import '../../data/models/login/netease_user_info_model.dart';
 import '../../data/models/login/user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../shared/utils/platform_utils.dart';
-import '../desktop/music_discovery/desktop_music_discovery_page.dart';
-import '../music_discovery/music_discovery_controller.dart';
-import '../music_discovery/music_discovery_page.dart';
+import '../discover/discover_controller.dart';
+import '../player/player_home_tab.dart';
 import '../playlist/playlist_controller.dart';
 import '../playlist/playlist_page.dart';
 import '../profile/profile_controller.dart';
 import '../profile/profile_page.dart';
+import '../search/search_controller.dart' as app;
+import '../search/search_page.dart';
 
 class HomeController extends GetxController {
   final currentIndex = 0.obs;
@@ -43,25 +43,21 @@ class HomeController extends GetxController {
   }
 
   void _initializePages() {
-    if (PlatformUtils.isDesktop) {
-      pages = [
-        const DesktopMusicDiscoveryPage(),
-        const PlaylistPage(),
-        const ProfilePage(),
-      ];
-    } else {
-      pages = [
-        const MusicDiscoveryPage(),
-        const PlaylistPage(),
-        const ProfilePage(),
-      ];
-    }
+    pages = [
+      const PlayerHomeTab(),
+      const SearchPage(isEmbedded: true),
+      const PlaylistPage(),
+      const ProfilePage(),
+    ];
   }
 
   void _initializeControllers() {
-    Get.put(MusicDiscoveryController());
     Get.put(PlaylistController());
+    Get.put(DiscoverController());
     Get.put(ProfileController());
+    if (!Get.isRegistered<app.SearchController>()) {
+      Get.put(app.SearchController());
+    }
   }
 
   void onTabChanged(int index) {

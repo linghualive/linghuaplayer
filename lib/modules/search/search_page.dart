@@ -13,12 +13,15 @@ import 'widgets/search_suggestion_list.dart';
 import 'widgets/search_result_card.dart';
 
 class SearchPage extends GetView<app.SearchController> {
-  const SearchPage({super.key});
+  final bool isEmbedded;
+
+  const SearchPage({super.key, this.isEmbedded = false});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !isEmbedded,
         toolbarHeight: 64,
         title: Container(
           height: 46,

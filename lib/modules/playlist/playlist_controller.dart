@@ -1,12 +1,9 @@
 import 'package:get/get.dart';
 
 import '../../core/storage/storage_service.dart';
-import '../../data/models/search/search_video_model.dart';
 import '../../data/models/user/fav_folder_model.dart';
-import '../../data/models/user/fav_resource_model.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/user_repository.dart';
-import '../player/player_controller.dart';
 
 class PlaylistController extends GetxController {
   final _repo = Get.find<UserRepository>();
@@ -17,17 +14,28 @@ class PlaylistController extends GetxController {
   final visibleFolders = <FavFolderModel>[].obs;
   final isLoading = true.obs;
 
-  // Per-folder video state
-  final tabVideos = <int, List<FavResourceModel>>{}.obs;
-  final tabHasMore = <int, bool>{}.obs;
-  final tabPage = <int, int>{}.obs;
-  final tabLoading = <int, bool>{}.obs;
-
   // Netease playlist state
   final neteasePlaylists = <NeteasePlaylistBrief>[].obs;
   final neteaseIsLoading = true.obs;
-  final neteasePlaylistTracks = <int, List<SearchVideoModel>>{}.obs;
-  final neteasePlaylistLoading = <int, bool>{}.obs;
+
+  // Search
+  final searchQuery = ''.obs;
+
+  List<FavFolderModel> get filteredFolders {
+    final query = searchQuery.value.toLowerCase();
+    if (query.isEmpty) return visibleFolders;
+    return visibleFolders
+        .where((f) => f.title.toLowerCase().contains(query))
+        .toList();
+  }
+
+  List<NeteasePlaylistBrief> get filteredNeteasePlaylists {
+    final query = searchQuery.value.toLowerCase();
+    if (query.isEmpty) return neteasePlaylists;
+    return neteasePlaylists
+        .where((p) => p.name.toLowerCase().contains(query))
+        .toList();
+  }
 
   @override
   void onInit() {
@@ -47,68 +55,28 @@ class PlaylistController extends GetxController {
       final list = await _repo.getFavFolders(upMid: mid);
       folders.assignAll(list);
       _applyVisibleConfig();
-    } catch (_) {
-      // Prevent stuck loading on network/parse errors
-    }
+    } catch (_) {}
     isLoading.value = false;
   }
 
   void _applyVisibleConfig() {
     final configured = _storage.playlistVisibleFolderIds;
     if (configured.isEmpty) {
-      // Show all by default
       visibleFolders.assignAll(folders);
     } else {
       final configuredSet = configured.toSet();
       visibleFolders.assignAll(
         folders.where((f) => configuredSet.contains(f.id)),
       );
-      // If config results in empty list, show all
       if (visibleFolders.isEmpty) {
         visibleFolders.assignAll(folders);
       }
     }
   }
 
-  Future<void> loadVideosForFolder(int folderId) async {
-    await Future.value(); // Defer to avoid setState during build
-    tabLoading[folderId] = true;
-    tabPage[folderId] = 1;
-    try {
-      final result = await _repo.getFavResources(mediaId: folderId, pn: 1);
-      tabVideos[folderId] = result.items;
-      tabHasMore[folderId] = result.hasMore;
-    } catch (_) {
-      tabVideos[folderId] = [];
-      tabHasMore[folderId] = false;
-    }
-    tabLoading[folderId] = false;
-  }
-
-  Future<void> loadMoreForFolder(int folderId) async {
-    if (!(tabHasMore[folderId] ?? false)) return;
-    if (tabLoading[folderId] ?? false) return;
-    final page = (tabPage[folderId] ?? 1) + 1;
-    tabPage[folderId] = page;
-    try {
-      final result = await _repo.getFavResources(mediaId: folderId, pn: page);
-      final existing = tabVideos[folderId] ?? [];
-      tabVideos[folderId] = [...existing, ...result.items];
-      tabHasMore[folderId] = result.hasMore;
-    } catch (_) {
-      tabHasMore[folderId] = false;
-    }
-  }
-
-  void playVideo(FavResourceModel video) {
-    final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(video.toSearchVideoModel());
-  }
-
   void toggleFolderVisibility(int folderId, bool visible) {
     final configured = _storage.playlistVisibleFolderIds.toList();
     if (configured.isEmpty) {
-      // First time configuring: start with all IDs then toggle
       final allIds = folders.map((f) => f.id).toList();
       if (!visible) {
         allIds.remove(folderId);
@@ -157,36 +125,5 @@ class PlaylistController extends GetxController {
       neteasePlaylists.assignAll(list);
     } catch (_) {}
     neteaseIsLoading.value = false;
-  }
-
-  Future<void> loadTracksForPlaylist(int playlistId) async {
-    if (neteasePlaylistLoading[playlistId] == true) return;
-    neteasePlaylistLoading[playlistId] = true;
-    try {
-      final detail = await _neteaseRepo.getPlaylistDetail(playlistId);
-      if (detail != null) {
-        neteasePlaylistTracks[playlistId] = detail.tracks;
-      } else {
-        neteasePlaylistTracks[playlistId] = [];
-      }
-    } catch (_) {
-      neteasePlaylistTracks[playlistId] = [];
-    }
-    neteasePlaylistLoading[playlistId] = false;
-  }
-
-  void playNeteaseSong(SearchVideoModel song) {
-    final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(song);
-  }
-
-  Future<void> playAllNetease(int playlistId) async {
-    final tracks = neteasePlaylistTracks[playlistId];
-    if (tracks == null || tracks.isEmpty) return;
-    final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(tracks.first);
-    if (tracks.length > 1) {
-      playerCtrl.addAllToQueue(tracks.sublist(1));
-    }
   }
 }

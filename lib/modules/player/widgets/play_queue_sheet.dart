@@ -44,9 +44,14 @@ class PlayQueueSheet extends GetView<PlayerController> {
             child: Row(
               children: [
                 Obx(() => Text(
-                      '播放队列 (${controller.queue.length})',
+                      controller.isHeartMode.value
+                          ? '心动队列 (${controller.queue.length})'
+                          : '播放队列 (${controller.queue.length})',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            color: controller.isHeartMode.value
+                                ? Colors.pink
+                                : null,
                           ),
                     )),
                 const SizedBox(width: 8),

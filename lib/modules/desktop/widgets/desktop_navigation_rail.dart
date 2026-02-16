@@ -55,9 +55,14 @@ class DesktopNavigationRail extends StatelessWidget {
       ),
       destinations: const [
         NavigationRailDestination(
-          icon: Icon(Icons.music_note_outlined),
-          selectedIcon: Icon(Icons.music_note),
-          label: Text('音乐'),
+          icon: Icon(Icons.play_circle_outline),
+          selectedIcon: Icon(Icons.play_circle),
+          label: Text('播放'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.search_outlined),
+          selectedIcon: Icon(Icons.search),
+          label: Text('搜索'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.queue_music_outlined),

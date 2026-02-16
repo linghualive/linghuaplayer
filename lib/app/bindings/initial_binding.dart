@@ -12,7 +12,9 @@ import '../../data/providers/player_provider.dart';
 import '../../data/providers/user_provider.dart';
 import '../../data/providers/music_provider.dart';
 import '../../data/providers/lyrics_provider.dart';
+import '../../data/providers/deepseek_provider.dart';
 import '../../data/providers/netease_provider.dart';
+import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../modules/player/player_controller.dart';
 
@@ -27,6 +29,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => MusicProvider(), fenix: true);
     Get.lazyPut(() => LyricsProvider(), fenix: true);
     Get.lazyPut(() => NeteaseProvider(), fenix: true);
+    Get.lazyPut(() => DeepSeekProvider(), fenix: true);
 
     // Repositories
     Get.lazyPut(() => AuthRepository(), fenix: true);
@@ -36,6 +39,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => MusicRepository(), fenix: true);
     Get.lazyPut(() => LyricsRepository(), fenix: true);
     Get.lazyPut(() => NeteaseRepository(), fenix: true);
+    Get.lazyPut(() => DeepSeekRepository(), fenix: true);
 
     // Global persistent controller
     Get.put(PlayerController(), permanent: true);

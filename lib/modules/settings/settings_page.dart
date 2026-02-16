@@ -133,6 +133,36 @@ class SettingsPage extends GetView<SettingsController> {
 
           const Divider(),
 
+          // ── AI 智能推荐 ──
+          _buildSectionHeader(theme, 'AI 智能推荐'),
+
+          Obx(() => ListTile(
+                leading: const Icon(Icons.key),
+                title: const Text('DeepSeek API Key'),
+                subtitle: Text(
+                  controller.deepseekApiKey.value.isNotEmpty
+                      ? '已配置 (${controller.deepseekApiKey.value.substring(0, 8)}...)'
+                      : '未配置',
+                  style: TextStyle(
+                    color: controller.deepseekApiKey.value.isNotEmpty
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outline,
+                  ),
+                ),
+                trailing: controller.isValidatingKey.value
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.chevron_right),
+                onTap: controller.isValidatingKey.value
+                    ? null
+                    : () => _showApiKeyDialog(context),
+              )),
+
+          const Divider(),
+
           // ── 关于 ──
           _buildSectionHeader(theme, '关于'),
 
@@ -155,6 +185,68 @@ class SettingsPage extends GetView<SettingsController> {
               )),
 
           const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
+
+  void _showApiKeyDialog(BuildContext context) {
+    final textController = TextEditingController(
+      text: controller.deepseekApiKey.value,
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('DeepSeek API Key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: textController,
+              decoration: const InputDecoration(
+                hintText: '输入 API Key',
+                border: OutlineInputBorder(),
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '用于 AI 分析音乐偏好和推荐歌曲',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+            ),
+          ],
+        ),
+        actions: [
+          if (controller.deepseekApiKey.value.isNotEmpty)
+            TextButton(
+              onPressed: () {
+                controller.clearDeepseekApiKey();
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('清除'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final key = textController.text.trim();
+              Navigator.of(ctx).pop();
+              if (key.isNotEmpty) {
+                final success = await controller.setDeepseekApiKey(key);
+                if (!success && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('API Key 验证失败，请检查密钥')),
+                  );
+                }
+              }
+            },
+            child: const Text('保存'),
+          ),
         ],
       ),
     );

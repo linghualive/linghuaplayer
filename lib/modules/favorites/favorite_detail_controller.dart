@@ -46,4 +46,23 @@ class FavoriteDetailController extends GetxController {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(video.toSearchVideoModel());
   }
+
+  void playAll() {
+    if (videos.isEmpty) return;
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.playFromSearch(videos.first.toSearchVideoModel());
+    if (videos.length > 1) {
+      playerCtrl.addAllToQueue(
+        videos.sublist(1).map((v) => v.toSearchVideoModel()).toList(),
+      );
+    }
+  }
+
+  void addAllToQueue() {
+    if (videos.isEmpty) return;
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.addAllToQueue(
+      videos.map((v) => v.toSearchVideoModel()).toList(),
+    );
+  }
 }

@@ -39,16 +39,42 @@ class FavoriteDetailPage extends StatelessWidget {
           child: RefreshIndicator(
             onRefresh: controller.loadVideos,
             child: ListView.builder(
-              itemCount: controller.videos.length +
+              itemCount: controller.videos.length + 1 +
                   (controller.hasMore.value ? 1 : 0),
               itemBuilder: (context, index) {
-                if (index >= controller.videos.length) {
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: FilledButton.tonalIcon(
+                            onPressed: controller.playAll,
+                            icon: const Icon(Icons.play_circle_filled,
+                                size: 20),
+                            label: Text(
+                                '播放全部 (${controller.videos.length})'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        OutlinedButton.icon(
+                          onPressed: controller.addAllToQueue,
+                          icon: const Icon(Icons.playlist_add, size: 20),
+                          label: const Text('全部添加'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final videoIndex = index - 1;
+                if (videoIndex >= controller.videos.length) {
                   return const Padding(
                     padding: EdgeInsets.all(16),
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                final video = controller.videos[index];
+                final video = controller.videos[videoIndex];
                 return InkWell(
                   onTap: () => controller.playVideo(video),
                   child: Padding(

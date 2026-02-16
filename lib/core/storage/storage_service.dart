@@ -105,11 +105,34 @@ class StorageService extends GetxService {
   set playlistVisibleFolderIds(List<int> value) =>
       _box.write('playlist_visible_folder_ids', value);
 
+  // Playlist view mode (0=category, 1=mixed)
+  int get playlistViewMode => _box.read<int>('playlist_view_mode') ?? 0;
+  set playlistViewMode(int value) => _box.write('playlist_view_mode', value);
+
   // Update
   String? get skippedUpdateVersion =>
       _box.read<String>('skipped_update_version');
   set skippedUpdateVersion(String? value) =>
       _box.write('skipped_update_version', value);
+
+  // DeepSeek API
+  String? get deepseekApiKey => _box.read<String>('deepseek_api_key');
+  set deepseekApiKey(String? value) {
+    if (value == null) {
+      _box.remove('deepseek_api_key');
+    } else {
+      _box.write('deepseek_api_key', value);
+    }
+  }
+
+  List<String> get preferenceTags {
+    final list = _box.read<List>('preference_tags');
+    if (list == null) return [];
+    return list.cast<String>();
+  }
+
+  set preferenceTags(List<String> value) =>
+      _box.write('preference_tags', value);
 
   // Clear all auth data (Bilibili only)
   void clearAuth() {

@@ -11,9 +11,11 @@ import 'package:media_kit_video/media_kit_video.dart' as mkv;
 import '../../app/constants/app_constants.dart';
 import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
+import '../home/home_controller.dart';
 import '../../data/models/music/audio_song_model.dart';
 import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
+import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/lyrics_repository.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/netease_repository.dart';
@@ -82,6 +84,15 @@ class PlayerController extends GetxController {
   final relatedMusic = <SearchVideoModel>[].obs;
   final relatedMusicLoading = false.obs;
 
+  // Heart mode
+  final isHeartMode = false.obs;
+  final heartModeTags = <String>[].obs;
+  final isHeartModeLoading = false.obs;
+  bool _pendingHeartModeExit = false;
+  List<QueueItem> _savedNormalQueue = [];
+  int _savedNormalIndex = -1;
+  SearchVideoModel? _savedCurrentVideo;
+
   // Lyrics
   final lyrics = Rxn<LyricsData>();
   final currentLyricsIndex = (-1).obs;
@@ -90,6 +101,9 @@ class PlayerController extends GetxController {
 
   AudioPlayer get audioPlayer => _audioPlayer;
   mkv.VideoController? get videoController => _videoController;
+
+  // Auto-play guard
+  bool _hasAutoPlayed = false;
 
   @override
   void onInit() {
@@ -203,15 +217,24 @@ class PlayerController extends GetxController {
     );
   }
 
+  /// Navigate to player: switch to Tab 0 if on home page, otherwise push route.
+  void _navigateToPlayer() {
+    if (Get.currentRoute == AppRoutes.home) {
+      final homeCtrl = Get.find<HomeController>();
+      homeCtrl.currentIndex.value = 0;
+      homeCtrl.selectedIndex.value = 0;
+    } else if (Get.currentRoute != AppRoutes.player) {
+      Get.toNamed(AppRoutes.player);
+    }
+  }
+
   /// Play from search result and navigate to player page
   Future<void> playFromSearch(SearchVideoModel video) async {
     isLoading.value = true;
     currentVideo.value = video;
 
-    // Navigate to player page if not already there
-    if (Get.currentRoute != AppRoutes.player) {
-      Get.toNamed(AppRoutes.player);
-    }
+    // Navigate to player: switch to player tab if on home, otherwise push route
+    _navigateToPlayer();
 
     try {
       if (video.isNetease) {
@@ -228,6 +251,30 @@ class PlayerController extends GetxController {
     isLoading.value = false;
     _fetchLyrics(video);
     _loadRelatedMusic(video);
+  }
+
+  /// Auto-play a random song (called when player tab opens with empty queue).
+  Future<void> playRandomIfNeeded() async {
+    if (_hasAutoPlayed || currentVideo.value != null || isLoading.value) return;
+    _hasAutoPlayed = true;
+
+    const keywords = [
+      '热门音乐', '流行歌曲', '经典老歌', '华语金曲',
+      '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
+    ];
+    final random = Random();
+    final keyword = keywords[random.nextInt(keywords.length)];
+
+    try {
+      final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
+      if (result != null && result.results.isNotEmpty) {
+        final maxIndex = result.results.length.clamp(1, 5);
+        final video = result.results[random.nextInt(maxIndex)];
+        await playFromSearch(video);
+      }
+    } catch (e) {
+      log('playRandomIfNeeded error: $e');
+    }
   }
 
   Future<void> _playAudioOnly(SearchVideoModel video) async {
@@ -355,11 +402,13 @@ class PlayerController extends GetxController {
     final existingIndex =
         queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
     if (existingIndex >= 0) {
-      currentIndex.value = existingIndex;
+      // Move to front
+      final item = queue.removeAt(existingIndex);
+      queue.insert(0, item);
     } else {
-      queue.add(queueItem);
-      currentIndex.value = queue.length - 1;
+      queue.insert(0, queueItem);
     }
+    currentIndex.value = 0;
   }
 
   Future<void> _playQueueItem(QueueItem item) async {
@@ -689,6 +738,12 @@ class PlayerController extends GetxController {
   }
 
   void _playNext() {
+    if (_pendingHeartModeExit) {
+      _pendingHeartModeExit = false;
+      _exitHeartModeAndRestoreQueue();
+      return;
+    }
+
     switch (playMode.value) {
       case PlayMode.repeatOne:
         seekTo(Duration.zero);
@@ -703,19 +758,13 @@ class PlayerController extends GetxController {
           _autoPlayNext();
           return;
         }
+        // Pick a random song (not the current one at index 0)
         final rng = Random();
-        int next;
-        do {
-          next = rng.nextInt(queue.length);
-        } while (next == currentIndex.value);
+        final next = 1 + rng.nextInt(queue.length - 1);
         playAt(next);
         break;
       case PlayMode.sequential:
-        if (currentIndex.value < queue.length - 1) {
-          skipNext();
-        } else {
-          _autoPlayNext();
-        }
+        skipNext();
         break;
     }
   }
@@ -730,6 +779,11 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _autoPlayNext() async {
+    if (isHeartMode.value) {
+      await _heartModeAutoNext();
+      return;
+    }
+
     final video = currentVideo.value;
     if (video == null) return;
 
@@ -788,25 +842,177 @@ class PlayerController extends GetxController {
     return result.songs.where((s) => s.id != video.id).toList();
   }
 
-  Future<void> skipNext() async {
-    if (currentIndex.value < queue.length - 1) {
-      currentIndex.value++;
-      final item = queue[currentIndex.value];
-      currentVideo.value = item.video;
-      audioQualityLabel.value = item.qualityLabel;
+  // ── Heart Mode ──
 
-      await _playQueueItem(item);
-      _fetchLyrics(item.video);
-      _loadRelatedMusic(item.video);
+  Future<void> activateHeartMode(List<String> tags) async {
+    // Save current queue state
+    _savedNormalQueue = List.from(queue);
+    _savedNormalIndex = currentIndex.value;
+    _savedCurrentVideo = currentVideo.value;
+
+    isHeartMode.value = true;
+    heartModeTags.assignAll(tags);
+    isHeartModeLoading.value = true;
+
+    try {
+      final deepseekRepo = Get.find<DeepSeekRepository>();
+      final List<String> queries;
+
+      if (tags.isNotEmpty) {
+        queries = await deepseekRepo.generateSearchQueries(tags);
+      } else {
+        queries = await deepseekRepo.generateRandomQueries();
+      }
+
+      final List<SearchVideoModel> songs = [];
+      final Set<String> seenIds = {};
+
+      for (final query in queries) {
+        try {
+          final result =
+              await _searchRepo.searchVideos(keyword: query, page: 1);
+          if (result != null && result.results.isNotEmpty) {
+            final video = result.results.first;
+            if (seenIds.add(video.uniqueId)) {
+              songs.add(video);
+            }
+          }
+        } catch (e) {
+          log('Heart mode search for "$query" failed: $e');
+        }
+      }
+
+      if (songs.isEmpty) {
+        AppToast.error('未找到推荐歌曲');
+        _restoreFromHeartMode();
+        return;
+      }
+
+      // Clear queue and play heart mode songs
+      queue.clear();
+      currentIndex.value = -1;
+      await playFromSearch(songs.first);
+
+      // Add remaining songs to queue
+      for (int i = 1; i < songs.length; i++) {
+        await addToQueueSilent(songs[i]);
+      }
+
+      AppToast.show('心动模式已开启');
+    } catch (e) {
+      log('activateHeartMode error: $e');
+      AppToast.error('心动模式启动失败');
+      _restoreFromHeartMode();
+    } finally {
+      isHeartModeLoading.value = false;
     }
   }
 
-  Future<void> skipPrevious() async {
-    if (position.value.inSeconds > 3) {
-      seekTo(Duration.zero);
-    } else if (currentIndex.value > 0) {
-      currentIndex.value--;
-      final item = queue[currentIndex.value];
+  void deactivateHeartMode() {
+    _pendingHeartModeExit = true;
+    AppToast.show('当前曲目播完后将退出心动模式');
+  }
+
+  void _exitHeartModeAndRestoreQueue() {
+    isHeartMode.value = false;
+    heartModeTags.clear();
+
+    queue.assignAll(_savedNormalQueue);
+    currentIndex.value = 0;
+
+    if (_savedNormalQueue.isNotEmpty) {
+      // Play the first item in the restored queue
+      final item = queue[0];
+      currentVideo.value = item.video;
+      _playQueueItem(item);
+    } else {
+      currentVideo.value = _savedCurrentVideo;
+      _stopPlayback();
+    }
+
+    _savedNormalQueue = [];
+    _savedNormalIndex = -1;
+    _savedCurrentVideo = null;
+
+    AppToast.show('已退出心动模式');
+  }
+
+  void _restoreFromHeartMode() {
+    isHeartMode.value = false;
+    heartModeTags.clear();
+    _pendingHeartModeExit = false;
+
+    queue.assignAll(_savedNormalQueue);
+    currentIndex.value = 0;
+    currentVideo.value = _savedCurrentVideo;
+
+    _savedNormalQueue = [];
+    _savedNormalIndex = -1;
+    _savedCurrentVideo = null;
+  }
+
+  Future<void> _heartModeAutoNext() async {
+    isHeartModeLoading.value = true;
+    try {
+      final deepseekRepo = Get.find<DeepSeekRepository>();
+
+      final recentPlayed =
+          queue.map((q) => '${q.video.title} - ${q.video.author}').toList();
+
+      final List<String> queries;
+      if (heartModeTags.isNotEmpty) {
+        queries = await deepseekRepo.generateSearchQueries(
+          heartModeTags.toList(),
+          recentPlayed: recentPlayed,
+        );
+      } else {
+        queries = await deepseekRepo.generateRandomQueries(
+          recentPlayed: recentPlayed,
+        );
+      }
+
+      final queueIds = queue.map((q) => q.video.uniqueId).toSet();
+
+      for (final query in queries) {
+        try {
+          final result =
+              await _searchRepo.searchVideos(keyword: query, page: 1);
+          if (result != null && result.results.isNotEmpty) {
+            final video = result.results.first;
+            if (!queueIds.contains(video.uniqueId)) {
+              await playFromSearch(video);
+              isHeartModeLoading.value = false;
+              return;
+            }
+          }
+        } catch (e) {
+          log('Heart mode auto-next search for "$query" failed: $e');
+        }
+      }
+
+      // If nothing new found, stop
+      _stopPlayback();
+      AppToast.show('心动模式暂无更多推荐');
+    } catch (e) {
+      log('_heartModeAutoNext error: $e');
+      _stopPlayback();
+    } finally {
+      isHeartModeLoading.value = false;
+    }
+  }
+
+  void toggleHeartMode() {
+    if (isHeartMode.value) {
+      deactivateHeartMode();
+    }
+  }
+
+  Future<void> skipNext() async {
+    if (queue.length > 1) {
+      // Remove current (index 0), play new front
+      queue.removeAt(0);
+      currentIndex.value = 0;
+      final item = queue[0];
       currentVideo.value = item.video;
       audioQualityLabel.value = item.qualityLabel;
 
@@ -814,7 +1020,17 @@ class PlayerController extends GetxController {
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
     } else {
+      // Last song in queue, trigger recommendation
+      _autoPlayNext();
+    }
+  }
+
+  Future<void> skipPrevious() async {
+    if (position.value.inSeconds > 3) {
       seekTo(Duration.zero);
+    } else {
+      // Already at front, trigger recommendation
+      _autoPlayNext();
     }
   }
 
@@ -834,8 +1050,13 @@ class PlayerController extends GetxController {
 
   Future<void> playAt(int index) async {
     if (index < 0 || index >= queue.length) return;
-    currentIndex.value = index;
-    final item = queue[index];
+    // Move the selected item to front
+    if (index != 0) {
+      final item = queue.removeAt(index);
+      queue.insert(0, item);
+    }
+    currentIndex.value = 0;
+    final item = queue[0];
     currentVideo.value = item.video;
     audioQualityLabel.value = item.qualityLabel;
     await _playQueueItem(item);
@@ -847,17 +1068,7 @@ class PlayerController extends GetxController {
     if (oldIndex < newIndex) newIndex--;
     final item = queue.removeAt(oldIndex);
     queue.insert(newIndex, item);
-
-    // Keep currentIndex pointing to the same item
-    if (currentIndex.value == oldIndex) {
-      currentIndex.value = newIndex;
-    } else if (oldIndex < currentIndex.value &&
-        newIndex >= currentIndex.value) {
-      currentIndex.value--;
-    } else if (oldIndex > currentIndex.value &&
-        newIndex <= currentIndex.value) {
-      currentIndex.value++;
-    }
+    // currentIndex is always 0 (currently playing is always first)
   }
 
   void enterFullScreen() {
@@ -880,11 +1091,8 @@ class PlayerController extends GetxController {
   }
 
   void removeFromQueue(int index) {
-    if (index == currentIndex.value) return;
+    if (index == 0) return; // Can't remove currently playing
     queue.removeAt(index);
-    if (index < currentIndex.value) {
-      currentIndex.value--;
-    }
   }
 
   void clearQueue() {
@@ -1042,9 +1250,8 @@ class PlayerController extends GetxController {
     isLoading.value = true;
     currentVideo.value = video;
 
-    if (Get.currentRoute != AppRoutes.player) {
-      Get.toNamed(AppRoutes.player);
-    }
+    // Navigate to player: switch to player tab if on home, otherwise push route
+    _navigateToPlayer();
 
     try {
       // Try AU audio URL first

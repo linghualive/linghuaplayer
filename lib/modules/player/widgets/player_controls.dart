@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../../core/storage/storage_service.dart';
 import '../player_controller.dart';
 import 'play_queue_sheet.dart';
 import 'uploader_works_sheet.dart';
@@ -14,6 +15,31 @@ class PlayerControls extends GetView<PlayerController> {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          // Heart mode badge
+          if (controller.isHeartMode.value)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+              margin: const EdgeInsets.only(bottom: 6),
+              decoration: BoxDecoration(
+                color: Colors.pink.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.favorite, size: 14, color: Colors.pink.shade400),
+                  const SizedBox(width: 4),
+                  Text(
+                    '心动模式',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.pink.shade400,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Track title + quality badge
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -158,7 +184,6 @@ class PlayerControls extends GetView<PlayerController> {
                 ),
                 onPressed: controller.togglePlayMode,
               ),
-              const SizedBox(width: 8),
               IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_previous_rounded),
@@ -197,24 +222,55 @@ class PlayerControls extends GetView<PlayerController> {
             ],
           ),
           const SizedBox(height: 8),
-          // Video/Audio toggle
-          TextButton.icon(
-            onPressed: controller.toggleVideoMode,
-            icon: Icon(
-              controller.isVideoMode.value
-                  ? Icons.videocam
-                  : Icons.music_note,
-              size: 18,
-            ),
-            label: Text(
-              controller.isVideoMode.value ? '视频模式' : '音频模式',
-              style: Theme.of(context).textTheme.labelMedium,
-            ),
-            style: TextButton.styleFrom(
-              foregroundColor: controller.isVideoMode.value
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.outline,
-            ),
+          // Heart mode + MV toggle
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: controller.isHeartModeLoading.value
+                    ? null
+                    : controller.isHeartMode.value
+                        ? controller.deactivateHeartMode
+                        : () {
+                            final tags =
+                                Get.find<StorageService>().preferenceTags;
+                            controller.activateHeartMode(tags);
+                          },
+                icon: controller.isHeartModeLoading.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(Icons.auto_awesome, size: 18),
+                label: Text(
+                  controller.isHeartMode.value ? '心动中' : '心动模式',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: controller.isHeartMode.value
+                      ? Colors.pink
+                      : Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton.icon(
+                onPressed: controller.toggleVideoMode,
+                icon: Icon(
+                  Icons.music_video,
+                  size: 18,
+                ),
+                label: Text(
+                  controller.isVideoMode.value ? 'MV 播放中' : 'MV',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: controller.isVideoMode.value
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context).colorScheme.outline,
+                ),
+              ),
+            ],
           ),
         ],
       );

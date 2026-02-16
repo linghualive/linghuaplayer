@@ -13,6 +13,7 @@ import 'app/routes/app_routes.dart';
 import 'app/theme/app_theme.dart';
 import 'app/theme/desktop_theme.dart';
 import 'app/theme/theme_controller.dart';
+import 'core/http/deepseek_http_client.dart';
 import 'core/http/http_client.dart';
 import 'core/http/netease_http_client.dart';
 import 'core/storage/storage_service.dart';
@@ -46,6 +47,12 @@ void main() async {
   // Initialize HTTP clients
   await HttpClient.instance.init();
   await NeteaseHttpClient.instance.init();
+
+  // Initialize DeepSeek HTTP client if API key exists
+  final deepseekKey = storageService.deepseekApiKey;
+  if (deepseekKey != null && deepseekKey.isNotEmpty) {
+    DeepSeekHttpClient.instance.init(deepseekKey);
+  }
 
   // Initialize theme controller
   Get.put(ThemeController(), permanent: true);

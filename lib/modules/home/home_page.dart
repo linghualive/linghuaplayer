@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../modules/player/widgets/mini_player_bar.dart';
 import '../../shared/utils/platform_utils.dart';
 import '../desktop/widgets/desktop_navigation_rail.dart';
 import '../desktop/widgets/desktop_player_bar.dart';
@@ -19,40 +18,54 @@ class HomePage extends GetView<HomeController> {
   }
 
   Widget _buildMobileLayout(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
+      extendBody: true,
       body: Obx(() {
         return IndexedStack(
           index: controller.currentIndex.value,
           children: controller.pages,
         );
       }),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const MiniPlayerBar(),
-          Obx(() => NavigationBar(
-                selectedIndex: controller.currentIndex.value,
-                onDestinationSelected: controller.onTabChanged,
-                destinations: const [
-                  NavigationDestination(
-                    icon: Icon(Icons.music_note_outlined),
-                    selectedIcon: Icon(Icons.music_note),
-                    label: '音乐',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.queue_music_outlined),
-                    selectedIcon: Icon(Icons.queue_music),
-                    label: '歌单',
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(Icons.person),
-                    label: '我的',
-                  ),
-                ],
-              )),
-        ],
-      ),
+      bottomNavigationBar: Obx(() {
+        final currentIdx = controller.currentIndex.value;
+        final isPlayerTab = currentIdx == 0;
+        const labels = ['播放', '搜索', '歌单', '我的'];
+
+        return Container(
+          color: isPlayerTab ? Colors.transparent : theme.colorScheme.surface,
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 48,
+              child: Row(
+                children: List.generate(labels.length, (index) {
+                  final isSelected = currentIdx == index;
+                  return Expanded(
+                    child: InkWell(
+                      onTap: () => controller.onTabChanged(index),
+                      child: Center(
+                        child: Text(
+                          labels[index],
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: isSelected
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.outline,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+        );
+      }),
     );
   }
 

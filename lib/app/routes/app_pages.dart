@@ -71,7 +71,9 @@ class AppPages {
       name: AppRoutes.search,
       page: () => const SearchPage(),
       binding: BindingsBuilder(() {
-        Get.put(app.SearchController());
+        if (!Get.isRegistered<app.SearchController>()) {
+          Get.put(app.SearchController());
+        }
       }),
     ),
     GetPage(
