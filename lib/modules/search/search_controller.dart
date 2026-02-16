@@ -1,17 +1,23 @@
+import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../core/storage/storage_service.dart';
 import '../../data/models/search/hot_search_model.dart';
 import '../../data/models/search/search_result_model.dart';
 import '../../data/models/search/search_suggest_model.dart';
 import '../../data/models/search/search_video_model.dart';
+import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/search_repository.dart';
 import '../../shared/utils/app_toast.dart';
 import '../../shared/utils/debouncer.dart';
+import '../player/player_controller.dart';
 
 enum SearchState { hot, suggesting, results, empty }
 
@@ -42,9 +48,23 @@ class SearchController extends GetxController {
   final _debouncer = Debouncer(delay: const Duration(milliseconds: 300));
   bool _isSearching = false;
 
+  // Voice recognition
+  final isListening = false.obs;
+  final isAnalyzing = false.obs;
+  final speechText = ''.obs;
+  final apiKeyConfigured = false.obs;
+  stt.SpeechToText? _speech;
+
+  bool get showVoiceButton => Platform.isAndroid && apiKeyConfigured.value;
+
+  void refreshApiKeyState() {
+    apiKeyConfigured.value = (_storage.deepseekApiKey ?? '').isNotEmpty;
+  }
+
   @override
   void onInit() {
     super.onInit();
+    refreshApiKeyState();
     loadHotSearch();
     loadSearchHistory();
     searchTextController.addListener(_onSearchTextChanged);
@@ -272,5 +292,97 @@ class SearchController extends GetxController {
     suggestions.clear();
     allResults.clear();
     currentKeyword.value = '';
+    refreshApiKeyState();
+  }
+
+  // ── Voice Recognition ──
+
+  bool _speechInitialized = false;
+
+  /// Pre-initialize speech engine (called when mic button appears).
+  /// This handles the permission dialog early so long-press can start instantly.
+  Future<void> initSpeech() async {
+    if (_speechInitialized) return;
+    _speech ??= stt.SpeechToText();
+    _speechInitialized = await _speech!.initialize(
+      onError: (error) {
+        log('Speech error: ${error.errorMsg}');
+        isListening.value = false;
+      },
+      onStatus: (status) {
+        log('Speech status: $status');
+      },
+    );
+    if (!_speechInitialized) {
+      AppToast.error('语音识别不可用，请检查麦克风权限');
+    }
+  }
+
+  Future<void> startListening() async {
+    if (!_speechInitialized) {
+      await initSpeech();
+      if (!_speechInitialized) return;
+    }
+
+    speechText.value = '';
+    isListening.value = true;
+    HapticFeedback.heavyImpact();
+
+    await _speech!.listen(
+      onResult: (result) {
+        speechText.value = result.recognizedWords;
+      },
+      localeId: 'zh_CN',
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.dictation,
+        partialResults: true,
+        cancelOnError: false,
+        autoPunctuation: true,
+      ),
+    );
+  }
+
+  Future<void> stopListeningAndAnalyze() async {
+    if (!isListening.value) return;
+
+    HapticFeedback.mediumImpact();
+
+    // Stop the recognizer and wait for final result
+    await _speech?.stop();
+
+    // The final onResult fires asynchronously after stop().
+    // Poll briefly for text to appear.
+    for (var i = 0; i < 10; i++) {
+      if (speechText.value.trim().isNotEmpty) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    isListening.value = false;
+
+    final text = speechText.value.trim();
+    if (text.isEmpty) {
+      AppToast.error('未识别到语音内容');
+      return;
+    }
+
+    isAnalyzing.value = true;
+    try {
+      final deepseekRepo = Get.find<DeepSeekRepository>();
+      final tags = await deepseekRepo.analyzeVoiceIntent(text);
+
+      if (tags.isEmpty) {
+        AppToast.error('无法分析音乐偏好');
+        return;
+      }
+
+      final playerCtrl = Get.find<PlayerController>();
+      playerCtrl.activateHeartMode(tags);
+    } catch (e) {
+      log('Voice analyze error: $e');
+      AppToast.error('AI 分析失败');
+    } finally {
+      isAnalyzing.value = false;
+      speechText.value = '';
+    }
   }
 }

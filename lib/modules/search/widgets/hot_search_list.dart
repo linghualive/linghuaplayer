@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../search_controller.dart' as app;
+import 'voice_mic_button.dart';
 
 class HotSearchList extends GetView<app.SearchController> {
   const HotSearchList({super.key});
@@ -16,6 +17,12 @@ class HotSearchList extends GetView<app.SearchController> {
       return ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
+          // Voice search button (Android + API Key only)
+          if (controller.showVoiceButton) ...[
+            const VoiceMicButton(),
+            const SizedBox(height: 24),
+          ],
+
           // Search history
           if (controller.searchHistory.isNotEmpty) ...[
             Row(

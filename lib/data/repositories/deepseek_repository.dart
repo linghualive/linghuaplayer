@@ -102,6 +102,30 @@ class DeepSeekRepository {
     }
   }
 
+  Future<List<String>> analyzeVoiceIntent(String speechText) async {
+    try {
+      final res = await _provider.chatCompletion(
+        systemPrompt:
+            '你是一个音乐推荐助手。用户通过语音告诉你他想听什么音乐，'
+            '请分析用户的意图，提取出音乐偏好标签。'
+            '标签可以是：音乐风格（流行、摇滚、民谣、电子、R&B、说唱、古风、爵士等）、'
+            '情感（伤感、欢快、治愈、浪漫、燃等）、'
+            '场景（睡前、运动、学习、开车等）、'
+            '语种（华语、粤语、英文、日语、韩语等）、'
+            '或具体的歌手/风格描述。'
+            '只输出一个JSON数组，包含3-6个标签，不要输出其他任何内容。'
+            '例如: ["华语流行","伤感","慢歌","女声"]',
+        userPrompt: speechText,
+        temperature: 0.3,
+        maxTokens: 200,
+      );
+      return _parseJsonArray(_extractContent(res));
+    } catch (e) {
+      log('analyzeVoiceIntent error: $e');
+      rethrow;
+    }
+  }
+
   Future<bool> validateApiKey(String apiKey) async {
     try {
       final dio = dio_pkg.Dio(dio_pkg.BaseOptions(

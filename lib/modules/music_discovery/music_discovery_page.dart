@@ -5,6 +5,8 @@ import '../../app/routes/app_routes.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/loading_widget.dart';
+import '../search/search_controller.dart' as app;
+import '../search/widgets/voice_fab.dart';
 import 'music_discovery_controller.dart';
 import 'widgets/hot_playlist_card.dart';
 import 'widgets/mv_card.dart';
@@ -17,9 +19,14 @@ class MusicDiscoveryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<MusicDiscoveryController>();
+    final searchCtrl = Get.find<app.SearchController>();
     final theme = Theme.of(context);
 
     return Scaffold(
+      floatingActionButton: Obx(() {
+        if (!searchCtrl.showVoiceButton) return const SizedBox.shrink();
+        return const VoiceFab();
+      }),
       appBar: AppBar(
         title: GestureDetector(
           onTap: () => Get.toNamed(AppRoutes.search),

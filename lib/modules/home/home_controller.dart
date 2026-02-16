@@ -7,13 +7,14 @@ import '../../data/models/login/netease_user_info_model.dart';
 import '../../data/models/login/user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../discover/discover_controller.dart';
+import '../music_discovery/music_discovery_controller.dart';
+import '../music_discovery/music_discovery_page.dart';
 import '../player/player_home_tab.dart';
 import '../playlist/playlist_controller.dart';
 import '../playlist/playlist_page.dart';
 import '../profile/profile_controller.dart';
 import '../profile/profile_page.dart';
 import '../search/search_controller.dart' as app;
-import '../search/search_page.dart';
 
 class HomeController extends GetxController {
   final currentIndex = 0.obs;
@@ -45,7 +46,7 @@ class HomeController extends GetxController {
   void _initializePages() {
     pages = [
       const PlayerHomeTab(),
-      const SearchPage(isEmbedded: true),
+      const MusicDiscoveryPage(),
       const PlaylistPage(),
       const ProfilePage(),
     ];
@@ -54,6 +55,7 @@ class HomeController extends GetxController {
   void _initializeControllers() {
     Get.put(PlaylistController());
     Get.put(DiscoverController());
+    Get.put(MusicDiscoveryController());
     Get.put(ProfileController());
     if (!Get.isRegistered<app.SearchController>()) {
       Get.put(app.SearchController());

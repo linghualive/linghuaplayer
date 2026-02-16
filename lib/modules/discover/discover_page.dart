@@ -77,15 +77,12 @@ class DiscoverPage extends GetView<DiscoverController> {
         }
       },
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
         children: [
-          // Preference tags section
           _buildTagsSection(context, theme),
           const SizedBox(height: 24),
-          // Heart mode button
           _buildHeartModeButton(context, theme),
           const SizedBox(height: 24),
-          // AI recommended songs
           _buildRecommendationsSection(context, theme),
         ],
       ),
@@ -273,18 +270,13 @@ class DiscoverPage extends GetView<DiscoverController> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.playlist_add, size: 20),
-                      onPressed: () {
-                        final playerCtrl = Get.find<PlayerController>();
-                        playerCtrl.addToQueue(video);
-                      },
-                      tooltip: '添加到队列',
-                    ),
-                  ],
+                trailing: IconButton(
+                  icon: const Icon(Icons.playlist_add, size: 20),
+                  onPressed: () {
+                    final playerCtrl = Get.find<PlayerController>();
+                    playerCtrl.addToQueue(video);
+                  },
+                  tooltip: '添加到队列',
                 ),
                 onTap: () {
                   final playerCtrl = Get.find<PlayerController>();
