@@ -558,7 +558,10 @@ class PlayerController extends GetxController {
         }
         break;
       case PlayMode.shuffle:
-        if (queue.length <= 1) return;
+        if (queue.length <= 1) {
+          _autoPlayNext();
+          return;
+        }
         final rng = Random();
         int next;
         do {
@@ -570,15 +573,78 @@ class PlayerController extends GetxController {
         if (currentIndex.value < queue.length - 1) {
           skipNext();
         } else {
-          if (isVideoMode.value) {
-            _mediaKitPlayer?.stop();
-          } else {
-            _audioPlayer.stop();
-            _audioPlayer.seek(Duration.zero);
-          }
+          _autoPlayNext();
         }
         break;
     }
+  }
+
+  void _stopPlayback() {
+    if (isVideoMode.value) {
+      _mediaKitPlayer?.stop();
+    } else {
+      _audioPlayer.stop();
+      _audioPlayer.seek(Duration.zero);
+    }
+  }
+
+  Future<void> _autoPlayNext() async {
+    final video = currentVideo.value;
+    if (video == null) return;
+
+    // 1. 从 relatedMusic 中找不在队列中的歌曲
+    final queueIds = queue.map((q) => q.video.uniqueId).toSet();
+    final candidates = relatedMusic
+        .where((s) => !queueIds.contains(s.uniqueId))
+        .toList();
+
+    if (candidates.isNotEmpty) {
+      await playFromSearch(candidates.first);
+      return;
+    }
+
+    // 2. 第二优先级：发现更多歌曲
+    try {
+      List<SearchVideoModel> moreSongs = [];
+      if (video.isBilibili && video.mid > 0) {
+        moreSongs = await _discoverBilibiliSongs(video);
+      } else if (video.isNetease) {
+        moreSongs = await _discoverNeteaseSongs(video);
+      }
+
+      final filtered = moreSongs
+          .where((s) => !queueIds.contains(s.uniqueId))
+          .toList();
+      if (filtered.isNotEmpty) {
+        await playFromSearch(filtered.first);
+        return;
+      }
+    } catch (e) {
+      log('Auto-play discover error: $e');
+    }
+
+    // 3. 全部耗尽，停止播放
+    _stopPlayback();
+  }
+
+  Future<List<SearchVideoModel>> _discoverBilibiliSongs(
+      SearchVideoModel video) async {
+    final seasonsResult = await _musicRepo.getMemberSeasons(video.mid);
+    for (final season in seasonsResult.seasons) {
+      final page = await loadCollectionPage(season, pn: 1);
+      if (page.items.isNotEmpty) return page.items;
+    }
+    return [];
+  }
+
+  Future<List<SearchVideoModel>> _discoverNeteaseSongs(
+      SearchVideoModel video) async {
+    if (video.author.isEmpty) return [];
+    final result = await _neteaseRepo.searchSongs(
+      keyword: video.author,
+      limit: 20,
+    );
+    return result.songs.where((s) => s.id != video.id).toList();
   }
 
   Future<void> skipNext() async {
