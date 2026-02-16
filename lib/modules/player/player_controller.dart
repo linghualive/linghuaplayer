@@ -135,7 +135,7 @@ class PlayerController extends GetxController {
     'referer': AppConstants.referer,
   };
 
-  void _ensureMediaKitPlayer() {
+  Future<void> _ensureMediaKitPlayer() async {
     if (_mediaKitPlayer != null) return;
 
     _mediaKitPlayer = mk.Player(
@@ -143,12 +143,14 @@ class PlayerController extends GetxController {
         bufferSize: 5 * 1024 * 1024,
       ),
     );
-    _videoController = mkv.VideoController(
-      _mediaKitPlayer!,
-      configuration: const mkv.VideoControllerConfiguration(
-        androidAttachSurfaceAfterVideoParameters: false,
-      ),
-    );
+
+    // Set HTTP headers globally on the mpv player so that all HTTP connections
+    // (including audio-files loaded separately) receive the correct headers.
+    // Without this, audio loaded via mpv's audio-files property won't have
+    // the Referer header and may get 403 from Bilibili's CDN.
+    final nativePlayer = _mediaKitPlayer!.platform as mk.NativePlayer;
+    await nativePlayer.setProperty('referrer', AppConstants.referer);
+    await nativePlayer.setProperty('user-agent', AppConstants.pcUserAgent);
 
     // Listen to media_kit player streams
     // On macOS/Linux, media_kit is used for audio too (just_audio unsupported)
@@ -184,6 +186,21 @@ class PlayerController extends GetxController {
         _playNext();
       }
     });
+  }
+
+  /// Create VideoController lazily, only when video rendering is needed.
+  /// This avoids calling mpv_render_context_create during audio-only playback,
+  /// which can crash on macOS due to a race condition in mpv init.
+  Future<void> _ensureVideoController() async {
+    await _ensureMediaKitPlayer();
+    if (_videoController != null) return;
+
+    _videoController = mkv.VideoController(
+      _mediaKitPlayer!,
+      configuration: const mkv.VideoControllerConfiguration(
+        androidAttachSurfaceAfterVideoParameters: false,
+      ),
+    );
   }
 
   /// Play from search result and navigate to player page
@@ -279,7 +296,7 @@ class PlayerController extends GetxController {
       _audioPlayer.stop();
     }
 
-    _ensureMediaKitPlayer();
+    await _ensureVideoController();
 
     final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
     if (playUrl == null || playUrl.videoStreams.isEmpty) {
@@ -348,19 +365,19 @@ class PlayerController extends GetxController {
   Future<void> _playQueueItem(QueueItem item) async {
     if (item.video.isNetease) {
       if (Platform.isMacOS || Platform.isLinux) {
-        _ensureMediaKitPlayer();
+        await _ensureMediaKitPlayer();
       }
       isVideoMode.value = false;
       videoQualityLabel.value = '';
       await _playAudioUrlDirect(item.audioUrl);
     } else if (item.videoUrl != null && _storage.enableVideo) {
-      _ensureMediaKitPlayer();
+      await _ensureVideoController();
       isVideoMode.value = true;
       videoQualityLabel.value = item.videoQualityLabel ?? '';
       await _openVideoWithAudio(item.videoUrl!, item.audioUrl);
     } else {
       if (Platform.isMacOS || Platform.isLinux) {
-        _ensureMediaKitPlayer();
+        await _ensureMediaKitPlayer();
       }
       isVideoMode.value = false;
       videoQualityLabel.value = '';
@@ -500,7 +517,7 @@ class PlayerController extends GetxController {
 
   Future<void> _playWithMediaKit(SearchVideoModel video,
       {bool audioOnly = false}) async {
-    _ensureMediaKitPlayer();
+    await _ensureMediaKitPlayer();
 
     if (!audioOnly && _storage.enableVideo) {
       await _playWithVideo(video);
@@ -561,7 +578,7 @@ class PlayerController extends GetxController {
     _isSwitchingTrack = true;
     try {
       _audioPlayer.stop();
-      _ensureMediaKitPlayer();
+      await _ensureMediaKitPlayer();
 
       await _mediaKitPlayer!.open(
         mk.Media(url, httpHeaders: _httpHeaders),
@@ -600,7 +617,7 @@ class PlayerController extends GetxController {
       // Switch to video
       if (item.videoUrl != null) {
         _audioPlayer.stop();
-        _ensureMediaKitPlayer();
+        await _ensureVideoController();
         isVideoMode.value = true;
         videoQualityLabel.value = item.videoQualityLabel ?? '';
         await _openVideoWithAudio(item.videoUrl!, item.audioUrl);
@@ -629,7 +646,7 @@ class PlayerController extends GetxController {
             queue[currentIndex.value] = newItem;
 
             _audioPlayer.stop();
-            _ensureMediaKitPlayer();
+            await _ensureVideoController();
             isVideoMode.value = true;
             audioQualityLabel.value = bestAudio.qualityLabel;
             videoQualityLabel.value = bestVideo.qualityLabel;
