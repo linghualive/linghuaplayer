@@ -71,6 +71,7 @@ class PlaylistController extends GetxController {
   }
 
   Future<void> loadVideosForFolder(int folderId) async {
+    await Future.value(); // Defer to avoid setState during build
     tabLoading[folderId] = true;
     tabPage[folderId] = 1;
     try {
