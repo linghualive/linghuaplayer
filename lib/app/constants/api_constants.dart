@@ -113,4 +113,15 @@ class ApiConstants {
 
   // Member archive (needs WBI)
   static const String memberArchive = '/x/space/wbi/arc/search';
+
+  // Member seasons & series (合集/系列)
+  static const String memberSeasons =
+      '/x/polymer/web-space/home/seasons_series';
+
+  // Season detail (合集详情)
+  static const String seasonDetail =
+      '/x/polymer/web-space/seasons_archives_list';
+
+  // Series detail (系列详情)
+  static const String seriesDetail = '/x/series/archives';
 }

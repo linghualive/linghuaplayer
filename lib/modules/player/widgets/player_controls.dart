@@ -37,9 +37,11 @@ class PlayerControls extends GetView<PlayerController> {
                 Flexible(
                   child: GestureDetector(
                     onTap: () {
-                      final author =
-                          controller.currentVideo.value?.author ?? '';
-                      if (author.isNotEmpty) {
+                      final video = controller.currentVideo.value;
+                      if (video != null &&
+                          video.author.isNotEmpty &&
+                          video.isBilibili &&
+                          video.mid > 0) {
                         UploaderWorksSheet.show();
                       }
                     },
@@ -60,8 +62,10 @@ class PlayerControls extends GetView<PlayerController> {
                                 ),
                           ),
                         ),
-                        if ((controller.currentVideo.value?.author ?? '')
-                            .isNotEmpty)
+                        if (controller.currentVideo.value != null &&
+                            controller.currentVideo.value!.isBilibili &&
+                            controller.currentVideo.value!.mid > 0 &&
+                            controller.currentVideo.value!.author.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(left: 2),
                             child: Icon(

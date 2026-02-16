@@ -102,4 +102,52 @@ class MusicProvider {
       queryParameters: params,
     );
   }
+
+  /// Get member seasons & series (合集/系列)
+  Future<Response> getMemberSeasons(int mid, {int pn = 1, int ps = 20}) {
+    return _dio.get(
+      ApiConstants.memberSeasons,
+      queryParameters: {'mid': mid, 'page_num': pn, 'page_size': ps},
+    );
+  }
+
+  /// Get season detail (合集详情)
+  Future<Response> getSeasonDetail({
+    required int mid,
+    required int seasonId,
+    int pn = 1,
+    int ps = 30,
+    bool sortReverse = false,
+  }) {
+    return _dio.get(
+      ApiConstants.seasonDetail,
+      queryParameters: {
+        'mid': mid,
+        'season_id': seasonId,
+        'sort_reverse': sortReverse,
+        'page_num': pn,
+        'page_size': ps,
+      },
+    );
+  }
+
+  /// Get series detail (系列详情)
+  Future<Response> getSeriesDetail({
+    required int mid,
+    required int seriesId,
+    int pn = 1,
+    int ps = 30,
+  }) {
+    return _dio.get(
+      ApiConstants.seriesDetail,
+      queryParameters: {
+        'mid': mid,
+        'series_id': seriesId,
+        'only_normal': true,
+        'sort': 'desc',
+        'pn': pn,
+        'ps': ps,
+      },
+    );
+  }
 }

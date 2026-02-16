@@ -729,22 +729,47 @@ class PlayerController extends GetxController {
     });
   }
 
-  Future<List<SearchVideoModel>> loadUploaderWorks() async {
+  /// Load uploader's seasons/series (合集)
+  Future<MemberSeasonsResult> loadUploaderSeasons() async {
     final video = currentVideo.value;
-    if (video == null) return [];
+    if (video == null || video.isNetease || video.mid <= 0) {
+      return MemberSeasonsResult(seasons: [], hasMore: false);
+    }
 
     try {
-      if (video.isNetease) {
-        final result =
-            await _neteaseRepo.searchSongs(keyword: video.author, limit: 30);
-        return result.songs;
-      } else {
-        if (video.mid <= 0) return [];
-        return await _musicRepo.getMemberArchive(video.mid);
-      }
+      return await _musicRepo.getMemberSeasons(video.mid);
     } catch (e) {
-      log('Uploader works fetch error: $e');
-      return [];
+      log('Uploader seasons fetch error: $e');
+      return MemberSeasonsResult(seasons: [], hasMore: false);
+    }
+  }
+
+  /// Load one page of videos in a collection (合集 or 系列)
+  Future<CollectionPage> loadCollectionPage(
+      MemberSeason season, {int pn = 1}) async {
+    final video = currentVideo.value;
+    if (video == null || video.isNetease || video.mid <= 0) {
+      return CollectionPage(items: [], total: 0);
+    }
+
+    try {
+      if (season.category == 0 && season.seasonId > 0) {
+        return await _musicRepo.getSeasonDetail(
+          mid: video.mid,
+          seasonId: season.seasonId,
+          pn: pn,
+        );
+      } else if (season.seriesId > 0) {
+        return await _musicRepo.getSeriesDetail(
+          mid: video.mid,
+          seriesId: season.seriesId,
+          pn: pn,
+        );
+      }
+      return CollectionPage(items: [], total: 0);
+    } catch (e) {
+      log('Collection page fetch error: $e');
+      return CollectionPage(items: [], total: 0);
     }
   }
 

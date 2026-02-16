@@ -87,7 +87,8 @@ class UserRepository {
     return false;
   }
 
-  Future<bool> addFavFolder({
+  /// Create a new fav folder. Returns the folder's media_id on success, null on failure.
+  Future<int?> addFavFolder({
     required String title,
     String intro = '',
     int privacy = 0,
@@ -99,7 +100,10 @@ class UserRepository {
       privacy: privacy,
       csrf: csrf,
     );
-    return res.data['code'] == 0;
+    if (res.data['code'] == 0 && res.data['data'] != null) {
+      return res.data['data']['id'] as int?;
+    }
+    return null;
   }
 
   Future<bool> editFavFolder({

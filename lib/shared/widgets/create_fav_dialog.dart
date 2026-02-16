@@ -46,7 +46,7 @@ class _CreateFavDialogState extends State<CreateFavDialog> {
     setState(() => _submitting = true);
 
     final repo = Get.find<UserRepository>();
-    final ok = await repo.addFavFolder(
+    final folderId = await repo.addFavFolder(
       title: title,
       intro: _introController.text.trim(),
       privacy: _isPrivate ? 1 : 0,
@@ -54,7 +54,7 @@ class _CreateFavDialogState extends State<CreateFavDialog> {
 
     if (!mounted) return;
 
-    if (ok) {
+    if (folderId != null) {
       Navigator.pop(context);
       AppToast.show('创建成功');
 

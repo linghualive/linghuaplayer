@@ -55,8 +55,13 @@ class UserProvider {
   }) {
     return _dio.post(
       ApiConstants.favResourceDeal,
-      data:
-          'rid=$rid&type=2&add_media_ids=$addMediaIds&del_media_ids=$delMediaIds&csrf=$csrf',
+      data: {
+        'rid': rid,
+        'type': 2,
+        'add_media_ids': addMediaIds,
+        'del_media_ids': delMediaIds,
+        'csrf': csrf,
+      },
     );
   }
 
@@ -75,7 +80,12 @@ class UserProvider {
   }) {
     return _dio.post(
       ApiConstants.addFavFolder,
-      data: 'title=$title&intro=$intro&privacy=$privacy&csrf=$csrf',
+      data: {
+        'title': title,
+        'intro': intro,
+        'privacy': privacy,
+        'csrf': csrf,
+      },
     );
   }
 
@@ -88,8 +98,13 @@ class UserProvider {
   }) {
     return _dio.post(
       ApiConstants.editFavFolder,
-      data:
-          'title=$title&intro=$intro&media_id=$mediaId&privacy=$privacy&csrf=$csrf',
+      data: {
+        'title': title,
+        'intro': intro,
+        'media_id': mediaId,
+        'privacy': privacy,
+        'csrf': csrf,
+      },
     );
   }
 

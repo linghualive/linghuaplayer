@@ -131,15 +131,16 @@ class PlaylistController extends GetxController {
   }
 
   Future<bool> createFolder(String title, {String intro = '', int privacy = 0}) async {
-    final ok = await _repo.addFavFolder(
+    final folderId = await _repo.addFavFolder(
       title: title,
       intro: intro,
       privacy: privacy,
     );
-    if (ok) {
+    if (folderId != null) {
       await loadFolders();
+      return true;
     }
-    return ok;
+    return false;
   }
 
   // ── Netease Playlist Methods ──────────────────────────
