@@ -1,120 +1,114 @@
 # FlameKit
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter)](https://flutter.dev)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20macOS%20%7C%20Windows-green)](https://github.com/user/flamekit)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20macOS-green)](https://github.com/user/flamekit)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%20v3-blue)](LICENSE)
 
-FlameKit 是一款基于 Flutter 开发的多源音乐播放器，支持 Bilibili 和网易云音乐两个音乐源，提供跨平台的音视频播放体验。
+FlameKit 是一款多源音乐播放器，支持从 Bilibili 和网易云音乐搜索、发现和播放音乐，适配手机和电脑。
 
-## Screenshots
+## 预览
 
-### Desktop
+### 桌面端
 
 <div align="center">
-  <img src="docs/preview/desktop.png" alt="Desktop Screenshot" width="100%" style="max-width: 1200px">
+  <img src="docs/preview/桌面端首页.png" alt="桌面端首页" width="100%" style="max-width: 1200px">
 </div>
 
-### Mobile
+### 移动端
 
 <table>
   <tr>
-    <td align="center" width="33%">
-      <img src="docs/preview/mobile1.jpg" alt="Mobile Screenshot 1" width="100%">
+    <td align="center" width="50%">
+      <img src="docs/preview/移动端首页.jpg" alt="移动端首页" width="100%">
       <br>
-      <sub><b>播放界面</b></sub>
+      <sub><b>首页</b></sub>
     </td>
-    <td align="center" width="33%">
-      <img src="docs/preview/mobile2.jpg" alt="Mobile Screenshot 2" width="100%">
+    <td align="center" width="50%">
+      <img src="docs/preview/移动端收藏页.jpg" alt="移动端收藏页" width="100%">
       <br>
-      <sub><b>搜索界面</b></sub>
-    </td>
-    <td align="center" width="33%">
-      <img src="docs/preview/mobile3.jpg" alt="Mobile Screenshot 3" width="100%">
-      <br>
-      <sub><b>播放列表</b></sub>
+      <sub><b>收藏</b></sub>
     </td>
   </tr>
 </table>
 
-## Features
+## 已实现的功能
 
-### Core Playback
+### 播放
 
-- Bilibili 音频 / 视频播放（多清晰度切换）
-- 网易云音乐搜索与播放（原生 WEAPI / EAPI 加密，无需外部 API 服务）
-- 播放队列管理（添加、删除、拖拽排序）
-- 播放模式切换（顺序 / 随机 / 单曲循环）
-- 音视频模式切换、Mini 播放器与全屏播放器
+- 支持播放 B 站和网易云的音乐，可随时切换音乐源
+- 支持视频模式播放，可在音频和视频之间切换
+- 播放队列管理：添加、删除、拖拽排序
+- 多种播放模式：顺序播放、随机播放、单曲循环
+- Mini 播放器和全屏播放器自由切换
+- 播放队列结束后自动推荐新歌曲继续播放
 
-### Search
+### 搜索
 
-- Bilibili 视频搜索（热搜、搜索建议、分页加载）
-- 网易云音乐歌曲搜索（分页加载）
-- 搜索源切换（B站 / 网易云）与搜索历史记录
+- 在 B 站和网易云之间切换搜索
+- 支持热搜词和搜索建议
+- 保留搜索历史，方便回顾
 
-### Lyrics
+### 歌词
 
-- LRCLIB 在线歌词匹配
-- Bilibili 字幕歌词回退
-- 网易云原生 LRC 歌词
-- 逐行歌词滚动显示
+- 自动匹配在线歌词
+- 支持逐行滚动歌词显示
+- 歌曲找不到歌词时自动尝试其他来源
 
-### Discovery
+### 发现音乐
 
-- Bilibili 热门音乐榜单 & 热门音乐 MV
-- 网易云新歌速递 & 推荐歌单
+- B 站热门音乐榜单和热门 MV
+- 网易云新歌速递和推荐歌单
 
-### Collection & Playlist
+### 收藏管理
 
-- Bilibili 收藏夹管理（查看、添加、创建文件夹）
-- Bilibili 播放列表浏览与批量播放
+- 查看和管理 B 站收藏夹
+- 创建新收藏夹、添加歌曲到收藏
+- 收藏夹内歌曲一键批量播放
 
-### Smart Source Switching
+### 智能换源
 
-- 网易云歌曲无法获取音频链接时，自动从 B 站搜索同名歌曲并播放
-- 换源过程用户无感，自动完成
+- 网易云歌曲无法播放时，自动从 B 站搜索同名歌曲无缝切换
+- 整个过程自动完成，无需手动操作
 
-### Others
+### 其他
 
-- Material You 动态主题配色
-- Bilibili 扫码登录
-- 视频模式（media_kit + mpv）
-- 音频质量选择
+- 跟随系统的动态主题配色
+- B 站扫码登录
+- 可选择不同音质
+- 手机和电脑共用一套界面，自适应屏幕大小
 
-## Roadmap
+## 开发指南
 
-- [ ] 网易云音乐账号登录（当前为游客模式）
-- [ ] 网易云歌单详情页
-- [ ] 下载 / 离线缓存
-- [ ] 桌面歌词 / 状态栏歌词
-- [ ] iOS 支持
-- [ ] 均衡器 / 音效设置
-- [ ] 定时关闭
-- [ ] 歌曲评论查看
-- [ ] 跨设备同步播放列表
-- [ ] 更多音乐源接入（QQ 音乐、酷狗等）
+如果你想参与开发或者自己编译运行，可以参考以下步骤。
 
-## Getting Started
+### 环境准备
 
-### Prerequisites
+- 安装 [Flutter](https://flutter.dev/docs/get-started/install)（3.x 版本）
+- 根据目标平台准备对应环境：
+  - **Android**: 安装 Android Studio 和 Android SDK
+  - **macOS**: 安装 Xcode
+  - **Linux**: 安装必要的桌面开发库
 
-- Flutter 3.x
-- Android SDK / Linux 桌面环境 / macOS / Windows
-
-### Build
+### 获取代码并运行
 
 ```bash
-# 安装依赖
+git clone https://github.com/user/flamekit.git
+cd flamekit
 flutter pub get
-
-# Debug 运行
 flutter run
-
-# Release 构建
-flutter build apk --release
 ```
 
-### Signing Configuration
+### 构建安装包
+
+```bash
+# Android APK
+flutter build apk --release
+
+# macOS 应用
+flutter build macos --release
+```
+
+### Android 签名配置
 
 在 `android/` 目录下创建 `key.properties` 文件：
 
@@ -125,9 +119,18 @@ keyAlias=upload
 storeFile=upload-keystore.jks
 ```
 
-## Contributing
+### 项目结构
 
-欢迎提交 Pull Request！无论是新功能、Bug 修复还是文档改进，都非常欢迎。
+```
+lib/
+  main.dart          # 应用入口
+  pages/             # 页面
+  services/          # 数据和网络服务
+  widgets/           # 可复用组件
+  models/            # 数据模型
+```
+
+### 贡献代码
 
 1. Fork 本仓库
 2. 创建你的分支 (`git checkout -b feature/your-feature`)
@@ -135,7 +138,16 @@ storeFile=upload-keystore.jks
 4. 推送到分支 (`git push origin feature/your-feature`)
 5. 创建 Pull Request
 
-如有任何问题或建议，欢迎通过 [Issues](../../issues) 反馈。
+## 问题反馈
+
+遇到 Bug、有功能建议、或者使用中有任何疑问，都欢迎通过 [Issues](../../issues) 提出。
+
+提 Issue 时建议包含：
+- 你使用的平台（Android / macOS / Linux）
+- 问题的具体表现或复现步骤
+- 如果方便，附上截图
+
+你的反馈对项目改进非常重要，感谢参与！
 
 ## Buy Me a Coffee
 
@@ -143,19 +155,20 @@ storeFile=upload-keystore.jks
 
 <img src="docs/pay.jpg" alt="Buy Me a Coffee" width="300">
 
-## Disclaimer
+## 免责声明
 
 本项目仅供学习交流和个人使用，**请勿用于任何商业用途**。
 
-- 本项目通过逆向工程实现的网易云音乐 API 调用（WEAPI / EAPI 加密协议），**未经网易云音乐官方授权**。相关接口可能随时变更或失效，本项目不保证其可用性和稳定性。
-- 本项目调用的 Bilibili API 同样**未经哔哩哔哩官方授权**，所有接口均来源于公开的网络资料。
+- 本项目调用的 Bilibili 和网易云音乐接口**均未经官方授权**，所有接口来源于公开的网络资料，可能随时变更或失效。
 - 所有音频、视频内容的版权归原作者和平台方所有，本项目不存储、不分发任何版权内容。
 - 使用本项目产生的一切法律责任由使用者自行承担，与项目开发者无关。
-- 频繁调用第三方 API 可能导致账号被限制或封禁，请合理使用。
+- 频繁调用第三方接口可能导致账号被限制或封禁，请合理使用。
 - 本项目不收集任何用户数据，所有登录凭证仅存储在用户本地设备上。
 
 **如果本项目侵犯了您的权益，请联系 linghualive@163.com，我们将立即删除相关内容。**
 
-## License
+## 开源协议
 
-本项目基于 [GPL-3.0](LICENSE) 协议开源。任何使用、修改或分发本项目代码的衍生作品，必须以相同的 GPL-3.0 协议开源并公开源代码。
+本项目基于 [GPL-3.0](LICENSE) 协议开源。
+
+这意味着：你可以自由使用、修改和分发本项目的代码，但任何基于本项目的衍生作品，必须同样以 GPL-3.0 协议开源并公开源代码。
