@@ -355,28 +355,28 @@ class PlayerController extends GetxController {
     }
     final currentPos = position.value;
 
-    if (isVideoMode.value) {
-      // Switch to audio-only
-      _playback.prepareForAudioOnly();
-      videoQualityLabel.value = '';
-      await _playback.playBilibiliAudio(item.audioUrl);
-      if (currentPos > Duration.zero) {
-        await Future.delayed(const Duration(milliseconds: 200));
-        _playback.seekTo(currentPos);
-      }
-    } else {
-      // Switch to video
-      if (item.videoUrl != null) {
-        videoQualityLabel.value = item.videoQualityLabel ?? '';
-        await _playback.prepareForVideo();
-        await _playback.playVideoWithAudio(item.videoUrl!, item.audioUrl);
+    try {
+      if (isVideoMode.value) {
+        // Switch to audio-only
+        _playback.prepareForAudioOnly();
+        videoQualityLabel.value = '';
+        await _playback.playBilibiliAudio(item.audioUrl);
         if (currentPos > Duration.zero) {
-          await Future.delayed(const Duration(milliseconds: 500));
+          await Future.delayed(const Duration(milliseconds: 200));
           _playback.seekTo(currentPos);
         }
       } else {
-        // No video URL available, try to fetch it
-        try {
+        // Switch to video
+        if (item.videoUrl != null) {
+          videoQualityLabel.value = item.videoQualityLabel ?? '';
+          await _playback.prepareForVideo();
+          await _playback.playVideoWithAudio(item.videoUrl!, item.audioUrl);
+          if (currentPos > Duration.zero) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            _playback.seekTo(currentPos);
+          }
+        } else {
+          // No video URL available, try to fetch it
           final playUrl =
               await _playerRepo.getFullPlayUrl(item.video.bvid);
           if (playUrl != null &&
@@ -406,11 +406,14 @@ class PlayerController extends GetxController {
           } else {
             AppToast.show('该视频无画面资源');
           }
-        } catch (e) {
-          log('Failed to fetch video: $e');
-          AppToast.error('获取视频失败');
         }
       }
+    } catch (e) {
+      log('toggleVideoMode error: $e');
+      AppToast.error('视频模式切换失败');
+      // Fallback: ensure audio keeps playing
+      _playback.prepareForAudioOnly();
+      videoQualityLabel.value = '';
     }
   }
 

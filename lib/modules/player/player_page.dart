@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../core/storage/storage_service.dart';
 import '../../shared/utils/app_toast.dart';
+import '../../shared/utils/platform_utils.dart';
 import '../../shared/widgets/fav_panel.dart';
 import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
@@ -69,30 +70,67 @@ class PlayerPage extends GetView<PlayerController> {
               return const Center(child: Text('未选择曲目'));
             }
 
-            return Column(
-              children: [
-                const SizedBox(height: 16),
-                Expanded(
-                  flex: 5,
-                  child: Obx(() {
-                    if (controller.isVideoMode.value) {
-                      return const PlayerVideo();
-                    }
-                    return GestureDetector(
-                      onTap: () => controller.toggleLyricsView(),
-                      child: controller.showLyrics.value
-                          ? const PlayerLyrics()
-                          : const PlayerArtwork(),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 24),
-                const Expanded(flex: 4, child: PlayerControls()),
-                const SizedBox(height: 16),
-              ],
-            );
+            if (PlatformUtils.isDesktop) {
+              return _buildDesktopLayout();
+            }
+            return _buildMobileLayout();
           }),
         ),
+      ),
+    );
+  }
+
+  Widget _buildArtworkArea() {
+    return Obx(() {
+      if (controller.isVideoMode.value) {
+        return const PlayerVideo();
+      }
+      return GestureDetector(
+        onTap: () => controller.toggleLyricsView(),
+        child: controller.showLyrics.value
+            ? const PlayerLyrics()
+            : const PlayerArtwork(),
+      );
+    });
+  }
+
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        Expanded(
+          flex: 5,
+          child: _buildArtworkArea(),
+        ),
+        const SizedBox(height: 24),
+        const Expanded(flex: 4, child: PlayerControls()),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: Row(
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: AspectRatio(
+              aspectRatio: 1.0,
+              child: _buildArtworkArea(),
+            ),
+          ),
+          const SizedBox(width: 32),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: const PlayerControls(),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

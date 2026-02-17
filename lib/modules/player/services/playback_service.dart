@@ -316,10 +316,14 @@ class PlaybackService {
     isVideoMode.value = false;
   }
 
-  /// Prepare for video mode: stop just_audio if active.
+  /// Prepare for video mode: stop current audio playback.
   Future<void> prepareForVideo() async {
     if (!isVideoMode.value) {
       audioPlayer.stop();
+      // On desktop, audio plays via media_kit – stop it before switching to video
+      if (_useMediaKit && _mediaKitPlayer != null) {
+        await _mediaKitPlayer!.stop();
+      }
     }
     await _ensureVideoController();
   }
