@@ -6,6 +6,20 @@ import 'package:get/get.dart';
 
 import '../providers/deepseek_provider.dart';
 
+class RecommendedSong {
+  final String title;
+  final String artist;
+
+  RecommendedSong({required this.title, required this.artist});
+
+  factory RecommendedSong.fromJson(Map<String, dynamic> json) {
+    return RecommendedSong(
+      title: json['title'] as String? ?? '',
+      artist: json['artist'] as String? ?? '',
+    );
+  }
+}
+
 class DeepSeekRepository {
   final _provider = Get.find<DeepSeekProvider>();
 
@@ -100,6 +114,68 @@ class DeepSeekRepository {
       return _parseJsonArray(_extractContent(res));
     } catch (e) {
       log('generateRandomQueries error: $e');
+      rethrow;
+    }
+  }
+
+  List<RecommendedSong> _parseSongJsonArray(String content) {
+    final jsonMatch = RegExp(r'\[.*\]', dotAll: true).firstMatch(content);
+    if (jsonMatch == null) throw Exception('No JSON array found in response');
+    final list = jsonDecode(jsonMatch.group(0)!) as List<dynamic>;
+    return list
+        .map((e) => RecommendedSong.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<RecommendedSong>> generateSongRecommendations(
+    List<String> tags, {
+    List<String>? recentPlayed,
+  }) async {
+    try {
+      final avoidPart = recentPlayed != null && recentPlayed.isNotEmpty
+          ? '\n\n不要推荐以下已听过的歌曲:\n${recentPlayed.take(20).join('\n')}'
+          : '';
+
+      final res = await _provider.chatCompletion(
+        systemPrompt:
+            '你是一个音乐推荐专家。根据用户的音乐偏好标签，推荐具体的歌曲。'
+            '推荐知名度较高、容易找到的歌曲，多样化覆盖不同歌手和风格。'
+            '生成8-12首推荐歌曲。'
+            '只输出JSON数组，每项包含title和artist，不要输出其他任何内容。'
+            '例如: [{"title":"晴天","artist":"周杰伦"},{"title":"海阔天空","artist":"Beyond"}]',
+        userPrompt: '用户偏好标签: ${tags.join(", ")}$avoidPart',
+        temperature: 0.9,
+        maxTokens: 600,
+      );
+      return _parseSongJsonArray(_extractContent(res));
+    } catch (e) {
+      log('generateSongRecommendations error: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<RecommendedSong>> generateRandomSongRecommendations({
+    List<String>? recentPlayed,
+  }) async {
+    try {
+      final avoidPart = recentPlayed != null && recentPlayed.isNotEmpty
+          ? '\n\n不要推荐以下已听过的歌曲:\n${recentPlayed.take(20).join('\n')}'
+          : '';
+
+      final res = await _provider.chatCompletion(
+        systemPrompt:
+            '你是一个音乐推荐专家。请推荐多样化的歌曲，覆盖不同语种、风格和年代。'
+            '推荐知名度较高、容易找到的歌曲。'
+            '生成8-12首推荐歌曲。'
+            '只输出JSON数组，每项包含title和artist，不要输出其他任何内容。'
+            '例如: [{"title":"晴天","artist":"周杰伦"},{"title":"海阔天空","artist":"Beyond"}]',
+        userPrompt: '请推荐一组多样化的好听歌曲$avoidPart',
+        temperature: 1.0,
+        maxTokens: 600,
+      );
+      return _parseSongJsonArray(_extractContent(res));
+    } catch (e) {
+      log('generateRandomSongRecommendations error: $e');
       rethrow;
     }
   }

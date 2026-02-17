@@ -16,6 +16,7 @@ import '../../data/providers/deepseek_provider.dart';
 import '../../data/providers/netease_provider.dart';
 import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/netease_repository.dart';
+import '../../data/services/recommendation_service.dart';
 import '../../modules/player/player_controller.dart';
 
 class InitialBinding extends Bindings {
@@ -40,6 +41,9 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => LyricsRepository(), fenix: true);
     Get.lazyPut(() => NeteaseRepository(), fenix: true);
     Get.lazyPut(() => DeepSeekRepository(), fenix: true);
+
+    // Services
+    Get.lazyPut(() => RecommendationService(), fenix: true);
 
     // Global persistent controller
     Get.put(PlayerController(), permanent: true);

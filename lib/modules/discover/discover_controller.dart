@@ -5,13 +5,12 @@ import 'package:get/get.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/deepseek_repository.dart';
-import '../../data/repositories/search_repository.dart';
 import '../../data/repositories/user_repository.dart';
+import '../../data/services/recommendation_service.dart';
 import '../player/player_controller.dart';
 
 class DiscoverController extends GetxController {
   final _storage = Get.find<StorageService>();
-  final _searchRepo = Get.find<SearchRepository>();
   final _userRepo = Get.find<UserRepository>();
 
   final preferenceTags = <String>[].obs;
@@ -87,32 +86,11 @@ class DiscoverController extends GetxController {
     aiRecommendedSongs.clear();
 
     try {
-      final deepseekRepo = Get.find<DeepSeekRepository>();
-      final List<String> queries;
-
-      if (preferenceTags.isNotEmpty) {
-        queries = await deepseekRepo.generateSearchQueries(
-          preferenceTags.toList(),
-        );
-      } else {
-        queries = await deepseekRepo.generateRandomQueries();
-      }
-
-      final Set<String> seenIds = {};
-      for (final query in queries) {
-        try {
-          final result =
-              await _searchRepo.searchVideos(keyword: query, page: 1);
-          if (result != null && result.results.isNotEmpty) {
-            final video = result.results.first;
-            if (seenIds.add(video.uniqueId)) {
-              aiRecommendedSongs.add(video);
-            }
-          }
-        } catch (e) {
-          log('Search for "$query" failed: $e');
-        }
-      }
+      final recService = Get.find<RecommendationService>();
+      final songs = await recService.getRecommendations(
+        tags: preferenceTags.toList(),
+      );
+      aiRecommendedSongs.assignAll(songs);
     } catch (e) {
       log('loadRecommendations error: $e');
     } finally {
