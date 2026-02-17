@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:get/get.dart';
 
+import '../../../core/storage/storage_service.dart';
 import '../../../data/models/search/search_video_model.dart';
 import '../../../data/services/recommendation_service.dart';
 import '../../../shared/utils/app_toast.dart';
@@ -88,10 +89,24 @@ class HeartModeService {
     isHeartModeLoading.value = true;
     try {
       final recService = Get.find<RecommendationService>();
+      final storage = Get.find<StorageService>();
       final currentQueue = getCurrentQueue?.call() ?? [];
+
+      // Combine queue songs + storage play history for better dedup
       final recentPlayed = currentQueue
           .map((q) => '${q.video.title} - ${q.video.author}')
           .toList();
+      final historyEntries = storage.getPlayHistory().take(30);
+      for (final entry in historyEntries) {
+        final v = entry['video'] as Map<String, dynamic>?;
+        if (v != null) {
+          final model = SearchVideoModel.fromJson(v);
+          final desc = '${model.title} - ${model.author}';
+          if (!recentPlayed.contains(desc)) {
+            recentPlayed.add(desc);
+          }
+        }
+      }
 
       final songs = await recService.getRecommendations(
         tags: heartModeTags.toList(),

@@ -16,6 +16,20 @@ class RecommendationService {
   static const _minDurationSeconds = 90; // 1:30
   static const _maxDurationSeconds = 600; // 10:00
 
+  /// Session-level set of recommended song IDs to avoid cross-batch duplicates.
+  final _sessionRecommendedIds = <String>{};
+
+  /// Normalize a song title for fuzzy deduplication.
+  static String _normalizeTitle(String title) {
+    return title
+        .replaceAll(RegExp(r'\(.*?\)'), '') // remove parentheses
+        .replaceAll(RegExp(r'（.*?）'), '') // remove full-width parentheses
+        .replaceAll(RegExp(r'【.*?】'), '') // remove brackets
+        .replaceAll(RegExp(r'\[.*?\]'), '') // remove square brackets
+        .replaceAll(RegExp(r'\s+'), '') // remove whitespace
+        .toLowerCase();
+  }
+
   /// Generate recommended songs using the new pipeline:
   /// 1. DeepSeek generates specific song titles + artists
   /// 2. Search NetEase first (high quality music database)
@@ -38,13 +52,25 @@ class RecommendationService {
 
     final List<SearchVideoModel> results = [];
     final Set<String> seenIds = {};
+    final Set<String> seenNormalizedTitles = {};
 
     for (final rec in recommendations) {
       try {
         final song = await _resolveRecommendedSong(rec);
-        if (song != null && seenIds.add(song.uniqueId)) {
-          results.add(song);
-        }
+        if (song == null) continue;
+
+        // Skip if already recommended in this session
+        if (_sessionRecommendedIds.contains(song.uniqueId)) continue;
+
+        // Skip if same uniqueId in current batch
+        if (!seenIds.add(song.uniqueId)) continue;
+
+        // Skip if a song with a very similar title already exists
+        final normalized = _normalizeTitle(song.title);
+        if (!seenNormalizedTitles.add(normalized)) continue;
+
+        results.add(song);
+        _sessionRecommendedIds.add(song.uniqueId);
       } catch (e) {
         log('Failed to resolve "${rec.title}" by ${rec.artist}: $e');
       }

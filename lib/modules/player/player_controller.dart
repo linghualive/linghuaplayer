@@ -13,6 +13,7 @@ import '../../data/models/music/audio_song_model.dart';
 import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/lyrics_repository.dart';
+import '../../data/services/recommendation_service.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/player_repository.dart';
@@ -63,6 +64,10 @@ class PlayerController extends GetxController {
   // Queue
   final queue = <QueueItem>[].obs;
   final currentIndex = (-1).obs;
+
+  // Play history (for "previous track" navigation)
+  final playHistory = <QueueItem>[].obs;
+  static const _maxHistorySize = 50;
 
   // Play mode
   final playMode = PlayMode.sequential.obs;
@@ -124,6 +129,16 @@ class PlayerController extends GetxController {
     }
   }
 
+  /// Push the current song to the play history stack.
+  void _pushToHistory() {
+    if (queue.isEmpty || currentIndex.value < 0) return;
+    final current = queue[0];
+    playHistory.add(current);
+    if (playHistory.length > _maxHistorySize) {
+      playHistory.removeAt(0);
+    }
+  }
+
   /// Play from search result and navigate to player page
   Future<void> playFromSearch(SearchVideoModel video) async {
     isLoading.value = true;
@@ -154,6 +169,38 @@ class PlayerController extends GetxController {
     if (_hasAutoPlayed || currentVideo.value != null || isLoading.value) return;
     _hasAutoPlayed = true;
 
+    // 1. Try personalized recommendations using preference tags
+    final tags = _storage.preferenceTags;
+    if (tags.isNotEmpty) {
+      try {
+        final recService = Get.find<RecommendationService>();
+        final recentHistory = _storage
+            .getPlayHistory()
+            .take(20)
+            .map((e) {
+              final v = SearchVideoModel.fromJson(
+                  e['video'] as Map<String, dynamic>);
+              return '${v.title} - ${v.author}';
+            })
+            .toList();
+
+        final songs = await recService.getRecommendations(
+          tags: tags,
+          recentPlayed: recentHistory,
+        );
+        if (songs.isNotEmpty) {
+          await playFromSearch(songs.first);
+          for (int i = 1; i < songs.length && i < 5; i++) {
+            await addToQueueSilent(songs[i]);
+          }
+          return;
+        }
+      } catch (e) {
+        log('Personalized auto-play failed: $e');
+      }
+    }
+
+    // 2. Fallback to random keyword search
     const keywords = [
       '热门歌曲', '流行音乐', '经典老歌', '华语金曲',
       '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
@@ -162,7 +209,6 @@ class PlayerController extends GetxController {
     final keyword = keywords[random.nextInt(keywords.length)];
 
     try {
-      // Prefer NetEase search for pure music results
       final neteaseResult = await _neteaseRepo.searchSongs(
         keyword: keyword,
         limit: 10,
@@ -174,7 +220,6 @@ class PlayerController extends GetxController {
         return;
       }
 
-      // Fallback to Bilibili
       final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
       if (result != null && result.results.isNotEmpty) {
         final maxIndex = result.results.length.clamp(1, 5);
@@ -258,14 +303,15 @@ class PlayerController extends GetxController {
       videoQualityLabel: videoQualityLabel,
     );
 
+    // Push current song to history before replacing
+    _pushToHistory();
+
     final existingIndex =
         queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
     if (existingIndex >= 0) {
-      final item = queue.removeAt(existingIndex);
-      queue.insert(0, item);
-    } else {
-      queue.insert(0, queueItem);
+      queue.removeAt(existingIndex);
     }
+    queue.insert(0, queueItem);
     currentIndex.value = 0;
   }
 
@@ -464,6 +510,7 @@ class PlayerController extends GetxController {
         .toList();
 
     if (candidates.isNotEmpty) {
+      AppToast.show('已为你自动推荐');
       await playFromSearch(candidates.first);
       return;
     }
@@ -481,6 +528,7 @@ class PlayerController extends GetxController {
           .where((s) => !queueIds.contains(s.uniqueId))
           .toList();
       if (filtered.isNotEmpty) {
+        AppToast.show('已为你自动推荐');
         await playFromSearch(filtered.first);
         return;
       }
@@ -543,6 +591,7 @@ class PlayerController extends GetxController {
   /// User manually skips: remove current song from queue, then play next.
   Future<void> skipNext() async {
     if (queue.length > 1) {
+      _pushToHistory();
       queue.removeAt(0);
       currentIndex.value = 0;
       final item = queue[0];
@@ -553,20 +602,20 @@ class PlayerController extends GetxController {
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
     } else {
-      queue.clear();
-      currentVideo.value = null;
-      _hasAutoPlayed = false;
-      await playRandomIfNeeded();
+      // Queue has no next song — stop playback instead of auto-recommending
+      if (queue.isNotEmpty) _pushToHistory();
+      _playback.stop();
+      AppToast.show('播放列表已播完');
     }
   }
 
-  /// Auto-advance when track finishes: keep current song in queue.
+  /// Auto-advance when track finishes: move current to history, play next.
   Future<void> _advanceNext() async {
     if (queue.length > 1) {
-      final item = queue[1];
-      queue.removeAt(1);
-      queue.insert(0, item);
+      _pushToHistory();
+      queue.removeAt(0);
       currentIndex.value = 0;
+      final item = queue[0];
       currentVideo.value = item.video;
       audioQualityLabel.value = item.qualityLabel;
 
@@ -579,10 +628,26 @@ class PlayerController extends GetxController {
   }
 
   Future<void> skipPrevious() async {
+    // If played more than 3 seconds, restart current track
     if (currentVideo.value != null && position.value.inSeconds > 3) {
       seekTo(Duration.zero);
+      return;
+    }
+    // Go back to previous song from history
+    if (playHistory.isNotEmpty) {
+      final previous = playHistory.removeLast();
+      // Current song goes back to the front of the queue
+      queue.insert(0, previous);
+      currentIndex.value = 0;
+      currentVideo.value = previous.video;
+      audioQualityLabel.value = previous.qualityLabel;
+
+      await _playQueueItem(previous);
+      _fetchLyrics(previous.video);
+      _loadRelatedMusic(previous.video);
     } else {
-      _autoPlayNext();
+      // No history, just restart current track
+      seekTo(Duration.zero);
     }
   }
 
@@ -602,12 +667,18 @@ class PlayerController extends GetxController {
 
   Future<void> playAt(int index) async {
     if (index < 0 || index >= queue.length) return;
-    if (index != 0) {
-      final item = queue.removeAt(index);
-      queue.insert(0, item);
+    if (index == 0) {
+      // Already playing this song, restart
+      seekTo(Duration.zero);
+      _playback.play();
+      return;
     }
+    _pushToHistory();
+    queue.removeAt(0);
+    // Target is now at index - 1
+    final item = queue.removeAt(index - 1);
+    queue.insert(0, item);
     currentIndex.value = 0;
-    final item = queue[0];
     currentVideo.value = item.video;
     audioQualityLabel.value = item.qualityLabel;
     await _playQueueItem(item);
@@ -649,6 +720,7 @@ class PlayerController extends GetxController {
     _playback.stop();
     _playback.isVideoMode.value = false;
     queue.clear();
+    playHistory.clear();
     currentIndex.value = -1;
     currentVideo.value = null;
     position.value = Duration.zero;
@@ -670,16 +742,25 @@ class PlayerController extends GetxController {
     final Future<List<SearchVideoModel>> fetchFuture;
     if (video.isNetease) {
       fetchFuture = _neteaseRepo
-          .searchSongs(keyword: video.title, limit: 20)
-          .then((result) =>
-              result.songs.where((s) => s.id != video.id).toList());
+          .searchSongs(keyword: '${video.author} 歌曲', limit: 20)
+          .then((result) {
+        final seen = <String>{_normalizeTitle(video.title)};
+        return result.songs
+            .where((s) => s.id != video.id)
+            .where((s) => seen.add(_normalizeTitle(s.title)))
+            .toList();
+      });
     } else {
       fetchFuture = _musicRepo.getRelatedVideos(video.bvid);
     }
 
     fetchFuture.then((results) {
       if (currentVideo.value?.uniqueId == video.uniqueId) {
-        relatedMusic.assignAll(results);
+        // Filter out songs already in queue
+        final queueIds = queue.map((q) => q.video.uniqueId).toSet();
+        final filtered =
+            results.where((s) => !queueIds.contains(s.uniqueId)).toList();
+        relatedMusic.assignAll(filtered);
         relatedMusicLoading.value = false;
       }
     }).catchError((e) {
@@ -786,6 +867,17 @@ class PlayerController extends GetxController {
   }
 
   bool get hasCurrentTrack => currentVideo.value != null;
+
+  /// Normalize a song title for fuzzy deduplication.
+  static String _normalizeTitle(String title) {
+    return title
+        .replaceAll(RegExp(r'\(.*?\)'), '')
+        .replaceAll(RegExp(r'（.*?）'), '')
+        .replaceAll(RegExp(r'【.*?】'), '')
+        .replaceAll(RegExp(r'\[.*?\]'), '')
+        .replaceAll(RegExp(r'\s+'), '')
+        .toLowerCase();
+  }
 
   /// Play from an AU audio song (Bilibili audio channel).
   Future<void> playFromAudioSong(AudioSongModel song) async {
