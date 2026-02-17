@@ -211,4 +211,33 @@ class StorageService extends GetxService {
     _box.remove('netease_is_logged_in');
     _box.remove('netease_user_id');
   }
+
+  // QQ Music auth
+  bool get isQqMusicLoggedIn =>
+      _box.read<bool>('qqmusic_is_logged_in') ?? false;
+
+  set isQqMusicLoggedIn(bool value) =>
+      _box.write('qqmusic_is_logged_in', value);
+
+  String? get qqMusicUin => _box.read<String>('qqmusic_uin');
+
+  set qqMusicUin(String? value) => _box.write('qqmusic_uin', value);
+
+  String? get qqMusicPSkey => _box.read<String>('qqmusic_p_skey');
+
+  set qqMusicPSkey(String? value) => _box.write('qqmusic_p_skey', value);
+
+  Map<String, dynamic>? getQqMusicUserInfo() =>
+      _box.read<Map<String, dynamic>>('qqmusic_user_info');
+
+  void setQqMusicUserInfo(Map<String, dynamic> info) {
+    _box.write('qqmusic_user_info', info);
+  }
+
+  void clearQqMusicAuth() {
+    _box.remove('qqmusic_user_info');
+    _box.remove('qqmusic_is_logged_in');
+    _box.remove('qqmusic_uin');
+    _box.remove('qqmusic_p_skey');
+  }
 }

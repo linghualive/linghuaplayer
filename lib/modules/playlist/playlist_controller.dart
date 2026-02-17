@@ -3,11 +3,13 @@ import 'package:get/get.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/user/fav_folder_model.dart';
 import '../../data/repositories/netease_repository.dart';
+import '../../data/repositories/qqmusic_repository.dart';
 import '../../data/repositories/user_repository.dart';
 
 class PlaylistController extends GetxController {
   final _repo = Get.find<UserRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
+  final _qqMusicRepo = Get.find<QqMusicRepository>();
   final _storage = Get.find<StorageService>();
 
   final folders = <FavFolderModel>[].obs;
@@ -17,6 +19,10 @@ class PlaylistController extends GetxController {
   // Netease playlist state
   final neteasePlaylists = <NeteasePlaylistBrief>[].obs;
   final neteaseIsLoading = true.obs;
+
+  // QQ Music playlist state
+  final qqMusicPlaylists = <QqMusicPlaylistBrief>[].obs;
+  final qqMusicIsLoading = true.obs;
 
   // Search
   final searchQuery = ''.obs;
@@ -37,11 +43,20 @@ class PlaylistController extends GetxController {
         .toList();
   }
 
+  List<QqMusicPlaylistBrief> get filteredQqMusicPlaylists {
+    final query = searchQuery.value.toLowerCase();
+    if (query.isEmpty) return qqMusicPlaylists;
+    return qqMusicPlaylists
+        .where((p) => p.name.toLowerCase().contains(query))
+        .toList();
+  }
+
   @override
   void onInit() {
     super.onInit();
     loadFolders();
     loadNeteasePlaylists();
+    loadQqMusicPlaylists();
   }
 
   Future<void> loadFolders() async {
@@ -125,5 +140,19 @@ class PlaylistController extends GetxController {
       neteasePlaylists.assignAll(list);
     } catch (_) {}
     neteaseIsLoading.value = false;
+  }
+
+  Future<void> loadQqMusicPlaylists() async {
+    qqMusicIsLoading.value = true;
+    final uin = _storage.qqMusicUin ?? '';
+    if (uin.isEmpty) {
+      qqMusicIsLoading.value = false;
+      return;
+    }
+    try {
+      final list = await _qqMusicRepo.getUserPlaylists(uin);
+      qqMusicPlaylists.assignAll(list);
+    } catch (_) {}
+    qqMusicIsLoading.value = false;
   }
 }

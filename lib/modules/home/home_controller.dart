@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../core/http/netease_http_client.dart';
+import '../../core/http/qqmusic_http_client.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/login/netease_user_info_model.dart';
+import '../../data/models/login/qqmusic_user_info_model.dart';
 import '../../data/models/login/user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../discover/discover_controller.dart';
@@ -29,6 +31,10 @@ class HomeController extends GetxController {
   // NetEase login state
   final isNeteaseLoggedIn = false.obs;
   final neteaseUserInfo = Rxn<NeteaseUserInfoModel>();
+
+  // QQ Music login state
+  final isQqMusicLoggedIn = false.obs;
+  final qqMusicUserInfo = Rxn<QqMusicUserInfoModel>();
 
   final _storage = Get.find<StorageService>();
 
@@ -87,6 +93,15 @@ class HomeController extends GetxController {
     } else {
       neteaseUserInfo.value = null;
     }
+
+    // QQ Music
+    isQqMusicLoggedIn.value = _storage.isQqMusicLoggedIn;
+    final qqMusicCached = _storage.getQqMusicUserInfo();
+    if (qqMusicCached != null) {
+      qqMusicUserInfo.value = QqMusicUserInfoModel.fromJson(qqMusicCached);
+    } else {
+      qqMusicUserInfo.value = null;
+    }
   }
 
   Future<void> logout() async {
@@ -101,5 +116,12 @@ class HomeController extends GetxController {
     await NeteaseHttpClient.instance.clearCookies();
     isNeteaseLoggedIn.value = false;
     neteaseUserInfo.value = null;
+  }
+
+  Future<void> logoutQqMusic() async {
+    _storage.clearQqMusicAuth();
+    await QqMusicHttpClient.instance.clearCookies();
+    isQqMusicLoggedIn.value = false;
+    qqMusicUserInfo.value = null;
   }
 }

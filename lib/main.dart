@@ -16,6 +16,7 @@ import 'app/theme/theme_controller.dart';
 import 'core/http/deepseek_http_client.dart';
 import 'core/http/http_client.dart';
 import 'core/http/netease_http_client.dart';
+import 'core/http/qqmusic_http_client.dart';
 import 'core/storage/storage_service.dart';
 
 void main() async {
@@ -47,6 +48,19 @@ void main() async {
   // Initialize HTTP clients
   await HttpClient.instance.init();
   await NeteaseHttpClient.instance.init();
+  await QqMusicHttpClient.instance.init();
+
+  // Restore QQ Music login state from storage
+  final qqMusicUin = storageService.qqMusicUin;
+  final qqMusicPSkey = storageService.qqMusicPSkey;
+  if (qqMusicUin != null &&
+      qqMusicUin.isNotEmpty &&
+      storageService.isQqMusicLoggedIn) {
+    QqMusicHttpClient.instance.updateLoginUin(qqMusicUin);
+    if (qqMusicPSkey != null && qqMusicPSkey.isNotEmpty) {
+      QqMusicHttpClient.instance.updateGtk(qqMusicPSkey);
+    }
+  }
 
   // Initialize DeepSeek HTTP client if API key exists
   final deepseekKey = storageService.deepseekApiKey;

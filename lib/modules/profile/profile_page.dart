@@ -34,6 +34,10 @@ class ProfilePage extends StatelessWidget {
             _buildNeteaseCard(context, controller),
             const SizedBox(height: 12),
 
+            // QQ Music account card
+            _buildQqMusicCard(context, controller),
+            const SizedBox(height: 12),
+
             // Play history (always visible, local storage)
             Card(
               clipBehavior: Clip.antiAlias,
@@ -381,6 +385,140 @@ class ProfilePage extends StatelessWidget {
             dense: true,
             onTap: () async {
               await controller.logoutNetease();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQqMusicCard(BuildContext context, HomeController controller) {
+    final theme = Theme.of(context);
+
+    if (!controller.isQqMusicLoggedIn.value) {
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => Get.toNamed(AppRoutes.login, arguments: {'platform': 2}),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.queue_music_outlined,
+                    size: 24,
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'QQ音乐',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '点击登录',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: theme.colorScheme.outline,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final qqUser = controller.qqMusicUserInfo.value;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.queue_music,
+                    size: 24,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            qqUser?.nickname ?? 'QQ音乐用户',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'QQ音乐',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.green.shade700,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'QQ号: ${qqUser?.uin ?? ''}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.outline,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          ListTile(
+            leading: Icon(Icons.logout, color: theme.colorScheme.error),
+            title: Text(
+              '退出QQ音乐登录',
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+            dense: true,
+            onTap: () async {
+              await controller.logoutQqMusic();
             },
           ),
         ],

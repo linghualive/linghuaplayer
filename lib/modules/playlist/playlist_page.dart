@@ -44,14 +44,18 @@ class _PlaylistBody extends StatelessWidget {
     return Obx(() {
       final biliLoggedIn = homeController.isLoggedIn.value;
       final neteaseLoggedIn = homeController.isNeteaseLoggedIn.value;
+      final qqMusicLoggedIn = homeController.isQqMusicLoggedIn.value;
       final biliLoading = controller.isLoading.value;
       final neteaseLoading = controller.neteaseIsLoading.value;
+      final qqMusicLoading = controller.qqMusicIsLoading.value;
       controller.searchQuery.value;
       controller.visibleFolders.length;
       controller.neteasePlaylists.length;
+      controller.qqMusicPlaylists.length;
 
       final biliFolders = controller.filteredFolders;
       final neteasePlaylists = controller.filteredNeteasePlaylists;
+      final qqMusicPlaylists = controller.filteredQqMusicPlaylists;
 
       return ListView(
         children: [
@@ -168,6 +172,59 @@ class _PlaylistBody extends StatelessWidget {
                     AppRoutes.neteasePlaylistDetail,
                     arguments: {
                       'playlistId': playlist.id,
+                      'title': playlist.name,
+                    },
+                  ),
+                )),
+
+          const SizedBox(height: 8),
+
+          // ── QQ Music section ──
+          _SectionHeader(
+            title: 'QQ音乐歌单',
+            icon: Icons.queue_music,
+          ),
+          if (!qqMusicLoggedIn)
+            _LoginPromptCard(
+              icon: Icons.queue_music_outlined,
+              label: '登录QQ音乐查看歌单',
+              onTap: () => Get.toNamed(
+                AppRoutes.login,
+                arguments: {'platform': 2},
+              ),
+            )
+          else if (qqMusicLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (qqMusicPlaylists.isEmpty)
+            _EmptyHint(
+              text: controller.searchQuery.value.isEmpty
+                  ? '暂无歌单'
+                  : '无匹配结果',
+            )
+          else
+            ...qqMusicPlaylists.map((playlist) => ListTile(
+                  leading: ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: CachedImage(
+                      imageUrl: playlist.coverUrl,
+                      width: 48,
+                      height: 48,
+                    ),
+                  ),
+                  title: Text(
+                    playlist.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text('${playlist.songCount} 首'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Get.toNamed(
+                    AppRoutes.qqMusicPlaylistDetail,
+                    arguments: {
+                      'disstid': playlist.id,
                       'title': playlist.name,
                     },
                   ),

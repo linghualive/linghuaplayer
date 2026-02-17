@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/storage/storage_service.dart';
 import '../../data/models/search/hot_search_model.dart';
@@ -135,7 +137,7 @@ class SearchController extends GetxController {
   }
 
   void switchSource(MusicSource source) {
-    final sourceId = source == MusicSource.netease ? 'netease' : 'bilibili';
+    final sourceId = source.name;
     if (searchSource.value == sourceId) return;
     searchSource.value = sourceId;
     _registry.activeSourceId.value = sourceId;
@@ -156,6 +158,7 @@ class SearchController extends GetxController {
   Future<void> search(String keyword) async {
     if (keyword.trim().isEmpty) return;
 
+    await _debugLog('search() called: keyword=$keyword, searchSource=${searchSource.value}');
     _isSearching = true;
     _debouncer.cancel();
 
@@ -332,5 +335,14 @@ class SearchController extends GetxController {
     suggestions.clear();
     allResults.clear();
     currentKeyword.value = '';
+  }
+
+  Future<void> _debugLog(String msg) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/qqmusic_debug.log');
+      final ts = DateTime.now().toIso8601String();
+      await file.writeAsString('[$ts] $msg\n', mode: FileMode.append);
+    } catch (_) {}
   }
 }

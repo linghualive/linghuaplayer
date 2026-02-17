@@ -124,4 +124,22 @@ class ApiConstants {
 
   // Series detail (系列详情)
   static const String seriesDetail = '/x/series/archives';
+
+  // ── QQ Music ─────────────────────────────────────────
+  static const String qqMusicContentBaseUrl = 'https://c.y.qq.com';
+  static const String qqMusicUBaseUrl = 'https://u.y.qq.com/cgi-bin/musicu.fcg';
+  static const String qqMusicMainBaseUrl = 'https://y.qq.com';
+  static const String qqMusicAppId = '716027609';
+  static const String qqMusicDaid = '383';
+  static const String qqMusicPt3rdAid = '100497308';
+  static const int qqMusicClientId = 100497308;
+
+  // QQ Music login
+  static const String qqMusicPtloginBaseUrl = 'https://ssl.ptlogin2.qq.com';
+  static const String qqMusicQrShow = '/ptqrshow';
+  static const String qqMusicQrLogin = '/ptqrlogin';
+  static const String qqMusicGraphBaseUrl = 'https://graph.qq.com';
+  static const String qqMusicOauthAuthorize = '/oauth2.0/authorize';
+  static const String qqMusicRedirectUri =
+      'https://y.qq.com/portal/wx_redirect.html';
 }

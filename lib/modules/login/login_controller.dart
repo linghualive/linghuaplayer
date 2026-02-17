@@ -1,16 +1,20 @@
 import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:gt3_flutter_plugin/gt3_flutter_plugin.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../core/http/qqmusic_http_client.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/login/captcha_model.dart';
+import '../../data/models/login/qqmusic_user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/netease_repository.dart';
+import '../../data/repositories/qqmusic_repository.dart';
 import '../../modules/home/home_controller.dart';
 import '../../modules/music_discovery/music_discovery_controller.dart';
 import '../../modules/playlist/playlist_controller.dart';
@@ -22,12 +26,13 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   late final TabController bilibiliTabController;
   final _authRepo = Get.find<AuthRepository>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
+  final _qqMusicRepo = Get.find<QqMusicRepository>();
   final _storage = Get.find<StorageService>();
 
   // GeeTest plugin instance (only available on mobile)
   Gt3FlutterPlugin? _captcha;
 
-  // Platform selection: 0 = Bilibili, 1 = NetEase
+  // Platform selection: 0 = Bilibili, 1 = NetEase, 2 = QQ Music
   final selectedPlatform = 0.obs;
 
   // Bilibili QR Login
@@ -43,6 +48,14 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   final neteaseQrStatus = ''.obs;
   Timer? _neteaseQrPollTimer;
   int _neteaseQrPollCount = 0;
+
+  // QQ Music QR Login
+  final qqMusicQrImage = Rxn<Uint8List>();
+  final qqMusicQrStatus = ''.obs;
+  Timer? _qqMusicQrPollTimer;
+  int _qqMusicQrPollCount = 0;
+  int _qqMusicPtqrtoken = 0;
+  String _qqMusicQrsig = '';
 
   // SMS Login
   final phoneController = TextEditingController();
@@ -68,7 +81,9 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     bilibiliTabController.addListener(_onBilibiliTabChanged);
 
     final args = Get.arguments;
-    if (args is Map && args['platform'] == 1) {
+    if (args is Map && args['platform'] == 2) {
+      selectPlatform(2);
+    } else if (args is Map && args['platform'] == 1) {
       selectPlatform(1);
     } else {
       _generateQrcode();
@@ -80,6 +95,7 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     bilibiliTabController.dispose();
     _qrPollTimer?.cancel();
     _neteaseQrPollTimer?.cancel();
+    _qqMusicQrPollTimer?.cancel();
     _smsTimer?.cancel();
     phoneController.dispose();
     smsCodeController.dispose();
@@ -95,15 +111,19 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     // Stop all polling when switching platforms
     _qrPollTimer?.cancel();
     _neteaseQrPollTimer?.cancel();
+    _qqMusicQrPollTimer?.cancel();
 
     if (index == 0) {
       // Bilibili selected - start QR if on QR tab
       if (bilibiliTabController.index == 0) {
         _generateQrcode();
       }
-    } else {
+    } else if (index == 1) {
       // NetEase selected
       _generateNeteaseQrcode();
+    } else if (index == 2) {
+      // QQ Music selected
+      _generateQqMusicQrcode();
     }
   }
 
@@ -238,6 +258,108 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       AppToast.success(userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败');
     } catch (e) {
       log('NetEase QR: _onNeteaseLoginSuccess error: $e');
+      AppToast.error('登录后处理失败: $e');
+    }
+  }
+
+  // ── QQ Music QR Login ────────────────────────────────
+
+  Future<void> _generateQqMusicQrcode() async {
+    qqMusicQrStatus.value = '正在加载二维码...';
+    qqMusicQrImage.value = null;
+    final result = await _qqMusicRepo.getQrCode();
+    if (result != null) {
+      qqMusicQrImage.value = result.imageBytes;
+      _qqMusicPtqrtoken = result.ptqrtoken;
+      _qqMusicQrsig = result.qrsig;
+      qqMusicQrStatus.value = '请使用QQ客户端扫码';
+      _startQqMusicQrPolling();
+    } else {
+      qqMusicQrStatus.value = '二维码生成失败';
+    }
+  }
+
+  void _startQqMusicQrPolling() {
+    _qqMusicQrPollCount = 0;
+    _qqMusicQrPollTimer?.cancel();
+    _qqMusicQrPollTimer =
+        Timer.periodic(const Duration(seconds: 3), (timer) async {
+      _qqMusicQrPollCount++;
+      if (_qqMusicQrPollCount > 100) {
+        timer.cancel();
+        qqMusicQrStatus.value = '二维码已过期';
+        return;
+      }
+
+      final result = await _qqMusicRepo.pollQrStatus(
+        _qqMusicPtqrtoken,
+        _qqMusicQrsig,
+      );
+      switch (result.status) {
+        case QqMusicQrStatus.success:
+          timer.cancel();
+          qqMusicQrStatus.value = '登录成功！';
+          await _onQqMusicQrSuccess(
+            uin: result.uin ?? '',
+            sigx: result.sigx ?? '',
+          );
+        case QqMusicQrStatus.scanned:
+          qqMusicQrStatus.value = '已扫码，请在手机上确认';
+        case QqMusicQrStatus.expired:
+          timer.cancel();
+          qqMusicQrStatus.value = '二维码已过期';
+        case QqMusicQrStatus.waiting:
+          break;
+      }
+    });
+  }
+
+  void refreshQqMusicQrcode() {
+    _generateQqMusicQrcode();
+  }
+
+  Future<void> _onQqMusicQrSuccess({
+    required String uin,
+    required String sigx,
+  }) async {
+    try {
+      qqMusicQrStatus.value = '正在完成登录...';
+      final loginResult = await _qqMusicRepo.completeLogin(
+        uin: uin,
+        sigx: sigx,
+      );
+      if (loginResult == null) {
+        qqMusicQrStatus.value = '登录失败，请重试';
+        return;
+      }
+
+      // Save login state
+      final client = QqMusicHttpClient.instance;
+      client.updateLoginUin(loginResult.uin);
+      client.updateGtk(loginResult.pSkey);
+
+      _storage.isQqMusicLoggedIn = true;
+      _storage.qqMusicUin = loginResult.uin;
+      _storage.qqMusicPSkey = loginResult.pSkey;
+
+      final userInfo = QqMusicUserInfoModel(
+        uin: loginResult.uin,
+        nickname: 'QQ用户${loginResult.uin}',
+        avatarUrl: '',
+      );
+      _storage.setQqMusicUserInfo(userInfo.toJson());
+
+      if (Get.isRegistered<HomeController>()) {
+        Get.find<HomeController>().refreshLoginStatus();
+      }
+      if (Get.isRegistered<PlaylistController>()) {
+        Get.find<PlaylistController>().loadQqMusicPlaylists();
+      }
+      Get.back();
+      AppToast.success('QQ音乐登录成功');
+    } catch (e) {
+      log('QQ Music QR: _onQqMusicQrSuccess error: $e');
+      qqMusicQrStatus.value = '登录失败，请重试';
       AppToast.error('登录后处理失败: $e');
     }
   }
