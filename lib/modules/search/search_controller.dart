@@ -36,7 +36,7 @@ class SearchController extends GetxController {
   final isLoadingMore = false.obs;
   final isLoading = false.obs;
   final currentKeyword = ''.obs;
-  final searchSource = 'netease'.obs;
+  final searchSource = 'qqmusic'.obs;
   final neteaseSearchType = NeteaseSearchType.song.obs;
   int _currentPage = 1;
   int _neteaseOffset = 0;

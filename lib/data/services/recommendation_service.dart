@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../models/search/search_video_model.dart';
 import '../repositories/deepseek_repository.dart';
+import '../services/user_profile_service.dart';
 import '../sources/music_source_registry.dart';
 
 class RecommendationService {
@@ -36,15 +37,24 @@ class RecommendationService {
     List<String> tags = const [],
     List<String>? recentPlayed,
   }) async {
+    // Get user profile summary for enhanced recommendations
+    String? profileSummary;
+    try {
+      final profileService = Get.find<UserProfileService>();
+      profileSummary = profileService.getProfileSummaryForPrompt();
+    } catch (_) {}
+
     final List<RecommendedSong> recommendations;
     if (tags.isNotEmpty) {
       recommendations = await _deepseekRepo.generateSongRecommendations(
         tags,
         recentPlayed: recentPlayed,
+        userProfile: profileSummary,
       );
     } else {
       recommendations = await _deepseekRepo.generateRandomSongRecommendations(
         recentPlayed: recentPlayed,
+        userProfile: profileSummary,
       );
     }
 

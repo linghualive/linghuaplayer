@@ -14,7 +14,7 @@ class MusicSourceRegistry extends GetxService {
   final _sources = <String, MusicSourceAdapter>{};
 
   /// The currently active source for search (observable).
-  final activeSourceId = 'netease'.obs;
+  final activeSourceId = 'qqmusic'.obs;
 
   /// Register a source adapter. Overwrites any existing adapter with
   /// the same [sourceId].

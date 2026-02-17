@@ -12,6 +12,10 @@ class StorageService extends GetxService {
     return this;
   }
 
+  // Generic read/write
+  T? read<T>(String key) => _box.read<T>(key);
+  void write(String key, dynamic value) => _box.write(key, value);
+
   // WBI keys
   String? getImgKey() => _box.read<String>('wbi_img_key');
   String? getSubKey() => _box.read<String>('wbi_sub_key');
@@ -116,6 +120,21 @@ class StorageService extends GetxService {
       return model.uniqueId == uniqueId;
     });
     _box.write(_playHistoryKey, list);
+  }
+
+  void updatePlayDuration(String uniqueId, int durationMs) {
+    final list = getPlayHistory();
+    for (int i = 0; i < list.length; i++) {
+      final v = list[i]['video'] as Map<String, dynamic>?;
+      if (v == null) continue;
+      final model = SearchVideoModel.fromJson(v);
+      if (model.uniqueId == uniqueId) {
+        final existing = list[i]['listenedMs'] as int? ?? 0;
+        list[i]['listenedMs'] = existing + durationMs;
+        _box.write(_playHistoryKey, list);
+        return;
+      }
+    }
   }
 
   void clearPlayHistory() {

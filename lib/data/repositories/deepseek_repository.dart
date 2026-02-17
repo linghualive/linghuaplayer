@@ -130,10 +130,14 @@ class DeepSeekRepository {
   Future<List<RecommendedSong>> generateSongRecommendations(
     List<String> tags, {
     List<String>? recentPlayed,
+    String? userProfile,
   }) async {
     try {
       final avoidPart = recentPlayed != null && recentPlayed.isNotEmpty
           ? '\n\n不要推荐以下已听过的歌曲:\n${recentPlayed.take(20).join('\n')}'
+          : '';
+      final profilePart = userProfile != null && userProfile.isNotEmpty
+          ? '\n\n用户听歌画像：\n$userProfile'
           : '';
 
       final res = await _provider.chatCompletion(
@@ -147,7 +151,7 @@ class DeepSeekRepository {
             '生成8-12首推荐歌曲。'
             '只输出JSON数组，每项包含title和artist，不要输出其他任何内容。'
             '例如: [{"title":"晴天","artist":"周杰伦"},{"title":"海阔天空","artist":"Beyond"}]',
-        userPrompt: '用户偏好标签: ${tags.join(", ")}$avoidPart',
+        userPrompt: '用户偏好标签: ${tags.join(", ")}$avoidPart$profilePart',
         temperature: 0.9,
         maxTokens: 600,
       );
@@ -160,10 +164,14 @@ class DeepSeekRepository {
 
   Future<List<RecommendedSong>> generateRandomSongRecommendations({
     List<String>? recentPlayed,
+    String? userProfile,
   }) async {
     try {
       final avoidPart = recentPlayed != null && recentPlayed.isNotEmpty
           ? '\n\n不要推荐以下已听过的歌曲:\n${recentPlayed.take(20).join('\n')}'
+          : '';
+      final profilePart = userProfile != null && userProfile.isNotEmpty
+          ? '\n\n用户听歌画像：\n$userProfile'
           : '';
 
       final res = await _provider.chatCompletion(
@@ -177,7 +185,7 @@ class DeepSeekRepository {
             '生成8-12首推荐歌曲。'
             '只输出JSON数组，每项包含title和artist，不要输出其他任何内容。'
             '例如: [{"title":"晴天","artist":"周杰伦"},{"title":"海阔天空","artist":"Beyond"}]',
-        userPrompt: '请推荐一组多样化的好听歌曲$avoidPart',
+        userPrompt: '请推荐一组多样化的好听歌曲$avoidPart$profilePart',
         temperature: 1.0,
         maxTokens: 600,
       );

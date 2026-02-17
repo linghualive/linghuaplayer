@@ -18,6 +18,7 @@ import 'core/http/http_client.dart';
 import 'core/http/netease_http_client.dart';
 import 'core/http/qqmusic_http_client.dart';
 import 'core/storage/storage_service.dart';
+import 'data/services/user_profile_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,13 @@ void main() async {
   final deepseekKey = storageService.deepseekApiKey;
   if (deepseekKey != null && deepseekKey.isNotEmpty) {
     DeepSeekHttpClient.instance.init(deepseekKey);
+  }
+
+  // Build user listening profile if play history exists
+  if (storageService.getPlayHistory().isNotEmpty) {
+    final profileService = UserProfileService();
+    Get.put(profileService, permanent: true);
+    profileService.buildProfile();
   }
 
   // Initialize theme controller

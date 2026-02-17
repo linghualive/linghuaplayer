@@ -15,6 +15,7 @@ import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/services/recommendation_service.dart';
+import '../../data/services/user_profile_service.dart';
 import '../../data/sources/music_source_adapter.dart';
 import '../../data/sources/music_source_registry.dart';
 import '../../shared/utils/app_toast.dart';
@@ -92,6 +93,11 @@ class PlayerController extends GetxController {
   AudioPlayer get audioPlayer => _playback.audioPlayer;
   mkv.VideoController? get videoController => _playback.videoController;
 
+  // Listen duration tracking
+  int _listenedMs = 0;
+  DateTime? _playStartTime;
+  int _tracksSinceBuildProfile = 0;
+
   // Auto-play guard
   bool _hasAutoPlayed = false;
 
@@ -112,6 +118,16 @@ class PlayerController extends GetxController {
     _heartMode.getCurrentQueue = () => List.from(queue);
     _heartMode.getCurrentVideo = () => currentVideo.value;
     _heartMode.onRestoreQueue = _restoreQueue;
+
+    // Track listen duration across play/pause transitions
+    ever(isPlaying, (bool playing) {
+      if (playing) {
+        _playStartTime = DateTime.now();
+      } else if (_playStartTime != null) {
+        _listenedMs += DateTime.now().difference(_playStartTime!).inMilliseconds;
+        _playStartTime = null;
+      }
+    });
   }
 
   @override
@@ -141,8 +157,30 @@ class PlayerController extends GetxController {
     }
   }
 
+  /// Save accumulated listen duration for the current track, then reset.
+  void _saveListenDuration() {
+    // Flush any in-progress playing time
+    if (_playStartTime != null) {
+      _listenedMs += DateTime.now().difference(_playStartTime!).inMilliseconds;
+      _playStartTime = null;
+    }
+    if (_listenedMs > 0 && currentVideo.value != null) {
+      _storage.updatePlayDuration(currentVideo.value!.uniqueId, _listenedMs);
+      _tracksSinceBuildProfile++;
+      if (_tracksSinceBuildProfile >= 5) {
+        _tracksSinceBuildProfile = 0;
+        try {
+          final profileService = Get.find<UserProfileService>();
+          profileService.buildProfile();
+        } catch (_) {}
+      }
+    }
+    _listenedMs = 0;
+  }
+
   /// Play from search result and navigate to player page
   Future<void> playFromSearch(SearchVideoModel video) async {
+    _saveListenDuration();
     isLoading.value = true;
     currentVideo.value = video;
 
@@ -526,6 +564,7 @@ class PlayerController extends GetxController {
   /// User manually skips: remove current song from queue, then play next.
   /// If queue is empty, just stop — don't auto-recommend.
   Future<void> skipNext() async {
+    _saveListenDuration();
     if (queue.length > 1) {
       _pushToHistory();
       queue.removeAt(0);
@@ -545,6 +584,7 @@ class PlayerController extends GetxController {
 
   /// Auto-advance when track finishes: move current to history, play next.
   Future<void> _advanceNext() async {
+    _saveListenDuration();
     if (queue.length > 1) {
       _pushToHistory();
       queue.removeAt(0);
@@ -562,6 +602,7 @@ class PlayerController extends GetxController {
   }
 
   Future<void> skipPrevious() async {
+    _saveListenDuration();
     // If played more than 3 seconds, restart current track
     if (currentVideo.value != null && position.value.inSeconds > 3) {
       seekTo(Duration.zero);
@@ -601,6 +642,7 @@ class PlayerController extends GetxController {
 
   Future<void> playAt(int index) async {
     if (index < 0 || index >= queue.length) return;
+    _saveListenDuration();
     if (index == 0) {
       // Already playing this song, restart
       seekTo(Duration.zero);
@@ -651,6 +693,7 @@ class PlayerController extends GetxController {
   }
 
   void clearQueue() {
+    _saveListenDuration();
     _manualStop = true;
     _playback.stop();
     _playback.isVideoMode.value = false;
