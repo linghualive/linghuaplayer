@@ -10,14 +10,13 @@ import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
 import '../home/home_controller.dart';
 import '../../data/models/music/audio_song_model.dart';
+import '../../data/models/playback_info.dart';
 import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
-import '../../data/repositories/lyrics_repository.dart';
-import '../../data/services/recommendation_service.dart';
 import '../../data/repositories/music_repository.dart';
-import '../../data/repositories/netease_repository.dart';
-import '../../data/repositories/player_repository.dart';
-import '../../data/repositories/search_repository.dart';
+import '../../data/services/recommendation_service.dart';
+import '../../data/sources/music_source_adapter.dart';
+import '../../data/sources/music_source_registry.dart';
 import '../../shared/utils/app_toast.dart';
 import 'services/heart_mode_service.dart';
 import 'services/playback_service.dart';
@@ -30,6 +29,7 @@ class QueueItem {
   final String qualityLabel;
   final String? videoUrl;
   final String? videoQualityLabel;
+  final Map<String, String> headers;
 
   QueueItem({
     required this.video,
@@ -37,14 +37,12 @@ class QueueItem {
     this.qualityLabel = '',
     this.videoUrl,
     this.videoQualityLabel,
+    this.headers = const {},
   });
 }
 
 class PlayerController extends GetxController {
-  final _playerRepo = Get.find<PlayerRepository>();
-  final _searchRepo = Get.find<SearchRepository>();
-  final _lyricsRepo = Get.find<LyricsRepository>();
-  final _neteaseRepo = Get.find<NeteaseRepository>();
+  final _registry = Get.find<MusicSourceRegistry>();
   final _musicRepo = Get.find<MusicRepository>();
   final _storage = Get.find<StorageService>();
   final _playback = PlaybackService();
@@ -97,6 +95,10 @@ class PlayerController extends GetxController {
   // Auto-play guard
   bool _hasAutoPlayed = false;
 
+  // Manual stop guard: prevents onTrackCompleted from chaining
+  // into _autoPlayNext when the stop was user-initiated.
+  bool _manualStop = false;
+
   @override
   void onInit() {
     super.onInit();
@@ -147,21 +149,93 @@ class PlayerController extends GetxController {
     _navigateToPlayer();
 
     try {
-      if (video.isNetease) {
-        await _playNetease(video);
-      } else if (_storage.enableVideo) {
-        await _playWithVideo(video);
-      } else {
-        await _playAudioOnly(video);
+      final resolved = await _registry.resolvePlaybackWithFallback(
+        video,
+        videoMode: _storage.enableVideo,
+      );
+
+      if (resolved == null) {
+        throw Exception('无法获取播放链接');
       }
-      _storage.addPlayHistory(video);
+
+      final (info, resolvedVideo) = resolved;
+
+      // If fallback occurred, update the current video
+      if (resolvedVideo.uniqueId != video.uniqueId) {
+        currentVideo.value = resolvedVideo;
+      }
+
+      await _playFromInfo(info, resolvedVideo);
+      _storage.addPlayHistory(resolvedVideo);
     } catch (e) {
       log('Playback failed: $e');
       AppToast.error('播放失败: $e');
     }
     isLoading.value = false;
-    _fetchLyrics(video);
-    _loadRelatedMusic(video);
+    _fetchLyrics(currentVideo.value ?? video);
+    _loadRelatedMusic(currentVideo.value ?? video);
+  }
+
+  /// Unified playback from resolved PlaybackInfo.
+  Future<void> _playFromInfo(PlaybackInfo info, SearchVideoModel video) async {
+    final bestAudio = info.bestAudio;
+    if (bestAudio == null) throw Exception('No audio stream available');
+
+    if (info.hasVideo && _storage.enableVideo) {
+      await _playback.prepareForVideo();
+      final bestVideo = info.bestVideo!;
+      audioQualityLabel.value = bestAudio.qualityLabel;
+      videoQualityLabel.value = bestVideo.qualityLabel;
+      await _playback.playVideoWithAudio(bestVideo.url, bestAudio.url);
+
+      _addToQueue(
+        video: video,
+        audioUrl: bestAudio.url,
+        qualityLabel: bestAudio.qualityLabel,
+        videoUrl: bestVideo.url,
+        videoQualityLabel: bestVideo.qualityLabel,
+        headers: bestAudio.headers,
+      );
+    } else {
+      _playback.prepareForAudioOnly();
+
+      // Try audio streams with fallback through backup URLs
+      String? playedUrl;
+      String playedLabel = '';
+      for (final stream in info.audioStreams) {
+        try {
+          await _playback.playAudioWithHeaders(stream.url, stream.headers);
+          playedUrl = stream.url;
+          playedLabel = stream.qualityLabel;
+          break;
+        } catch (e) {
+          log('Audio stream ${stream.qualityLabel} failed: $e');
+          if (stream.backupUrl != null && stream.backupUrl!.isNotEmpty) {
+            try {
+              await _playback.playAudioWithHeaders(
+                  stream.backupUrl!, stream.headers);
+              playedUrl = stream.backupUrl!;
+              playedLabel = stream.qualityLabel;
+              break;
+            } catch (e2) {
+              log('Audio stream ${stream.qualityLabel} backup failed: $e2');
+            }
+          }
+        }
+      }
+
+      if (playedUrl == null) throw Exception('All audio streams failed');
+
+      audioQualityLabel.value = playedLabel;
+      videoQualityLabel.value = '';
+
+      _addToQueue(
+        video: video,
+        audioUrl: playedUrl,
+        qualityLabel: playedLabel,
+        headers: bestAudio.headers,
+      );
+    }
   }
 
   /// Auto-play a random song (called when player tab opens with empty queue).
@@ -200,7 +274,7 @@ class PlayerController extends GetxController {
       }
     }
 
-    // 2. Fallback to random keyword search
+    // 2. Fallback to random keyword search via registry sources
     const keywords = [
       '热门歌曲', '流行音乐', '经典老歌', '华语金曲',
       '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
@@ -209,83 +283,18 @@ class PlayerController extends GetxController {
     final keyword = keywords[random.nextInt(keywords.length)];
 
     try {
-      final neteaseResult = await _neteaseRepo.searchSongs(
-        keyword: keyword,
-        limit: 10,
-      );
-      if (neteaseResult.songs.isNotEmpty) {
-        final maxIndex = neteaseResult.songs.length.clamp(1, 5);
-        final video = neteaseResult.songs[random.nextInt(maxIndex)];
-        await playFromSearch(video);
-        return;
-      }
-
-      final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
-      if (result != null && result.results.isNotEmpty) {
-        final maxIndex = result.results.length.clamp(1, 5);
-        final video = result.results[random.nextInt(maxIndex)];
-        await playFromSearch(video);
+      for (final source in _registry.availableSources) {
+        final result = await source.searchTracks(keyword: keyword, limit: 10);
+        if (result.tracks.isNotEmpty) {
+          final maxIndex = result.tracks.length.clamp(1, 5);
+          final video = result.tracks[random.nextInt(maxIndex)];
+          await playFromSearch(video);
+          return;
+        }
       }
     } catch (e) {
       log('playRandomIfNeeded error: $e');
     }
-  }
-
-  Future<void> _playAudioOnly(SearchVideoModel video) async {
-    _playback.prepareForAudioOnly();
-
-    final streams = await _playerRepo.getAudioStreams(video.bvid);
-    if (streams.isEmpty) {
-      AppToast.error('获取音频流失败');
-      isLoading.value = false;
-      return;
-    }
-
-    final result = await _playback.tryPlayStreams(streams);
-    log('Playing with quality: ${result.qualityLabel}');
-    audioQualityLabel.value = result.qualityLabel;
-    videoQualityLabel.value = '';
-
-    _addToQueue(
-      video: video,
-      audioUrl: result.url,
-      qualityLabel: result.qualityLabel,
-    );
-  }
-
-  Future<void> _playWithVideo(SearchVideoModel video) async {
-    await _playback.prepareForVideo();
-
-    final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
-    if (playUrl == null || playUrl.videoStreams.isEmpty) {
-      log('No video streams available, falling back to audio-only');
-      await _playAudioOnly(video);
-      return;
-    }
-
-    final bestVideo = playUrl.bestVideo!;
-    final bestAudio = playUrl.bestAudio;
-
-    if (bestAudio == null) {
-      throw Exception('No audio stream available');
-    }
-
-    log('Video: ${bestVideo.qualityLabel} ${bestVideo.codecs} '
-        '(${bestVideo.width}x${bestVideo.height})');
-    log('Audio: ${bestAudio.qualityLabel} ${bestAudio.codecs}');
-
-    audioQualityLabel.value = bestAudio.qualityLabel;
-    videoQualityLabel.value = bestVideo.qualityLabel;
-
-    await _playback.playVideoWithAudio(bestVideo.baseUrl, bestAudio.baseUrl);
-
-    _addToQueue(
-      video: video,
-      audioUrl: bestAudio.baseUrl,
-      qualityLabel: bestAudio.qualityLabel,
-      videoUrl: bestVideo.baseUrl,
-      videoQualityLabel: bestVideo.qualityLabel,
-    );
   }
 
   void _addToQueue({
@@ -294,6 +303,7 @@ class PlayerController extends GetxController {
     String qualityLabel = '',
     String? videoUrl,
     String? videoQualityLabel,
+    Map<String, String> headers = const {},
   }) {
     final queueItem = QueueItem(
       video: video,
@@ -301,6 +311,7 @@ class PlayerController extends GetxController {
       qualityLabel: qualityLabel,
       videoUrl: videoUrl,
       videoQualityLabel: videoQualityLabel,
+      headers: headers,
     );
 
     // Push current song to history before replacing
@@ -316,78 +327,15 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _playQueueItem(QueueItem item) async {
-    if (item.video.isNetease) {
-      await _playback.ensureMediaKit();
-      _playback.isVideoMode.value = false;
-      videoQualityLabel.value = '';
-      await _playback.playDirectAudio(item.audioUrl);
-    } else if (item.videoUrl != null && _storage.enableVideo) {
+    if (item.videoUrl != null && _storage.enableVideo) {
       videoQualityLabel.value = item.videoQualityLabel ?? '';
       await _playback.playVideoWithAudio(item.videoUrl!, item.audioUrl);
     } else {
       await _playback.ensureMediaKit();
       _playback.isVideoMode.value = false;
       videoQualityLabel.value = '';
-      await _playback.playBilibiliAudio(item.audioUrl);
+      await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
     }
-  }
-
-  Future<void> _playNetease(SearchVideoModel video) async {
-    _playback.prepareForAudioOnly();
-
-    final url = await _neteaseRepo.getSongUrl(video.id);
-    if (url != null && url.isNotEmpty) {
-      await _playback.playDirectAudio(url);
-      audioQualityLabel.value = '网易云';
-      videoQualityLabel.value = '';
-      _addToQueue(
-        video: video,
-        audioUrl: url,
-        qualityLabel: '网易云',
-      );
-      return;
-    }
-
-    // Fallback: search on Bilibili and play the top result
-    log('NetEase URL unavailable for "${video.title}", falling back to Bilibili');
-    await _fallbackToBilibili(video);
-  }
-
-  Future<void> _fallbackToBilibili(SearchVideoModel neteaseVideo) async {
-    final keyword = '${neteaseVideo.title} ${neteaseVideo.author}'.trim();
-    log('NetEase URL unavailable, falling back to Bilibili search');
-
-    final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
-    if (result == null || result.results.isEmpty) {
-      throw Exception('B站换源搜索无结果');
-    }
-
-    final fallbackVideo = result.results.first;
-    log('Fallback to Bilibili: "${fallbackVideo.title}" (${fallbackVideo.bvid})');
-    currentVideo.value = fallbackVideo;
-
-    if (_storage.enableVideo) {
-      await _playWithVideo(fallbackVideo);
-    } else {
-      await _playAudioOnly(fallbackVideo);
-    }
-    _fetchLyrics(fallbackVideo);
-  }
-
-  Future<SearchVideoModel?> _searchBilibiliFallback(
-      SearchVideoModel neteaseVideo) async {
-    final keyword = '${neteaseVideo.title} ${neteaseVideo.author}'.trim();
-    log('Searching Bilibili fallback for: "$keyword"');
-    try {
-      final result =
-          await _searchRepo.searchVideos(keyword: keyword, page: 1);
-      if (result != null && result.results.isNotEmpty) {
-        return result.results.first;
-      }
-    } catch (e) {
-      log('Bilibili fallback search failed: $e');
-    }
-    return null;
   }
 
   /// Switch the current track between video and audio-only mode.
@@ -395,8 +343,10 @@ class PlayerController extends GetxController {
     if (currentIndex.value < 0 || currentIndex.value >= queue.length) return;
     final item = queue[currentIndex.value];
 
-    if (item.video.isNetease) {
-      AppToast.show('网易云音乐暂不支持视频模式');
+    // Check if source supports video
+    final source = _registry.getSourceForTrack(item.video);
+    if (source is! VideoCapability || !source.hasVideo(item.video)) {
+      AppToast.show('该音乐源暂不支持视频模式');
       return;
     }
     final currentPos = position.value;
@@ -406,7 +356,7 @@ class PlayerController extends GetxController {
         // Switch to audio-only
         _playback.prepareForAudioOnly();
         videoQualityLabel.value = '';
-        await _playback.playBilibiliAudio(item.audioUrl);
+        await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
         if (currentPos > Duration.zero) {
           await Future.delayed(const Duration(milliseconds: 200));
           _playback.seekTo(currentPos);
@@ -422,29 +372,25 @@ class PlayerController extends GetxController {
             _playback.seekTo(currentPos);
           }
         } else {
-          // No video URL available, try to fetch it
-          final playUrl =
-              await _playerRepo.getFullPlayUrl(item.video.bvid);
-          if (playUrl != null &&
-              playUrl.videoStreams.isNotEmpty &&
-              playUrl.bestAudio != null) {
-            final bestVideo = playUrl.bestVideo!;
-            final bestAudio = playUrl.bestAudio!;
-            // Update queue item with video URL
+          // No video URL cached, resolve with video mode
+          final info = await source.resolvePlayback(item.video, videoMode: true);
+          if (info != null && info.hasVideo && info.bestAudio != null) {
+            final bestVideo = info.bestVideo!;
+            final bestAudio = info.bestAudio!;
             final newItem = QueueItem(
               video: item.video,
-              audioUrl: bestAudio.baseUrl,
+              audioUrl: bestAudio.url,
               qualityLabel: bestAudio.qualityLabel,
-              videoUrl: bestVideo.baseUrl,
+              videoUrl: bestVideo.url,
               videoQualityLabel: bestVideo.qualityLabel,
+              headers: bestAudio.headers,
             );
             queue[currentIndex.value] = newItem;
 
             audioQualityLabel.value = bestAudio.qualityLabel;
             videoQualityLabel.value = bestVideo.qualityLabel;
             await _playback.prepareForVideo();
-            await _playback.playVideoWithAudio(
-                bestVideo.baseUrl, bestAudio.baseUrl);
+            await _playback.playVideoWithAudio(bestVideo.url, bestAudio.url);
             if (currentPos > Duration.zero) {
               await Future.delayed(const Duration(milliseconds: 500));
               _playback.seekTo(currentPos);
@@ -468,6 +414,11 @@ class PlayerController extends GetxController {
   void seekTo(Duration pos) => _playback.seekTo(pos);
 
   void _playNext() {
+    // Ignore completion events caused by manual stop/skip
+    if (_manualStop) {
+      _manualStop = false;
+      return;
+    }
     if (_heartMode.handleTrackCompleted()) return;
 
     switch (playMode.value) {
@@ -503,10 +454,16 @@ class PlayerController extends GetxController {
       return;
     }
 
-    // 1. Try related music not already in queue
-    final queueIds = queue.map((q) => q.video.uniqueId).toSet();
+    // Exclude both queue and recently played history to avoid ping-ponging
+    final excludeIds = <String>{
+      ...queue.map((q) => q.video.uniqueId),
+      ...playHistory.map((q) => q.video.uniqueId),
+      video.uniqueId,
+    };
+
+    // 1. Try related music not already played
     final candidates = relatedMusic
-        .where((s) => !queueIds.contains(s.uniqueId))
+        .where((s) => !excludeIds.contains(s.uniqueId))
         .toList();
 
     if (candidates.isNotEmpty) {
@@ -515,49 +472,27 @@ class PlayerController extends GetxController {
       return;
     }
 
-    // 2. Discover more songs
+    // 2. Discover more songs via source adapter
     try {
-      List<SearchVideoModel> moreSongs = [];
-      if (video.isBilibili && video.mid > 0) {
-        moreSongs = await _discoverBilibiliSongs(video);
-      } else if (video.isNetease) {
-        moreSongs = await _discoverNeteaseSongs(video);
-      }
-
-      final filtered = moreSongs
-          .where((s) => !queueIds.contains(s.uniqueId))
-          .toList();
-      if (filtered.isNotEmpty) {
-        AppToast.show('已为你自动推荐');
-        await playFromSearch(filtered.first);
-        return;
+      final source = _registry.getSourceForTrack(video);
+      if (source != null) {
+        final moreSongs = await source.getRelatedTracks(video);
+        final filtered = moreSongs
+            .where((s) => !excludeIds.contains(s.uniqueId))
+            .toList();
+        if (filtered.isNotEmpty) {
+          AppToast.show('已为你自动推荐');
+          await playFromSearch(filtered.first);
+          return;
+        }
       }
     } catch (e) {
       log('Auto-play discover error: $e');
     }
 
     // 3. Nothing left, stop
+    _manualStop = true;
     _playback.stop();
-  }
-
-  Future<List<SearchVideoModel>> _discoverBilibiliSongs(
-      SearchVideoModel video) async {
-    final seasonsResult = await _musicRepo.getMemberSeasons(video.mid);
-    for (final season in seasonsResult.seasons) {
-      final page = await loadCollectionPage(season, pn: 1);
-      if (page.items.isNotEmpty) return page.items;
-    }
-    return [];
-  }
-
-  Future<List<SearchVideoModel>> _discoverNeteaseSongs(
-      SearchVideoModel video) async {
-    if (video.author.isEmpty) return [];
-    final result = await _neteaseRepo.searchSongs(
-      keyword: video.author,
-      limit: 20,
-    );
-    return result.songs.where((s) => s.id != video.id).toList();
   }
 
   // ── Heart Mode ──
@@ -589,6 +524,7 @@ class PlayerController extends GetxController {
   }
 
   /// User manually skips: remove current song from queue, then play next.
+  /// If queue is empty, just stop — don't auto-recommend.
   Future<void> skipNext() async {
     if (queue.length > 1) {
       _pushToHistory();
@@ -602,10 +538,8 @@ class PlayerController extends GetxController {
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
     } else {
-      // Queue has no next song — stop playback instead of auto-recommending
-      if (queue.isNotEmpty) _pushToHistory();
-      _playback.stop();
-      AppToast.show('播放列表已播完');
+      // Queue has no next song — auto-recommend (history-aware, won't ping-pong)
+      _autoPlayNext();
     }
   }
 
@@ -717,6 +651,7 @@ class PlayerController extends GetxController {
   }
 
   void clearQueue() {
+    _manualStop = true;
     _playback.stop();
     _playback.isVideoMode.value = false;
     queue.clear();
@@ -739,27 +674,26 @@ class PlayerController extends GetxController {
     relatedMusic.clear();
     relatedMusicLoading.value = true;
 
-    final Future<List<SearchVideoModel>> fetchFuture;
-    if (video.isNetease) {
-      fetchFuture = _neteaseRepo
-          .searchSongs(keyword: '${video.author} 歌曲', limit: 20)
-          .then((result) {
-        final seen = <String>{_normalizeTitle(video.title)};
-        return result.songs
-            .where((s) => s.id != video.id)
-            .where((s) => seen.add(_normalizeTitle(s.title)))
-            .toList();
-      });
-    } else {
-      fetchFuture = _musicRepo.getRelatedVideos(video.bvid);
+    final source = _registry.getSourceForTrack(video);
+    if (source == null) {
+      relatedMusicLoading.value = false;
+      return;
     }
 
-    fetchFuture.then((results) {
+    source.getRelatedTracks(video).then((results) {
       if (currentVideo.value?.uniqueId == video.uniqueId) {
-        // Filter out songs already in queue
-        final queueIds = queue.map((q) => q.video.uniqueId).toSet();
+        // Deduplicate by normalized title
+        final seen = <String>{_normalizeTitle(video.title)};
+        final deduped = results
+            .where((s) => seen.add(_normalizeTitle(s.title)))
+            .toList();
+        // Filter out songs already in queue or recently played
+        final excludeIds = <String>{
+          ...queue.map((q) => q.video.uniqueId),
+          ...playHistory.map((q) => q.video.uniqueId),
+        };
         final filtered =
-            results.where((s) => !queueIds.contains(s.uniqueId)).toList();
+            deduped.where((s) => !excludeIds.contains(s.uniqueId)).toList();
         relatedMusic.assignAll(filtered);
         relatedMusicLoading.value = false;
       }
@@ -771,10 +705,10 @@ class PlayerController extends GetxController {
     });
   }
 
-  /// Load uploader's seasons/series (合集)
+  /// Load uploader's seasons/series (合集) — Bilibili-specific
   Future<MemberSeasonsResult> loadUploaderSeasons() async {
     final video = currentVideo.value;
-    if (video == null || video.isNetease || video.mid <= 0) {
+    if (video == null || video.isBilibili == false || video.mid <= 0) {
       return MemberSeasonsResult(seasons: [], hasMore: false);
     }
 
@@ -786,11 +720,11 @@ class PlayerController extends GetxController {
     }
   }
 
-  /// Load one page of videos in a collection (合集 or 系列)
+  /// Load one page of videos in a collection (合集 or 系列) — Bilibili-specific
   Future<CollectionPage> loadCollectionPage(
       MemberSeason season, {int pn = 1}) async {
     final video = currentVideo.value;
-    if (video == null || video.isNetease || video.mid <= 0) {
+    if (video == null || video.isBilibili == false || video.mid <= 0) {
       return CollectionPage(items: [], total: 0);
     }
 
@@ -822,10 +756,15 @@ class PlayerController extends GetxController {
     currentLyricsIndex.value = -1;
     lyricsLoading.value = true;
 
-    final fetchFuture = video.isNetease
-        ? _lyricsRepo.getNeteaseLyrics(video.id)
-        : _lyricsRepo.getLyrics(video.title, video.author, video.duration,
-            bvid: video.bvid);
+    final source = _registry.getSourceForTrack(video);
+    final Future<LyricsData?> fetchFuture;
+
+    if (source is LyricsCapability) {
+      fetchFuture = source.getLyrics(video);
+    } else {
+      lyricsLoading.value = false;
+      return;
+    }
 
     fetchFuture.then((result) {
       if (currentVideo.value?.uniqueId == video.uniqueId) {
@@ -888,8 +827,7 @@ class PlayerController extends GetxController {
     _navigateToPlayer();
 
     try {
-      final musicRepo = Get.find<MusicRepository>();
-      final audioUrl = await musicRepo.getAudioUrl(song.id);
+      final audioUrl = await _musicRepo.getAudioUrl(song.id);
 
       if (audioUrl != null && audioUrl.isNotEmpty) {
         _playback.prepareForAudioOnly();
@@ -903,22 +841,24 @@ class PlayerController extends GetxController {
           qualityLabel: 'AU',
         );
       } else if (video.bvid.isNotEmpty) {
-        await _playAudioOnly(video);
+        // Fallback to normal Bilibili playback via adapter
+        final resolved = await _registry.resolvePlaybackWithFallback(
+          video,
+          videoMode: false,
+          enableFallback: false,
+        );
+        if (resolved != null) {
+          await _playFromInfo(resolved.$1, resolved.$2);
+        } else {
+          throw Exception('No playable URL');
+        }
       } else {
         throw Exception('No playable URL');
       }
       _storage.addPlayHistory(video);
     } catch (e) {
       log('AU playback failed: $e');
-      if (video.bvid.isNotEmpty) {
-        try {
-          await _playAudioOnly(video);
-        } catch (e2) {
-          AppToast.error('播放失败: $e2');
-        }
-      } else {
-        AppToast.error('播放失败: $e');
-      }
+      AppToast.error('播放失败: $e');
     }
     isLoading.value = false;
     _fetchLyrics(video);
@@ -928,48 +868,34 @@ class PlayerController extends GetxController {
   // ── Queue Resolution (shared by addToQueue and addToQueueSilent) ──
 
   Future<QueueItem?> _resolveQueueItem(SearchVideoModel video) async {
-    if (video.isNetease) {
-      final url = await _neteaseRepo.getSongUrl(video.id);
-      if (url != null && url.isNotEmpty) {
-        return QueueItem(
-          video: video,
-          audioUrl: url,
-          qualityLabel: '网易云',
-        );
-      }
-      // Fallback to Bilibili
-      final fallback = await _searchBilibiliFallback(video);
-      if (fallback != null) return _resolveQueueItem(fallback);
-      return null;
-    }
+    final resolved = await _registry.resolvePlaybackWithFallback(
+      video,
+      videoMode: _storage.enableVideo,
+    );
+    if (resolved == null) return null;
 
-    if (_storage.enableVideo) {
-      final playUrl = await _playerRepo.getFullPlayUrl(video.bvid);
-      if (playUrl != null &&
-          playUrl.videoStreams.isNotEmpty &&
-          playUrl.bestAudio != null) {
-        final bestVideo = playUrl.bestVideo!;
-        final bestAudio = playUrl.bestAudio!;
-        return QueueItem(
-          video: video,
-          audioUrl: bestAudio.baseUrl,
-          qualityLabel: bestAudio.qualityLabel,
-          videoUrl: bestVideo.baseUrl,
-          videoQualityLabel: bestVideo.qualityLabel,
-        );
-      }
-    }
+    final (info, resolvedVideo) = resolved;
+    final bestAudio = info.bestAudio;
+    if (bestAudio == null) return null;
 
-    // Audio-only fallback
-    final streams = await _playerRepo.getAudioStreams(video.bvid);
-    if (streams.isNotEmpty) {
+    if (info.hasVideo && _storage.enableVideo) {
+      final bestVideo = info.bestVideo!;
       return QueueItem(
-        video: video,
-        audioUrl: streams.first.baseUrl,
-        qualityLabel: streams.first.qualityLabel,
+        video: resolvedVideo,
+        audioUrl: bestAudio.url,
+        qualityLabel: bestAudio.qualityLabel,
+        videoUrl: bestVideo.url,
+        videoQualityLabel: bestVideo.qualityLabel,
+        headers: bestAudio.headers,
       );
     }
-    return null;
+
+    return QueueItem(
+      video: resolvedVideo,
+      audioUrl: bestAudio.url,
+      qualityLabel: bestAudio.qualityLabel,
+      headers: bestAudio.headers,
+    );
   }
 
   Future<void> _startPlaybackIfIdle() async {
@@ -1027,9 +953,9 @@ class PlayerController extends GetxController {
       final item = await _resolveQueueItem(video);
       if (item == null) return;
 
-      // Check if we had a Bilibili fallback (resolved video differs from input)
-      if (video.isNetease && !item.video.isNetease) {
-        log('NetEase URL unavailable, used Bilibili fallback');
+      // Check if a fallback occurred (resolved video differs from input)
+      if (item.video.uniqueId != video.uniqueId) {
+        log('Source fallback occurred for "${video.title}"');
       }
 
       queue.add(item);

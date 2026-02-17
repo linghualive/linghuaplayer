@@ -4,13 +4,11 @@ import 'package:get/get.dart';
 
 import '../models/search/search_video_model.dart';
 import '../repositories/deepseek_repository.dart';
-import '../repositories/netease_repository.dart';
-import '../repositories/search_repository.dart';
+import '../sources/music_source_registry.dart';
 
 class RecommendationService {
   final _deepseekRepo = Get.find<DeepSeekRepository>();
-  final _neteaseRepo = Get.find<NeteaseRepository>();
-  final _searchRepo = Get.find<SearchRepository>();
+  final _registry = Get.find<MusicSourceRegistry>();
 
   static const _excludeTitleKeywords = ['合集', '串烧', '盘点', '混剪'];
   static const _minDurationSeconds = 90; // 1:30
@@ -32,8 +30,8 @@ class RecommendationService {
 
   /// Generate recommended songs using the new pipeline:
   /// 1. DeepSeek generates specific song titles + artists
-  /// 2. Search NetEase first (high quality music database)
-  /// 3. Fall back to Bilibili with quality filtering
+  /// 2. Search all registered sources for matches
+  /// 3. Apply quality filtering for non-music sources
   Future<List<SearchVideoModel>> getRecommendations({
     List<String> tags = const [],
     List<String>? recentPlayed,
@@ -80,34 +78,35 @@ class RecommendationService {
   }
 
   /// Resolve a recommended song to a playable SearchVideoModel.
-  /// Tries NetEase first, then falls back to Bilibili with filtering.
+  /// Iterates through all registered sources until one returns results.
   Future<SearchVideoModel?> _resolveRecommendedSong(
       RecommendedSong rec) async {
-    // 1. Try NetEase first
-    final neteaseResult = await _neteaseRepo.searchSongs(
-      keyword: '${rec.title} ${rec.artist}',
-      limit: 5,
-    );
-    if (neteaseResult.songs.isNotEmpty) {
-      log('Resolved "${rec.title}" via NetEase');
-      return neteaseResult.songs.first;
+    final keyword = '${rec.title} ${rec.artist}';
+
+    for (final source in _registry.availableSources) {
+      try {
+        final result = await source.searchTracks(keyword: keyword, limit: 5);
+        if (result.tracks.isEmpty) continue;
+
+        // For sources that might return non-music content (e.g. Bilibili),
+        // apply quality filtering
+        if (source.sourceId == 'bilibili') {
+          final candidates =
+              result.tracks.take(5).where(_isQualityResult).toList();
+          if (candidates.isEmpty) continue;
+          candidates.sort((a, b) => b.play.compareTo(a.play));
+          log('Resolved "${rec.title}" via ${source.sourceId} (filtered)');
+          return candidates.first;
+        }
+
+        log('Resolved "${rec.title}" via ${source.sourceId}');
+        return result.tracks.first;
+      } catch (e) {
+        log('Source ${source.sourceId} failed for "${rec.title}": $e');
+      }
     }
 
-    // 2. Fall back to Bilibili with quality filtering
-    final keyword = '${rec.title} ${rec.artist}';
-    final biliResult = await _searchRepo.searchVideos(
-      keyword: keyword,
-      page: 1,
-    );
-    if (biliResult == null || biliResult.results.isEmpty) return null;
-
-    final candidates = biliResult.results.take(5).where(_isQualityResult).toList();
-    if (candidates.isEmpty) return null;
-
-    // Pick the one with highest play count
-    candidates.sort((a, b) => b.play.compareTo(a.play));
-    log('Resolved "${rec.title}" via Bilibili (filtered)');
-    return candidates.first;
+    return null;
   }
 
   /// Quality filter for Bilibili search results.

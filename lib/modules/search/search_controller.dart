@@ -6,11 +6,11 @@ import 'package:get/get.dart';
 
 import '../../core/storage/storage_service.dart';
 import '../../data/models/search/hot_search_model.dart';
-import '../../data/models/search/search_result_model.dart';
 import '../../data/models/search/search_suggest_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/netease_repository.dart';
-import '../../data/repositories/search_repository.dart';
+import '../../data/sources/music_source_adapter.dart';
+import '../../data/sources/music_source_registry.dart';
 import '../../shared/utils/app_toast.dart';
 import '../../shared/utils/debouncer.dart';
 
@@ -19,7 +19,7 @@ enum SearchState { hot, suggesting, results, empty }
 enum NeteaseSearchType { song, artist, album, playlist }
 
 class SearchController extends GetxController {
-  final _searchRepo = Get.find<SearchRepository>();
+  final _registry = Get.find<MusicSourceRegistry>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();
   final searchTextController = TextEditingController();
@@ -28,13 +28,13 @@ class SearchController extends GetxController {
   final state = SearchState.hot.obs;
   final hotSearchList = <HotSearchModel>[].obs;
   final suggestions = <SearchSuggestModel>[].obs;
-  final searchResults = <SearchResultModel>[].obs;
+  final searchResults = <SearchVideoModel>[].obs;
   final allResults = <dynamic>[].obs;
   final searchHistory = <String>[].obs;
   final isLoadingMore = false.obs;
   final isLoading = false.obs;
   final currentKeyword = ''.obs;
-  final searchSource = MusicSource.netease.obs;
+  final searchSource = 'netease'.obs;
   final neteaseSearchType = NeteaseSearchType.song.obs;
   int _currentPage = 1;
   int _neteaseOffset = 0;
@@ -49,6 +49,9 @@ class SearchController extends GetxController {
     loadHotSearch();
     loadSearchHistory();
     searchTextController.addListener(_onSearchTextChanged);
+
+    // Sync with registry's active source
+    searchSource.value = _registry.activeSourceId.value;
   }
 
   @override
@@ -81,25 +84,61 @@ class SearchController extends GetxController {
   Future<void> loadHotSearch() async {
     isLoading.value = true;
     try {
-      final list = await _neteaseRepo.getHotSearch();
-      hotSearchList.assignAll(list);
+      // Use any source that supports hot search
+      final hotSources =
+          _registry.getSourcesWithCapability<HotSearchCapability>();
+      if (hotSources.isNotEmpty) {
+        final keywords = await hotSources.first.getHotSearchKeywords();
+        hotSearchList.assignAll(keywords.map((k) => HotSearchModel(
+              keyword: k.keyword,
+              showName: k.displayName,
+              icon: k.iconUrl,
+              position: k.position,
+            )));
+      } else {
+        // Fallback to direct netease call
+        final list = await _neteaseRepo.getHotSearch();
+        hotSearchList.assignAll(list);
+      }
     } catch (_) {}
     isLoading.value = false;
   }
 
   Future<void> _loadSuggestions(String term) async {
     try {
-      final list = await _searchRepo.getSuggestions(term);
-      suggestions.assignAll(list);
-      if (list.isNotEmpty) {
+      // Use the active source if it supports suggestions, otherwise try others
+      final activeSource = _registry.activeSource;
+      if (activeSource is SearchSuggestCapability) {
+        final list = await activeSource.getSearchSuggestions(term);
+        suggestions.assignAll(list.map((s) => SearchSuggestModel(
+              value: s,
+              term: term,
+              name: s,
+            )));
+      } else {
+        // Try any source with suggestion capability
+        final suggestSources =
+            _registry.getSourcesWithCapability<SearchSuggestCapability>();
+        if (suggestSources.isNotEmpty) {
+          final list = await suggestSources.first.getSearchSuggestions(term);
+          suggestions.assignAll(list.map((s) => SearchSuggestModel(
+                value: s,
+                term: term,
+                name: s,
+              )));
+        }
+      }
+      if (suggestions.isNotEmpty) {
         state.value = SearchState.suggesting;
       }
     } catch (_) {}
   }
 
   void switchSource(MusicSource source) {
-    if (searchSource.value == source) return;
-    searchSource.value = source;
+    final sourceId = source == MusicSource.netease ? 'netease' : 'bilibili';
+    if (searchSource.value == sourceId) return;
+    searchSource.value = sourceId;
+    _registry.activeSourceId.value = sourceId;
     if (currentKeyword.value.isNotEmpty) {
       search(currentKeyword.value);
     }
@@ -109,7 +148,7 @@ class SearchController extends GetxController {
     if (neteaseSearchType.value == type) return;
     neteaseSearchType.value = type;
     if (currentKeyword.value.isNotEmpty &&
-        searchSource.value == MusicSource.netease) {
+        searchSource.value == 'netease') {
       search(currentKeyword.value);
     }
   }
@@ -135,16 +174,27 @@ class SearchController extends GetxController {
     loadSearchHistory();
 
     try {
-      if (searchSource.value == MusicSource.netease) {
+      if (searchSource.value == 'netease' &&
+          neteaseSearchType.value != NeteaseSearchType.song) {
+        // Multi-type search (artist, album, playlist) still uses
+        // NeteaseRepository directly for rich typed results
         await _searchNetease(currentKeyword.value, 0);
       } else {
-        final result = await _searchRepo.searchVideos(
-          keyword: currentKeyword.value,
-          page: _currentPage,
-        );
-        if (result != null && result.results.isNotEmpty) {
-          allResults.assignAll(result.results);
-          _hasMore = result.hasMore;
+        // Unified track search via adapter
+        final source = _registry.getSource(searchSource.value);
+        if (source != null) {
+          final result = await source.searchTracks(
+            keyword: currentKeyword.value,
+            limit: 30,
+            offset: 0,
+          );
+          if (result.tracks.isNotEmpty) {
+            allResults.assignAll(result.tracks);
+            _hasMore = result.hasMore;
+            _neteaseOffset = result.tracks.length;
+          } else {
+            state.value = SearchState.empty;
+          }
         } else {
           state.value = SearchState.empty;
         }
@@ -228,23 +278,32 @@ class SearchController extends GetxController {
     isLoadingMore.value = true;
 
     try {
-      if (searchSource.value == MusicSource.netease) {
+      if (searchSource.value == 'netease' &&
+          neteaseSearchType.value != NeteaseSearchType.song) {
         await _searchNetease(currentKeyword.value, _neteaseOffset);
       } else {
-        _currentPage++;
-        final result = await _searchRepo.searchVideos(
-          keyword: currentKeyword.value,
-          page: _currentPage,
-        );
-        if (result != null && result.results.isNotEmpty) {
-          allResults.addAll(result.results);
-          _hasMore = result.hasMore;
-        } else {
-          _hasMore = false;
+        final source = _registry.getSource(searchSource.value);
+        if (source != null) {
+          final offset = searchSource.value == 'netease'
+              ? _neteaseOffset
+              : _currentPage * 20;
+          final result = await source.searchTracks(
+            keyword: currentKeyword.value,
+            limit: 30,
+            offset: offset,
+          );
+          if (result.tracks.isNotEmpty) {
+            allResults.addAll(result.tracks);
+            _hasMore = result.hasMore;
+            _neteaseOffset = offset + result.tracks.length;
+            _currentPage++;
+          } else {
+            _hasMore = false;
+          }
         }
       }
     } catch (_) {
-      if (searchSource.value == MusicSource.bilibili) _currentPage--;
+      if (searchSource.value == 'bilibili') _currentPage--;
     }
     isLoadingMore.value = false;
   }

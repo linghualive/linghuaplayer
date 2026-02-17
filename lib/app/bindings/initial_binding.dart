@@ -17,6 +17,9 @@ import '../../data/providers/netease_provider.dart';
 import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/services/recommendation_service.dart';
+import '../../data/sources/bilibili_source_adapter.dart';
+import '../../data/sources/music_source_registry.dart';
+import '../../data/sources/netease_source_adapter.dart';
 import '../../modules/player/player_controller.dart';
 
 class InitialBinding extends Bindings {
@@ -44,6 +47,12 @@ class InitialBinding extends Bindings {
 
     // Services
     Get.lazyPut(() => RecommendationService(), fenix: true);
+
+    // Music Source Registry
+    final registry = MusicSourceRegistry();
+    registry.register(BilibiliSourceAdapter());
+    registry.register(NeteaseSourceAdapter());
+    Get.put(registry, permanent: true);
 
     // Global persistent controller
     Get.put(PlayerController(), permanent: true);

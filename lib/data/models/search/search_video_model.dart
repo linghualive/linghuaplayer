@@ -1,5 +1,14 @@
+/// Deprecated: Use string-based sourceId via MusicSourceRegistry instead.
+/// This enum is kept for backward compatibility during the migration period.
+@Deprecated('Use string-based sourceId via MusicSourceAdapter/MusicSourceRegistry')
 enum MusicSource { bilibili, netease }
 
+/// Legacy unified search result model.
+///
+/// New code should use [Track] from `lib/data/models/track.dart` instead.
+/// This class is kept for backward compatibility and will be replaced
+/// incrementally. Use [Track.fromSearchVideoModel] and
+/// [track.toSearchVideoModel()] for bridging.
 class SearchVideoModel {
   final int id;
   final String author;

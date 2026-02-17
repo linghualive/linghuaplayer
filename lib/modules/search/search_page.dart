@@ -78,7 +78,7 @@ class SearchPage extends GetView<app.SearchController> {
             return Column(
               children: [
                 _buildSourceChips(),
-                if (controller.searchSource.value == MusicSource.netease)
+                if (controller.searchSource.value == 'netease')
                   _buildNeteaseTypeChips(),
                 const Expanded(child: EmptyWidget(message: '未找到结果')),
               ],
@@ -98,7 +98,7 @@ class SearchPage extends GetView<app.SearchController> {
               ChoiceChip(
                 label: const Text('网易云'),
                 selected:
-                    controller.searchSource.value == MusicSource.netease,
+                    controller.searchSource.value == 'netease',
                 onSelected: (_) =>
                     controller.switchSource(MusicSource.netease),
               ),
@@ -106,7 +106,7 @@ class SearchPage extends GetView<app.SearchController> {
               ChoiceChip(
                 label: const Text('B站'),
                 selected:
-                    controller.searchSource.value == MusicSource.bilibili,
+                    controller.searchSource.value == 'bilibili',
                 onSelected: (_) =>
                     controller.switchSource(MusicSource.bilibili),
               ),
@@ -164,7 +164,7 @@ class SearchPage extends GetView<app.SearchController> {
       children: [
         _buildSourceChips(),
         Obx(() {
-          if (controller.searchSource.value == MusicSource.netease) {
+          if (controller.searchSource.value == 'netease') {
             return _buildNeteaseTypeChips();
           }
           return const SizedBox.shrink();

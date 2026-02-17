@@ -231,6 +231,19 @@ class PlaybackService {
     }
   }
 
+  /// Play an audio URL with source-provided HTTP headers.
+  ///
+  /// If [headers] is empty, plays without special headers (like NetEase).
+  /// If [headers] contains Referer/UA, uses them (like Bilibili).
+  Future<void> playAudioWithHeaders(
+      String url, Map<String, String> headers) async {
+    if (headers.isEmpty) {
+      await playDirectAudio(url);
+    } else {
+      await playBilibiliAudio(url);
+    }
+  }
+
   Future<void> _playAudioWithMediaKit(String url) async {
     log('Playing audio with media_kit: $url');
     _isSwitchingTrack = true;
