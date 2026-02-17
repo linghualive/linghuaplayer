@@ -33,8 +33,7 @@ class MusicSourceRegistry extends GetxService {
 
   /// Look up the source that owns a given track.
   MusicSourceAdapter? getSourceForTrack(SearchVideoModel track) {
-    final id = track.isNetease ? 'netease' : 'bilibili';
-    return _sources[id];
+    return _sources[track.source.name];
   }
 
   /// Get the currently active source for search.

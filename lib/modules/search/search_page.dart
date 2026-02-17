@@ -104,6 +104,14 @@ class SearchPage extends GetView<app.SearchController> {
               ),
               const SizedBox(width: 8),
               ChoiceChip(
+                label: const Text('QQ音乐'),
+                selected:
+                    controller.searchSource.value == 'qqmusic',
+                onSelected: (_) =>
+                    controller.switchSource(MusicSource.qqmusic),
+              ),
+              const SizedBox(width: 8),
+              ChoiceChip(
                 label: const Text('B站'),
                 selected:
                     controller.searchSource.value == 'bilibili',
@@ -208,7 +216,7 @@ class SearchPage extends GetView<app.SearchController> {
     final item = controller.allResults[index];
 
     if (item is SearchVideoModel) {
-      if (item.isNetease) {
+      if (item.isNetease || item.isQQMusic) {
         return _buildNeteaseSongCard(context, item);
       }
       return SearchResultCard(video: item);
@@ -228,14 +236,30 @@ class SearchPage extends GetView<app.SearchController> {
   Widget _buildNeteaseSongCard(BuildContext context, SearchVideoModel song) {
     final theme = Theme.of(context);
     return ListTile(
-      leading: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Icon(Icons.music_note, size: 20, color: theme.colorScheme.outline),
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: song.pic.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: song.pic,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Container(
+                  width: 48,
+                  height: 48,
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  child: Icon(Icons.music_note, size: 20, color: theme.colorScheme.outline),
+                ),
+              )
+            : Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Icon(Icons.music_note, size: 20, color: theme.colorScheme.outline),
+              ),
       ),
       title: Text(
         song.title,

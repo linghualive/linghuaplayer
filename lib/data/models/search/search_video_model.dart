@@ -1,7 +1,7 @@
 /// Deprecated: Use string-based sourceId via MusicSourceRegistry instead.
 /// This enum is kept for backward compatibility during the migration period.
 @Deprecated('Use string-based sourceId via MusicSourceAdapter/MusicSourceRegistry')
-enum MusicSource { bilibili, netease }
+enum MusicSource { bilibili, netease, qqmusic }
 
 /// Legacy unified search result model.
 ///
@@ -38,11 +38,20 @@ class SearchVideoModel {
     this.source = MusicSource.bilibili,
   });
 
-  String get uniqueId =>
-      source == MusicSource.netease ? 'netease_$id' : bvid;
+  String get uniqueId {
+    switch (source) {
+      case MusicSource.netease:
+        return 'netease_$id';
+      case MusicSource.qqmusic:
+        return 'qqmusic_$id';
+      case MusicSource.bilibili:
+        return bvid;
+    }
+  }
 
   bool get isNetease => source == MusicSource.netease;
   bool get isBilibili => source == MusicSource.bilibili;
+  bool get isQQMusic => source == MusicSource.qqmusic;
 
   Map<String, dynamic> toJson() {
     return {
@@ -57,7 +66,7 @@ class SearchVideoModel {
       'duration': duration,
       'bvid': bvid,
       'arcurl': arcurl,
-      'source': source == MusicSource.netease ? 'netease' : 'bilibili',
+      'source': source.name,
     };
   }
 
@@ -74,10 +83,22 @@ class SearchVideoModel {
       duration: json['duration'] as String? ?? '0:00',
       bvid: json['bvid'] as String? ?? '',
       arcurl: json['arcurl'] as String? ?? '',
-      source: json['source'] == 'netease'
-          ? MusicSource.netease
-          : MusicSource.bilibili,
+      source: _parseSource(json['source']),
     );
+  }
+
+  static MusicSource _parseSource(dynamic value) {
+    if (value is String) {
+      switch (value) {
+        case 'netease':
+          return MusicSource.netease;
+        case 'qqmusic':
+          return MusicSource.qqmusic;
+        default:
+          return MusicSource.bilibili;
+      }
+    }
+    return MusicSource.bilibili;
   }
 
   static int _parseInt(dynamic value) {
