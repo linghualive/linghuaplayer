@@ -131,7 +131,6 @@ class PlayerHomeTab extends StatelessWidget {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           playerCtrl.playRandomIfNeeded();
         });
-        return const Center(child: CircularProgressIndicator());
       }
       return _buildPlayerUI(context, playerCtrl);
     });

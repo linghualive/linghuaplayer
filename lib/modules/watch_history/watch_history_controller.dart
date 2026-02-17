@@ -1,19 +1,16 @@
 import 'package:get/get.dart';
 
-import '../../data/models/user/history_model.dart';
-import '../../data/repositories/user_repository.dart';
-import '../../shared/utils/app_toast.dart';
+import '../../core/storage/storage_service.dart';
+import '../../data/models/search/search_video_model.dart';
 import '../player/player_controller.dart';
 
 class WatchHistoryController extends GetxController {
-  final _repo = Get.find<UserRepository>();
+  final _storage = Get.find<StorageService>();
 
-  final videos = <HistoryModel>[].obs;
+  final videos = <SearchVideoModel>[].obs;
+  final playedAtList = <int>[].obs;
   final isLoading = true.obs;
-  final hasMore = true.obs;
-
-  int _cursorMax = 0;
-  int _cursorViewAt = 0;
+  final hasMore = false.obs;
 
   @override
   void onInit() {
@@ -23,50 +20,38 @@ class WatchHistoryController extends GetxController {
 
   Future<void> loadHistory() async {
     isLoading.value = true;
-    _cursorMax = 0;
-    _cursorViewAt = 0;
-    final result = await _repo.getHistoryCursor();
-    videos.assignAll(result.items);
-    _cursorMax = result.cursor;
-    _cursorViewAt = result.viewAt;
-    hasMore.value = result.items.isNotEmpty && _cursorMax > 0;
+    final history = _storage.getPlayHistory();
+    videos.clear();
+    playedAtList.clear();
+    for (final entry in history) {
+      final videoJson = entry['video'] as Map<String, dynamic>?;
+      if (videoJson == null) continue;
+      videos.add(SearchVideoModel.fromJson(videoJson));
+      playedAtList.add(entry['playedAt'] as int? ?? 0);
+    }
+    hasMore.value = false;
     isLoading.value = false;
   }
 
   Future<void> loadMore() async {
-    if (!hasMore.value) return;
-    final result = await _repo.getHistoryCursor(
-      max: _cursorMax,
-      viewAt: _cursorViewAt,
-    );
-    videos.addAll(result.items);
-    _cursorMax = result.cursor;
-    _cursorViewAt = result.viewAt;
-    hasMore.value = result.items.isNotEmpty && _cursorMax > 0;
+    // Local data is loaded at once, no pagination needed.
   }
 
   Future<void> deleteItem(int index) async {
     final video = videos[index];
-    final kid = '${video.business}_${video.kid}';
-    final success = await _repo.deleteHistory(kid);
-    if (success) {
-      videos.removeAt(index);
-    } else {
-      AppToast.error('Failed to delete');
-    }
+    _storage.removePlayHistory(video.uniqueId);
+    videos.removeAt(index);
+    playedAtList.removeAt(index);
   }
 
   Future<void> clearAll() async {
-    final success = await _repo.clearHistory();
-    if (success) {
-      videos.clear();
-    } else {
-      AppToast.error('Failed to clear');
-    }
+    _storage.clearPlayHistory();
+    videos.clear();
+    playedAtList.clear();
   }
 
-  void playVideo(HistoryModel video) {
+  void playVideo(SearchVideoModel video) {
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(video.toSearchVideoModel());
+    playerCtrl.playFromSearch(video);
   }
 }

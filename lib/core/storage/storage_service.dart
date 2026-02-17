@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../../data/models/search/search_video_model.dart';
+
 class StorageService extends GetxService {
   late final GetStorage _box;
 
@@ -75,6 +77,49 @@ class StorageService extends GetxService {
 
   void clearSearchHistory() {
     _box.remove(_searchHistoryKey);
+  }
+
+  // Play history
+  static const _playHistoryKey = 'play_history';
+  static const _maxPlayHistory = 200;
+
+  List<Map<String, dynamic>> getPlayHistory() {
+    final list = _box.read<List>(_playHistoryKey);
+    if (list == null) return [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  void addPlayHistory(SearchVideoModel video) {
+    final list = getPlayHistory();
+    list.removeWhere((e) {
+      final v = e['video'] as Map<String, dynamic>?;
+      if (v == null) return false;
+      final model = SearchVideoModel.fromJson(v);
+      return model.uniqueId == video.uniqueId;
+    });
+    list.insert(0, {
+      'video': video.toJson(),
+      'playedAt': DateTime.now().millisecondsSinceEpoch,
+    });
+    if (list.length > _maxPlayHistory) {
+      list.removeRange(_maxPlayHistory, list.length);
+    }
+    _box.write(_playHistoryKey, list);
+  }
+
+  void removePlayHistory(String uniqueId) {
+    final list = getPlayHistory();
+    list.removeWhere((e) {
+      final v = e['video'] as Map<String, dynamic>?;
+      if (v == null) return false;
+      final model = SearchVideoModel.fromJson(v);
+      return model.uniqueId == uniqueId;
+    });
+    _box.write(_playHistoryKey, list);
+  }
+
+  void clearPlayHistory() {
+    _box.remove(_playHistoryKey);
   }
 
   // Theme settings

@@ -139,6 +139,7 @@ class PlayerController extends GetxController {
       } else {
         await _playAudioOnly(video);
       }
+      _storage.addPlayHistory(video);
     } catch (e) {
       log('Playback failed: $e');
       AppToast.error('播放失败: $e');
@@ -154,13 +155,26 @@ class PlayerController extends GetxController {
     _hasAutoPlayed = true;
 
     const keywords = [
-      '热门音乐', '流行歌曲', '经典老歌', '华语金曲',
+      '热门歌曲', '流行音乐', '经典老歌', '华语金曲',
       '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
     ];
     final random = Random();
     final keyword = keywords[random.nextInt(keywords.length)];
 
     try {
+      // Prefer NetEase search for pure music results
+      final neteaseResult = await _neteaseRepo.searchSongs(
+        keyword: keyword,
+        limit: 10,
+      );
+      if (neteaseResult.songs.isNotEmpty) {
+        final maxIndex = neteaseResult.songs.length.clamp(1, 5);
+        final video = neteaseResult.songs[random.nextInt(maxIndex)];
+        await playFromSearch(video);
+        return;
+      }
+
+      // Fallback to Bilibili
       final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
       if (result != null && result.results.isNotEmpty) {
         final maxIndex = result.results.length.clamp(1, 5);
@@ -295,7 +309,7 @@ class PlayerController extends GetxController {
 
   Future<void> _fallbackToBilibili(SearchVideoModel neteaseVideo) async {
     final keyword = '${neteaseVideo.title} ${neteaseVideo.author}'.trim();
-    AppToast.show('网易云链接不可用，正在从B站换源播放...');
+    log('NetEase URL unavailable, falling back to Bilibili search');
 
     final result = await _searchRepo.searchVideos(keyword: keyword, page: 1);
     if (result == null || result.results.isEmpty) {
@@ -422,7 +436,7 @@ class PlayerController extends GetxController {
         playAt(next);
         break;
       case PlayMode.sequential:
-        skipNext();
+        _advanceNext();
         break;
     }
   }
@@ -434,7 +448,11 @@ class PlayerController extends GetxController {
     }
 
     final video = currentVideo.value;
-    if (video == null) return;
+    if (video == null) {
+      _hasAutoPlayed = false;
+      await playRandomIfNeeded();
+      return;
+    }
 
     // 1. Try related music not already in queue
     final queueIds = queue.map((q) => q.video.uniqueId).toSet();
@@ -519,6 +537,7 @@ class PlayerController extends GetxController {
     }
   }
 
+  /// User manually skips: remove current song from queue, then play next.
   Future<void> skipNext() async {
     if (queue.length > 1) {
       queue.removeAt(0);
@@ -531,12 +550,33 @@ class PlayerController extends GetxController {
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
     } else {
+      queue.clear();
+      currentVideo.value = null;
+      _hasAutoPlayed = false;
+      await playRandomIfNeeded();
+    }
+  }
+
+  /// Auto-advance when track finishes: keep current song in queue.
+  Future<void> _advanceNext() async {
+    if (queue.length > 1) {
+      final item = queue[1];
+      queue.removeAt(1);
+      queue.insert(0, item);
+      currentIndex.value = 0;
+      currentVideo.value = item.video;
+      audioQualityLabel.value = item.qualityLabel;
+
+      await _playQueueItem(item);
+      _fetchLyrics(item.video);
+      _loadRelatedMusic(item.video);
+    } else {
       _autoPlayNext();
     }
   }
 
   Future<void> skipPrevious() async {
-    if (position.value.inSeconds > 3) {
+    if (currentVideo.value != null && position.value.inSeconds > 3) {
       seekTo(Duration.zero);
     } else {
       _autoPlayNext();
@@ -772,6 +812,7 @@ class PlayerController extends GetxController {
       } else {
         throw Exception('No playable URL');
       }
+      _storage.addPlayHistory(video);
     } catch (e) {
       log('AU playback failed: $e');
       if (video.bvid.isNotEmpty) {
@@ -893,7 +934,7 @@ class PlayerController extends GetxController {
 
       // Check if we had a Bilibili fallback (resolved video differs from input)
       if (video.isNetease && !item.video.isNetease) {
-        AppToast.show('网易云链接不可用，已从B站换源');
+        log('NetEase URL unavailable, used Bilibili fallback');
       }
 
       queue.add(item);

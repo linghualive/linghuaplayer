@@ -35,6 +35,23 @@ class SearchVideoModel {
   bool get isNetease => source == MusicSource.netease;
   bool get isBilibili => source == MusicSource.bilibili;
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'author': author,
+      'mid': mid,
+      'title': title,
+      'description': description,
+      'pic': pic,
+      'play': play,
+      'danmaku': danmaku,
+      'duration': duration,
+      'bvid': bvid,
+      'arcurl': arcurl,
+      'source': source == MusicSource.netease ? 'netease' : 'bilibili',
+    };
+  }
+
   factory SearchVideoModel.fromJson(Map<String, dynamic> json) {
     return SearchVideoModel(
       id: json['id'] as int? ?? 0,
@@ -48,6 +65,9 @@ class SearchVideoModel {
       duration: json['duration'] as String? ?? '0:00',
       bvid: json['bvid'] as String? ?? '',
       arcurl: json['arcurl'] as String? ?? '',
+      source: json['source'] == 'netease'
+          ? MusicSource.netease
+          : MusicSource.bilibili,
     );
   }
 

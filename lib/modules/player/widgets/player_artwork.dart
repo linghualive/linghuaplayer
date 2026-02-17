@@ -19,8 +19,8 @@ class _PlayerArtworkState extends State<PlayerArtwork>
   late final AnimationController _tonearmCtrl;
   late final PlayerController _playerCtrl;
 
-  // Tonearm angle: 0.0 = resting (away), 1.0 = on record
-  static const _tonearmRestAngle = -0.5; // radians, lifted away
+  // Tonearm swing angle: 0.0 → resting (lifted away), 1.0 → on record
+  static const _tonearmRestAngle = -0.45; // radians, lifted away
   static const _tonearmPlayAngle = 0.0; // radians, on the record
 
   @override
@@ -35,7 +35,7 @@ class _PlayerArtworkState extends State<PlayerArtwork>
 
     _tonearmCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 500),
       value: _playerCtrl.isPlaying.value ? 1.0 : 0.0,
     );
 
@@ -67,7 +67,7 @@ class _PlayerArtworkState extends State<PlayerArtwork>
   Widget build(BuildContext context) {
     return Obx(() {
       final video = _playerCtrl.currentVideo.value;
-      if (video == null) return const SizedBox.shrink();
+      final imageUrl = video?.pic ?? '';
 
       return Center(
         child: Padding(
@@ -75,9 +75,8 @@ class _PlayerArtworkState extends State<PlayerArtwork>
           child: LayoutBuilder(
             builder: (context, constraints) {
               final availableWidth = constraints.maxWidth;
-              // Disc takes most of the width, leave room for tonearm overhang
               final discSize = availableWidth * 0.82;
-              final tonearmLength = discSize * 0.58;
+              final tonearmLength = discSize * 0.55;
 
               return SizedBox(
                 width: availableWidth,
@@ -85,7 +84,7 @@ class _PlayerArtworkState extends State<PlayerArtwork>
                 child: Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Vinyl disc - centered horizontally, slightly left
+                    // Vinyl disc
                     Positioned(
                       left: (availableWidth - discSize) / 2 - 10,
                       top: 16,
@@ -100,21 +99,22 @@ class _PlayerArtworkState extends State<PlayerArtwork>
                               child: child,
                             );
                           },
-                          child: _VinylDisc(imageUrl: video.pic),
+                          child: _VinylDisc(imageUrl: imageUrl),
                         ),
                       ),
                     ),
-                    // Tonearm - pivot at top-right area
+                    // Tonearm – pivot at top-right
                     Positioned(
-                      right: (availableWidth - discSize) / 2 + discSize * 0.28,
-                      top: -6,
+                      right: (availableWidth - discSize) / 2 +
+                          discSize * 0.26,
+                      top: -4,
                       child: AnimatedBuilder(
                         animation: _tonearmCtrl,
                         builder: (context, child) {
+                          final t =
+                              Curves.easeInOut.transform(_tonearmCtrl.value);
                           final angle = _tonearmRestAngle +
-                              (_tonearmPlayAngle - _tonearmRestAngle) *
-                                  Curves.easeInOut
-                                      .transform(_tonearmCtrl.value);
+                              (_tonearmPlayAngle - _tonearmRestAngle) * t;
                           return Transform.rotate(
                             angle: angle,
                             alignment: Alignment.topCenter,
@@ -135,7 +135,7 @@ class _PlayerArtworkState extends State<PlayerArtwork>
   }
 }
 
-/// The tonearm (唱臂) painted with CustomPaint for a realistic look.
+/// Two-segment tonearm with elbow joint, modeled after a real S-type tonearm.
 class _Tonearm extends StatelessWidget {
   final double length;
 
@@ -143,12 +143,14 @@ class _Tonearm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = length * 0.28;
+    // Extra width for the angled headshell overhang
+    final width = length * 0.35;
+    final height = length * 1.1;
     return SizedBox(
       width: width,
-      height: length,
+      height: height,
       child: CustomPaint(
-        size: Size(width, length),
+        size: Size(width, height),
         painter: _TonearmPainter(),
       ),
     );
@@ -158,166 +160,225 @@ class _Tonearm extends StatelessWidget {
 class _TonearmPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
+    final cx = size.width * 0.5;
     final h = size.height;
 
-    // ── Pivot base ──
-    final pivotR = size.width * 0.32;
-    final pivotCenter = Offset(cx, pivotR);
+    // ── 1. Pivot base ──
+    final pivotR = size.width * 0.22;
+    final pivotCenter = Offset(cx, pivotR + 2);
 
-    // Outer ring
+    // Base plate (outer)
     canvas.drawCircle(
       pivotCenter,
       pivotR,
       Paint()
         ..shader = RadialGradient(
-          colors: [
-            const Color(0xFFE0E0E0),
-            const Color(0xFFA0A0A0),
-            const Color(0xFF707070),
+          colors: const [
+            Color(0xFFD5D5D5),
+            Color(0xFFB0B0B0),
+            Color(0xFF8A8A8A),
           ],
-          stops: const [0.0, 0.6, 1.0],
+          stops: const [0.0, 0.65, 1.0],
         ).createShader(
             Rect.fromCircle(center: pivotCenter, radius: pivotR)),
     );
-    // Inner ring
+    // Inner bearing ring
     canvas.drawCircle(
       pivotCenter,
       pivotR * 0.55,
       Paint()
         ..shader = RadialGradient(
-          colors: [
-            const Color(0xFF555555),
-            const Color(0xFF888888),
-            const Color(0xFF444444),
+          colors: const [
+            Color(0xFF505050),
+            Color(0xFF787878),
+            Color(0xFF404040),
           ],
-          stops: const [0.0, 0.5, 1.0],
+          stops: const [0.0, 0.55, 1.0],
         ).createShader(
             Rect.fromCircle(center: pivotCenter, radius: pivotR * 0.55)),
     );
-    // Center dot
+    // Center screw
     canvas.drawCircle(
       pivotCenter,
       pivotR * 0.18,
-      Paint()..color = const Color(0xFFCCCCCC),
+      Paint()..color = const Color(0xFFB8B8B8),
     );
 
-    // ── Counterweight (behind pivot) ──
-    // Small sphere slightly above pivot
-    // (Counterweight sits at the back/top of the arm, visible above pivot)
+    // ── 2. Counterweight (above pivot) ──
+    // Not drawn since it's behind the pivot in this orientation
 
-    // ── Arm body (tapered tube) ──
-    final armTop = pivotR * 1.5;
-    final armBottom = h * 0.84;
-    final armWidthTop = size.width * 0.1;
-    final armWidthBottom = size.width * 0.065;
+    // ── 3. Main arm (first segment) ──
+    final armStartY = pivotCenter.dy + pivotR * 0.9;
+    final elbowY = h * 0.72;
+    final armW = size.width * 0.055; // thin cylindrical tube
 
-    // Shadow
-    final shadowPath = Path()
-      ..moveTo(cx - armWidthTop + 1.5, armTop)
-      ..lineTo(cx - armWidthBottom + 1.5, armBottom)
-      ..lineTo(cx + armWidthBottom + 1.5, armBottom)
-      ..lineTo(cx + armWidthTop + 1.5, armTop)
-      ..close();
-    canvas.drawPath(
-      shadowPath,
+    // Arm shadow
+    _drawRoundedBar(
+      canvas,
+      Offset(cx + 1.5, armStartY),
+      Offset(cx + 1.5, elbowY),
+      armW,
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.18)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+        ..color = Colors.black.withValues(alpha: 0.15)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
 
-    // Arm shape
-    final armPath = Path()
-      ..moveTo(cx - armWidthTop, armTop)
-      ..lineTo(cx - armWidthBottom, armBottom)
-      ..lineTo(cx + armWidthBottom, armBottom)
-      ..lineTo(cx + armWidthTop, armTop)
-      ..close();
-    canvas.drawPath(
-      armPath,
+    // Arm body – metallic gradient
+    _drawRoundedBar(
+      canvas,
+      Offset(cx, armStartY),
+      Offset(cx, elbowY),
+      armW,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: const [
-            Color(0xFF999999),
-            Color(0xFFD8D8D8),
-            Color(0xFFEEEEEE),
-            Color(0xFFD0D0D0),
-            Color(0xFF8A8A8A),
+            Color(0xFF909090),
+            Color(0xFFCCCCCC),
+            Color(0xFFE8E8E8),
+            Color(0xFFCCCCCC),
+            Color(0xFF858585),
           ],
-          stops: const [0.0, 0.25, 0.48, 0.75, 1.0],
-        ).createShader(Rect.fromLTWH(
-            cx - armWidthTop, armTop, armWidthTop * 2, armBottom - armTop)),
+          stops: const [0.0, 0.25, 0.45, 0.7, 1.0],
+        ).createShader(
+            Rect.fromLTWH(cx - armW, armStartY, armW * 2, elbowY - armStartY)),
     );
 
-    // Highlight line along the arm
-    final highlightPath = Path()
-      ..moveTo(cx + armWidthTop * 0.15, armTop)
-      ..lineTo(cx + armWidthBottom * 0.15, armBottom);
-    canvas.drawPath(
-      highlightPath,
-      Paint()
-        ..color = Colors.white.withValues(alpha: 0.35)
-        ..strokeWidth = 0.8
-        ..style = PaintingStyle.stroke,
-    );
-
-    // Small joint ring where arm meets headshell
-    final jointY = armBottom;
-    final jointR = armWidthBottom * 1.6;
+    // ── 4. Elbow joint ──
+    final jointR = armW * 1.8;
+    final jointCenter = Offset(cx, elbowY);
     canvas.drawCircle(
-      Offset(cx, jointY),
+      jointCenter,
       jointR,
       Paint()
         ..shader = RadialGradient(
-          colors: const [Color(0xFFBBBBBB), Color(0xFF777777)],
+          colors: const [
+            Color(0xFFCCCCCC),
+            Color(0xFFA0A0A0),
+            Color(0xFF686868),
+          ],
+          stops: const [0.0, 0.5, 1.0],
         ).createShader(
-            Rect.fromCircle(center: Offset(cx, jointY), radius: jointR)),
+            Rect.fromCircle(center: jointCenter, radius: jointR)),
+    );
+    // Joint highlight
+    canvas.drawCircle(
+      jointCenter + const Offset(-1, -1),
+      jointR * 0.35,
+      Paint()..color = Colors.white.withValues(alpha: 0.25),
     );
 
-    // ── Headshell ──
-    final headTop = armBottom + jointR * 0.5;
-    final headBottom = h * 0.95;
-    final headW = size.width * 0.16;
+    // ── 5. Headshell (second segment, angled) ──
+    // Headshell angles ~22° to the left of the main arm
+    const headshellAngle = -0.38; // radians (~22°)
+    final headshellLen = h * 0.22;
+
+    canvas.save();
+    canvas.translate(jointCenter.dx, jointCenter.dy);
+    canvas.rotate(headshellAngle);
+
+    final hsW = armW * 0.85; // slightly thinner
+    final hsStart = jointR * 0.6;
+    final hsEnd = headshellLen;
+
+    // Headshell shadow
+    _drawRoundedBar(
+      canvas,
+      Offset(1.5, hsStart),
+      Offset(1.5, hsEnd),
+      hsW,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.12)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+    );
 
     // Headshell body
-    final headRect =
-        RRect.fromRectAndRadius(
-      Rect.fromLTWH(cx - headW, headTop, headW * 2, headBottom - headTop),
-      const Radius.circular(1.5),
-    );
-    canvas.drawRRect(
-      headRect,
+    _drawRoundedBar(
+      canvas,
+      Offset(0, hsStart),
+      Offset(0, hsEnd),
+      hsW,
       Paint()
         ..shader = LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
           colors: const [
-            Color(0xFF606060),
-            Color(0xFF909090),
-            Color(0xFF707070),
+            Color(0xFF808080),
+            Color(0xFFBBBBBB),
+            Color(0xFFD8D8D8),
+            Color(0xFFBBBBBB),
+            Color(0xFF757575),
           ],
-        ).createShader(headRect.outerRect),
+          stops: const [0.0, 0.25, 0.45, 0.7, 1.0],
+        ).createShader(Rect.fromLTWH(-hsW, hsStart, hsW * 2, hsEnd - hsStart)),
     );
 
-    // Stylus (needle)
-    final needleTop = headBottom;
-    final needleBottom = h;
+    // ── 6. Cartridge (rectangular body at headshell end) ──
+    final cartW = size.width * 0.08;
+    final cartH = headshellLen * 0.22;
+    final cartTop = hsEnd - cartH * 0.3;
+    final cartRect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(0, cartTop + cartH / 2),
+        width: cartW * 2,
+        height: cartH,
+      ),
+      const Radius.circular(1.5),
+    );
+    canvas.drawRRect(
+      cartRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: const [
+            Color(0xFF3A3A3A),
+            Color(0xFF555555),
+            Color(0xFF2E2E2E),
+          ],
+        ).createShader(cartRect.outerRect),
+    );
+
+    // ── 7. Stylus (needle) ──
+    final needleStart = cartTop + cartH;
+    final needleEnd = needleStart + headshellLen * 0.14;
     canvas.drawLine(
-      Offset(cx, needleTop),
-      Offset(cx, needleBottom),
+      Offset(0, needleStart),
+      Offset(0, needleEnd),
       Paint()
         ..color = const Color(0xFFD0D0D0)
-        ..strokeWidth = 1.2
+        ..strokeWidth = 0.8
         ..strokeCap = StrokeCap.round,
     );
     // Needle tip
     canvas.drawCircle(
-      Offset(cx, needleBottom),
-      1.2,
-      Paint()..color = const Color(0xFFEEEEEE),
+      Offset(0, needleEnd),
+      1.0,
+      Paint()..color = const Color(0xFFE0E0E0),
     );
+
+    canvas.restore();
+  }
+
+  /// Draw a rounded bar (cylinder) between two points.
+  void _drawRoundedBar(
+      Canvas canvas, Offset start, Offset end, double halfWidth, Paint paint) {
+    final path = Path()
+      ..moveTo(start.dx - halfWidth, start.dy)
+      ..lineTo(end.dx - halfWidth, end.dy)
+      ..arcTo(
+        Rect.fromCenter(center: end, width: halfWidth * 2, height: halfWidth * 2),
+        pi, -pi, false,
+      )
+      ..lineTo(start.dx + halfWidth, start.dy)
+      ..arcTo(
+        Rect.fromCenter(
+            center: start, width: halfWidth * 2, height: halfWidth * 2),
+        0, -pi, false,
+      )
+      ..close();
+    canvas.drawPath(path, paint);
   }
 
   @override

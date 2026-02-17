@@ -34,30 +34,31 @@ class ProfilePage extends StatelessWidget {
             _buildNeteaseCard(context, controller),
             const SizedBox(height: 12),
 
-            // Media library (only if bilibili logged in)
-            if (controller.isLoggedIn.value) ...[
-              Card(
-                clipBehavior: Clip.antiAlias,
-                child: Column(
-                  children: [
+            // Play history (always visible, local storage)
+            Card(
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('播放历史'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Get.toNamed(AppRoutes.watchHistory),
+                  ),
+                  // Favorites (only if bilibili logged in)
+                  if (controller.isLoggedIn.value) ...[
+                    const Divider(height: 1, indent: 56),
                     ListTile(
                       leading: const Icon(Icons.favorite_outline),
                       title: const Text('我的收藏'),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => Get.toNamed(AppRoutes.favorites),
                     ),
-                    const Divider(height: 1, indent: 56),
-                    ListTile(
-                      leading: const Icon(Icons.history),
-                      title: const Text('观看历史'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Get.toNamed(AppRoutes.watchHistory),
-                    ),
                   ],
-                ),
+                ],
               ),
-              const SizedBox(height: 12),
-            ],
+            ),
+            const SizedBox(height: 12),
 
             // Settings
             Card(
