@@ -349,12 +349,45 @@ class NeteaseRepository {
     try {
       final res = await _provider.getPlaylistDetail(id);
       final data = res.data as Map<String, dynamic>;
-      if (data['code'] != 200 || data['playlist'] == null) return null;
+      print('[DEBUG] NetEase playlist detail code: ${data['code']}');
+      if (data['code'] != 200 || data['playlist'] == null) {
+        print('[DEBUG] NetEase playlist detail failed: code=${data['code']}, keys=${data.keys}');
+        return null;
+      }
 
       final pl = data['playlist'] as Map<String, dynamic>;
-      final tracks = (pl['tracks'] as List<dynamic>? ?? [])
-          .map((s) => _songToModel(s as Map<String, dynamic>))
-          .toList();
+      final rawTracks = pl['tracks'] as List<dynamic>? ?? [];
+      final rawTrackIds = pl['trackIds'] as List<dynamic>? ?? [];
+      print('[DEBUG] NetEase playlist: tracks=${rawTracks.length}, trackIds=${rawTrackIds.length}, trackCount=${pl['trackCount']}');
+      if (rawTrackIds.isNotEmpty) {
+        print('[DEBUG] trackIds[0] type=${rawTrackIds[0].runtimeType}, value=${rawTrackIds[0]}');
+      }
+
+      var tracks = <SearchVideoModel>[];
+
+      // Always fetch via trackIds for complete results
+      if (rawTrackIds.isNotEmpty) {
+        final trackIds = rawTrackIds
+            .map((e) {
+              if (e is Map) return (e as Map<String, dynamic>)['id'] as int;
+              if (e is int) return e;
+              return 0;
+            })
+            .where((id) => id > 0)
+            .toList();
+        if (trackIds.isNotEmpty) {
+          tracks = await _fetchSongsByIds(trackIds);
+        }
+      }
+
+      // Fallback to inline tracks if trackIds fetch failed
+      if (tracks.isEmpty && rawTracks.isNotEmpty) {
+        tracks = rawTracks
+            .map((s) => _songToModel(s as Map<String, dynamic>))
+            .toList();
+      }
+
+      print('[DEBUG] NetEase playlist final tracks: ${tracks.length}');
 
       final creator = pl['creator'] as Map<String, dynamic>? ?? {};
 
@@ -368,10 +401,33 @@ class NeteaseRepository {
         creatorName: creator['nickname'] as String? ?? '',
         tracks: tracks,
       );
-    } catch (e) {
-      log('NetEase getPlaylistDetail error: $e');
+    } catch (e, st) {
+      print('[DEBUG] NetEase getPlaylistDetail error: $e\n$st');
       return null;
     }
+  }
+
+  /// Fetch song details in batches by IDs.
+  Future<List<SearchVideoModel>> _fetchSongsByIds(List<int> ids) async {
+    print('[DEBUG] _fetchSongsByIds: total ids=${ids.length}');
+    final results = <SearchVideoModel>[];
+    // Batch in groups of 50 to avoid API limits
+    for (var i = 0; i < ids.length; i += 50) {
+      final batch = ids.sublist(i, (i + 50).clamp(0, ids.length));
+      try {
+        final res = await _provider.getSongDetail(batch);
+        final data = res.data as Map<String, dynamic>;
+        print('[DEBUG] getSongDetail batch response code=${data['code']}, keys=${data.keys}');
+        final songs = data['songs'] as List<dynamic>? ?? [];
+        print('[DEBUG] getSongDetail batch songs=${songs.length}');
+        results.addAll(
+          songs.map((s) => _songToModel(s as Map<String, dynamic>)),
+        );
+      } catch (e, st) {
+        print('[DEBUG] fetchSongsByIds batch error: $e\n$st');
+      }
+    }
+    return results;
   }
 
   // ── Multi-type Search ─────────────────────────────────

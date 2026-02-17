@@ -26,6 +26,9 @@ class NeteasePlaylistDetailController extends GetxController {
     } else if (args is int) {
       playlistId = args;
       title = '';
+    } else if (args is Map) {
+      playlistId = args['playlistId'] as int? ?? 0;
+      title = args['title'] as String? ?? '';
     } else {
       playlistId = 0;
       title = '';
@@ -35,14 +38,16 @@ class NeteasePlaylistDetailController extends GetxController {
 
   Future<void> _loadData() async {
     isLoading.value = true;
+    print('[DEBUG] Loading playlist detail for id=$playlistId');
     try {
       final result = await _neteaseRepo.getPlaylistDetail(playlistId);
+      print('[DEBUG] getPlaylistDetail result: ${result != null ? 'tracks=${result.tracks.length}' : 'null'}');
       if (result != null) {
         detail.value = result;
         tracks.assignAll(result.tracks);
       }
-    } catch (e) {
-      log('Load netease playlist detail error: $e');
+    } catch (e, st) {
+      print('[DEBUG] Load netease playlist detail error: $e\n$st');
     }
     isLoading.value = false;
   }
