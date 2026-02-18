@@ -50,9 +50,9 @@ android/app/upload-keystore.jks
 *.jks
 
 
-# Claude Code
-.claude/
-claude.md
+# Flamekit Config
+.flamekit-config/
+flamekit-config.md
 
 # Skill packaging artifacts
 *.skill
