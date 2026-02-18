@@ -19,6 +19,7 @@ import '../../data/services/user_profile_service.dart';
 import '../../data/sources/music_source_adapter.dart';
 import '../../data/sources/music_source_registry.dart';
 import '../../shared/utils/app_toast.dart';
+import 'services/audio_output_service.dart';
 import 'services/heart_mode_service.dart';
 import 'services/playback_service.dart';
 
@@ -48,6 +49,7 @@ class PlayerController extends GetxController {
   final _storage = Get.find<StorageService>();
   final _playback = PlaybackService();
   final _heartMode = HeartModeService();
+  final audioOutput = AudioOutputService();
 
   // Reactive state (delegated from PlaybackService)
   final currentVideo = Rxn<SearchVideoModel>();
@@ -123,11 +125,20 @@ class PlayerController extends GetxController {
     ever(isPlaying, (bool playing) {
       if (playing) {
         _playStartTime = DateTime.now();
+        // Connect NativePlayer to AudioOutputService when playback starts (desktop)
+        _connectAudioOutputIfNeeded();
       } else if (_playStartTime != null) {
         _listenedMs += DateTime.now().difference(_playStartTime!).inMilliseconds;
         _playStartTime = null;
       }
     });
+  }
+
+  void _connectAudioOutputIfNeeded() {
+    final nativePlayer = _playback.nativePlayerRef;
+    if (nativePlayer != null) {
+      audioOutput.connectNativePlayer(nativePlayer);
+    }
   }
 
   @override
@@ -312,7 +323,8 @@ class PlayerController extends GetxController {
       }
     }
 
-    // 2. Fallback to random keyword search via registry sources
+    // 2. Fallback to random keyword search via music-only sources
+    //    (skip Bilibili — its search returns all video types, not just music)
     const keywords = [
       '热门歌曲', '流行音乐', '经典老歌', '华语金曲',
       '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
@@ -321,7 +333,10 @@ class PlayerController extends GetxController {
     final keyword = keywords[random.nextInt(keywords.length)];
 
     try {
-      for (final source in _registry.availableSources) {
+      final musicSources = _registry.availableSources
+          .where((s) => s.sourceId != 'bilibili')
+          .toList();
+      for (final source in musicSources) {
         final result = await source.searchTracks(keyword: keyword, limit: 10);
         if (result.tracks.isNotEmpty) {
           final maxIndex = result.tracks.length.clamp(1, 5);

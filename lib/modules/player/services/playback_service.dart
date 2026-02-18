@@ -39,6 +39,10 @@ class PlaybackService {
 
   mkv.VideoController? get videoController => _videoController;
 
+  /// Expose the mpv NativePlayer for AudioOutputService (desktop only).
+  mk.NativePlayer? get nativePlayerRef =>
+      _mediaKitPlayer?.platform as mk.NativePlayer?;
+
   static final _httpHeaders = {
     'user-agent': AppConstants.pcUserAgent,
     'referer': AppConstants.referer,

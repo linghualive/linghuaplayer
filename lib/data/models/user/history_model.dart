@@ -10,6 +10,7 @@ class HistoryModel {
   final int viewAt;
   final int duration;
   final String authorName;
+  final int authorMid;
   final int kid;
 
   HistoryModel({
@@ -22,6 +23,7 @@ class HistoryModel {
     required this.viewAt,
     required this.duration,
     required this.authorName,
+    this.authorMid = 0,
     required this.kid,
   });
 
@@ -37,6 +39,7 @@ class HistoryModel {
       viewAt: json['view_at'] as int? ?? 0,
       duration: json['duration'] as int? ?? 0,
       authorName: json['author_name'] as String? ?? '',
+      authorMid: json['author_mid'] as int? ?? 0,
       kid: json['kid'] as int? ?? 0,
     );
   }
@@ -68,7 +71,7 @@ class HistoryModel {
     return SearchVideoModel(
       id: kid,
       author: authorName,
-      mid: 0,
+      mid: authorMid,
       title: title,
       description: '',
       pic: cover,

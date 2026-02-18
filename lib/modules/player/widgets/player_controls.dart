@@ -1,8 +1,12 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/storage/storage_service.dart';
 import '../player_controller.dart';
+import '../services/audio_output_service.dart';
+import 'audio_output_sheet.dart';
 import 'play_queue_sheet.dart';
 import 'uploader_works_sheet.dart';
 
@@ -62,8 +66,12 @@ class PlayerControls extends GetView<PlayerController> {
               children: [
                 Flexible(
                   child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                     onTap: () {
                       final video = controller.currentVideo.value;
+                      log('Author tap: source=${video?.source.name}, '
+                          'mid=${video?.mid}, author=${video?.author}, '
+                          'isBilibili=${video?.isBilibili}');
                       if (video != null &&
                           video.author.isNotEmpty &&
                           video.isBilibili &&
@@ -269,6 +277,27 @@ class PlayerControls extends GetView<PlayerController> {
                       : Theme.of(context).colorScheme.outline,
                 ),
               ),
+              const SizedBox(width: 12),
+              TextButton.icon(
+                onPressed: () async {
+                  await controller.audioOutput.showOutputPicker();
+                  if (!controller.audioOutput.usesSystemPicker &&
+                      controller.audioOutput.devices.isNotEmpty) {
+                    AudioOutputSheet.show();
+                  }
+                },
+                icon: Icon(
+                  _outputIcon(controller.audioOutput.activeType),
+                  size: 18,
+                ),
+                label: Text(
+                  '输出',
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.outline,
+                ),
+              ),
             ],
           ),
         ],
@@ -284,6 +313,25 @@ class PlayerControls extends GetView<PlayerController> {
         return Icons.shuffle;
       case PlayMode.repeatOne:
         return Icons.repeat_one;
+    }
+  }
+
+  IconData _outputIcon(AudioOutputType type) {
+    switch (type) {
+      case AudioOutputType.speaker:
+        return Icons.volume_up;
+      case AudioOutputType.bluetooth:
+        return Icons.bluetooth_audio;
+      case AudioOutputType.wired:
+        return Icons.headphones;
+      case AudioOutputType.airplay:
+        return Icons.airplay;
+      case AudioOutputType.usb:
+        return Icons.usb;
+      case AudioOutputType.hdmi:
+        return Icons.settings_input_hdmi;
+      case AudioOutputType.unknown:
+        return Icons.volume_up;
     }
   }
 

@@ -7,6 +7,7 @@ class FavResourceModel {
   final String bvid;
   final int cid;
   final String author;
+  final int mid;
   final int play;
   final int danmaku;
   final int duration;
@@ -19,6 +20,7 @@ class FavResourceModel {
     required this.bvid,
     required this.cid,
     required this.author,
+    this.mid = 0,
     required this.play,
     required this.danmaku,
     required this.duration,
@@ -35,6 +37,7 @@ class FavResourceModel {
       bvid: json['bvid'] as String? ?? '',
       cid: json['ugc']?['first_cid'] as int? ?? 0,
       author: upper['name'] as String? ?? '',
+      mid: upper['mid'] as int? ?? 0,
       play: cntInfo['play'] as int? ?? 0,
       danmaku: cntInfo['danmaku'] as int? ?? 0,
       duration: json['duration'] as int? ?? 0,
@@ -52,7 +55,7 @@ class FavResourceModel {
     return SearchVideoModel(
       id: id,
       author: author,
-      mid: 0,
+      mid: mid,
       title: title,
       description: '',
       pic: pic,

@@ -9,6 +9,7 @@ class AudioSongModel {
   final int duration;
   final String bvid;
   final int aid;
+  final int uid;
 
   AudioSongModel({
     required this.id,
@@ -18,6 +19,7 @@ class AudioSongModel {
     required this.duration,
     required this.bvid,
     required this.aid,
+    this.uid = 0,
   });
 
   factory AudioSongModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class AudioSongModel {
       duration: json['duration'] as int? ?? 0,
       bvid: json['bvid'] as String? ?? '',
       aid: json['aid'] as int? ?? 0,
+      uid: json['uid'] as int? ?? json['mid'] as int? ?? 0,
     );
   }
 
@@ -36,7 +39,7 @@ class AudioSongModel {
     return SearchVideoModel(
       id: aid,
       author: author,
-      mid: 0,
+      mid: uid,
       title: title,
       description: '',
       pic: cover,

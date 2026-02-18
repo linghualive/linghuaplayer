@@ -9,6 +9,7 @@ class MvItemModel {
   final int duration;
   final String bvid;
   final int playCount;
+  final int publisherUid;
 
   MvItemModel({
     required this.id,
@@ -18,6 +19,7 @@ class MvItemModel {
     required this.duration,
     required this.bvid,
     required this.playCount,
+    required this.publisherUid,
   });
 
   factory MvItemModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class MvItemModel {
       duration: json['duration'] as int? ?? 0,
       bvid: json['bvid'] as String? ?? '',
       playCount: json['click'] as int? ?? 0,
+      publisherUid: json['publisher_uid'] as int? ?? json['mid'] as int? ?? 0,
     );
   }
 
@@ -36,7 +39,7 @@ class MvItemModel {
     return SearchVideoModel(
       id: id,
       author: artist,
-      mid: 0,
+      mid: publisherUid,
       title: title,
       description: '',
       pic: cover,

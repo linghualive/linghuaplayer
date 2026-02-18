@@ -7,6 +7,7 @@ class WatchLaterModel {
   final String title;
   final String pic;
   final String author;
+  final int mid;
   final int view;
   final int danmaku;
   final int duration;
@@ -19,6 +20,7 @@ class WatchLaterModel {
     required this.title,
     required this.pic,
     required this.author,
+    this.mid = 0,
     required this.view,
     required this.danmaku,
     required this.duration,
@@ -33,6 +35,7 @@ class WatchLaterModel {
       title: json['title'] as String? ?? '',
       pic: json['pic'] as String? ?? '',
       author: json['owner']?['name'] as String? ?? '',
+      mid: json['owner']?['mid'] as int? ?? 0,
       view: json['stat']?['view'] as int? ?? 0,
       danmaku: json['stat']?['danmaku'] as int? ?? 0,
       duration: json['duration'] as int? ?? 0,
@@ -50,7 +53,7 @@ class WatchLaterModel {
     return SearchVideoModel(
       id: aid,
       author: author,
-      mid: 0,
+      mid: mid,
       title: title,
       description: '',
       pic: pic,

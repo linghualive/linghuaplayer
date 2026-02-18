@@ -7,6 +7,8 @@ class SubResourceModel {
   final String bvid;
   final int duration;
   final int pubtime;
+  final int mid;
+  final String author;
 
   SubResourceModel({
     required this.id,
@@ -15,9 +17,12 @@ class SubResourceModel {
     required this.bvid,
     required this.duration,
     required this.pubtime,
+    required this.mid,
+    required this.author,
   });
 
   factory SubResourceModel.fromJson(Map<String, dynamic> json) {
+    final upper = json['upper'] as Map<String, dynamic>?;
     return SubResourceModel(
       id: json['id'] as int? ?? 0,
       title: json['title'] as String? ?? '',
@@ -25,6 +30,8 @@ class SubResourceModel {
       bvid: json['bvid'] as String? ?? '',
       duration: json['duration'] as int? ?? 0,
       pubtime: json['pubtime'] as int? ?? 0,
+      mid: upper?['mid'] as int? ?? json['mid'] as int? ?? 0,
+      author: upper?['name'] as String? ?? '',
     );
   }
 
@@ -37,8 +44,8 @@ class SubResourceModel {
   SearchVideoModel toSearchVideoModel() {
     return SearchVideoModel(
       id: id,
-      author: '',
-      mid: 0,
+      author: author,
+      mid: mid,
       title: title,
       description: '',
       pic: cover,
