@@ -100,6 +100,9 @@ class PlayerController extends GetxController {
   DateTime? _playStartTime;
   int _tracksSinceBuildProfile = 0;
 
+  // Bilibili uploader mid — preserved across cross-source fallback
+  final uploaderMid = 0.obs;
+
   // Auto-play guard
   bool _hasAutoPlayed = false;
 
@@ -194,6 +197,9 @@ class PlayerController extends GetxController {
     _saveListenDuration();
     isLoading.value = true;
     currentVideo.value = video;
+
+    // Preserve the original Bilibili uploader mid before fallback
+    _updateUploaderMid(video);
 
     _navigateToPlayer();
 
@@ -569,9 +575,11 @@ class PlayerController extends GetxController {
     if (savedQueue.isNotEmpty) {
       final item = queue[0];
       currentVideo.value = item.video;
+      _updateUploaderMid(item.video);
       _playQueueItem(item);
     } else {
       currentVideo.value = video;
+      if (video != null) _updateUploaderMid(video);
       _playback.stop();
     }
   }
@@ -586,6 +594,7 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       final item = queue[0];
       currentVideo.value = item.video;
+      _updateUploaderMid(item.video);
       audioQualityLabel.value = item.qualityLabel;
 
       await _playQueueItem(item);
@@ -606,6 +615,7 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       final item = queue[0];
       currentVideo.value = item.video;
+      _updateUploaderMid(item.video);
       audioQualityLabel.value = item.qualityLabel;
 
       await _playQueueItem(item);
@@ -630,6 +640,7 @@ class PlayerController extends GetxController {
       queue.insert(0, previous);
       currentIndex.value = 0;
       currentVideo.value = previous.video;
+      _updateUploaderMid(previous.video);
       audioQualityLabel.value = previous.qualityLabel;
 
       await _playQueueItem(previous);
@@ -671,6 +682,7 @@ class PlayerController extends GetxController {
     queue.insert(0, item);
     currentIndex.value = 0;
     currentVideo.value = item.video;
+    _updateUploaderMid(item.video);
     audioQualityLabel.value = item.qualityLabel;
     await _playQueueItem(item);
     _fetchLyrics(item.video);
@@ -716,6 +728,7 @@ class PlayerController extends GetxController {
     playHistory.clear();
     currentIndex.value = -1;
     currentVideo.value = null;
+    uploaderMid.value = 0;
     position.value = Duration.zero;
     duration.value = Duration.zero;
     lyrics.value = null;
@@ -763,15 +776,24 @@ class PlayerController extends GetxController {
     });
   }
 
+  /// Update the preserved Bilibili uploader mid from a video.
+  void _updateUploaderMid(SearchVideoModel video) {
+    if (video.isBilibili && video.mid > 0) {
+      uploaderMid.value = video.mid;
+    } else {
+      uploaderMid.value = 0;
+    }
+  }
+
   /// Load uploader's seasons/series (合集) — Bilibili-specific
   Future<MemberSeasonsResult> loadUploaderSeasons() async {
-    final video = currentVideo.value;
-    if (video == null || video.isBilibili == false || video.mid <= 0) {
+    final mid = uploaderMid.value;
+    if (mid <= 0) {
       return MemberSeasonsResult(seasons: [], hasMore: false);
     }
 
     try {
-      return await _musicRepo.getMemberSeasons(video.mid);
+      return await _musicRepo.getMemberSeasons(mid);
     } catch (e) {
       log('Uploader seasons fetch error: $e');
       return MemberSeasonsResult(seasons: [], hasMore: false);
@@ -781,21 +803,21 @@ class PlayerController extends GetxController {
   /// Load one page of videos in a collection (合集 or 系列) — Bilibili-specific
   Future<CollectionPage> loadCollectionPage(
       MemberSeason season, {int pn = 1}) async {
-    final video = currentVideo.value;
-    if (video == null || video.isBilibili == false || video.mid <= 0) {
+    final mid = uploaderMid.value;
+    if (mid <= 0) {
       return CollectionPage(items: [], total: 0);
     }
 
     try {
       if (season.category == 0 && season.seasonId > 0) {
         return await _musicRepo.getSeasonDetail(
-          mid: video.mid,
+          mid: mid,
           seasonId: season.seasonId,
           pn: pn,
         );
       } else if (season.seriesId > 0) {
         return await _musicRepo.getSeriesDetail(
-          mid: video.mid,
+          mid: mid,
           seriesId: season.seriesId,
           pn: pn,
         );
@@ -881,6 +903,7 @@ class PlayerController extends GetxController {
     final video = song.toSearchVideoModel();
     isLoading.value = true;
     currentVideo.value = video;
+    _updateUploaderMid(video);
 
     _navigateToPlayer();
 
@@ -961,6 +984,7 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       final item = queue[0];
       currentVideo.value = item.video;
+      _updateUploaderMid(item.video);
       audioQualityLabel.value = item.qualityLabel;
       await _playQueueItem(item);
     }

@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -69,13 +67,9 @@ class PlayerControls extends GetView<PlayerController> {
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
                       final video = controller.currentVideo.value;
-                      log('Author tap: source=${video?.source.name}, '
-                          'mid=${video?.mid}, author=${video?.author}, '
-                          'isBilibili=${video?.isBilibili}');
                       if (video != null &&
                           video.author.isNotEmpty &&
-                          video.isBilibili &&
-                          video.mid > 0) {
+                          controller.uploaderMid.value > 0) {
                         UploaderWorksSheet.show();
                       }
                     },
@@ -97,8 +91,7 @@ class PlayerControls extends GetView<PlayerController> {
                           ),
                         ),
                         if (controller.currentVideo.value != null &&
-                            controller.currentVideo.value!.isBilibili &&
-                            controller.currentVideo.value!.mid > 0 &&
+                            controller.uploaderMid.value > 0 &&
                             controller.currentVideo.value!.author.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(left: 2),
