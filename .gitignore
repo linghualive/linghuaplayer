@@ -52,6 +52,7 @@ android/app/upload-keystore.jks
 
 # Claude Code
 .claude/
+claude.md
 
 # Skill packaging artifacts
 *.skill
