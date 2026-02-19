@@ -133,7 +133,6 @@ class UpdateService {
   }
 
   static Future<void> _downloadAndInstall(UpdateInfo info) async {
-    final url = _mirrorUrl(info.downloadUrl);
     final dir = await getTemporaryDirectory();
     final savePath = '${dir.path}/update.apk';
 
@@ -148,23 +147,53 @@ class UpdateService {
       final downloadDio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 30),
         receiveTimeout: const Duration(minutes: 10),
+        followRedirects: true,
+        maxRedirects: 5,
       ));
 
-      await downloadDio.download(
-        url,
-        savePath,
-        onReceiveProgress: (received, total) {
-          if (total > 0) {
-            progress.value = received / total;
-          }
-        },
-      );
+      // Try mirror first, fallback to direct URL
+      final mirrorUrl = _mirrorUrl(info.downloadUrl);
+      final urls = mirrorUrl != info.downloadUrl
+          ? [mirrorUrl, info.downloadUrl]
+          : [info.downloadUrl];
+
+      bool downloaded = false;
+      for (final url in urls) {
+        try {
+          log('Downloading APK from: $url');
+          progress.value = 0;
+          await downloadDio.download(
+            url,
+            savePath,
+            onReceiveProgress: (received, total) {
+              if (total > 0) {
+                progress.value = received / total;
+              }
+            },
+          );
+          downloaded = true;
+          break;
+        } catch (e) {
+          log('Download failed from $url: $e');
+          // Try next URL
+        }
+      }
+
+      if (!downloaded) {
+        status.value = _DownloadStatus.failed;
+        return;
+      }
 
       status.value = _DownloadStatus.installing;
 
-      await _updateChannel.invokeMethod('installApk', {
-        'filePath': savePath,
-      });
+      try {
+        await _updateChannel.invokeMethod('installApk', {
+          'filePath': savePath,
+        });
+      } catch (e) {
+        log('Install APK failed: $e');
+        status.value = _DownloadStatus.failed;
+      }
     } catch (e) {
       log('Download failed: $e');
       status.value = _DownloadStatus.failed;

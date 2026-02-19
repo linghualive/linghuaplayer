@@ -20,7 +20,7 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
   int _centerLineIndex = 0;
   Timer? _resumeTimer;
 
-  static const double _itemExtent = 48.0;
+  static const double _itemExtent = 56.0;
 
   @override
   void dispose() {
@@ -30,7 +30,6 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
   }
 
   void _onScrollStart(ScrollStartNotification notification) {
-    // Only react to user-initiated scrolls (drag gestures)
     if (notification.dragDetails != null) {
       setState(() => _isUserScrolling = true);
       _resumeTimer?.cancel();
@@ -40,9 +39,9 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
   void _onScrollUpdate(ScrollUpdateNotification notification) {
     if (!_isUserScrolling) return;
     final offset = _scrollController.offset;
-    final viewportHeight = _scrollController.position.viewportDimension;
-    final centerOffset = offset + viewportHeight / 2 - 16; // adjust for padding
-    final index = (centerOffset / _itemExtent).round();
+    // With centered padding, item i is at offset i * _itemExtent
+    // Center of viewport maps to index = offset / _itemExtent (rounded)
+    final index = (offset / _itemExtent).round();
     final lines = _controller.lyrics.value?.lines;
     if (lines == null) return;
     final clampedIndex = index.clamp(0, lines.length - 1);
@@ -131,137 +130,146 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
       final currentIndex = _controller.currentLyricsIndex.value;
       final lines = lyrics.lines;
 
-      // Auto-scroll to current line (skip if user is scrolling)
-      if (!_isUserScrolling) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (currentIndex >= 0 && _scrollController.hasClients) {
-            final targetOffset = currentIndex * _itemExtent -
-                _scrollController.position.viewportDimension / 2 +
-                24;
-            _scrollController.animateTo(
-              targetOffset.clamp(
-                0.0,
-                _scrollController.position.maxScrollExtent,
-              ),
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOutCubic,
-            );
-          }
-        });
-      }
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final viewportHeight = constraints.maxHeight;
+          // Padding so that any line (including first/last) can be centered
+          final verticalPadding = viewportHeight / 2 - _itemExtent / 2;
 
-      final listView = NotificationListener<ScrollNotification>(
-        onNotification: (notification) {
-          if (notification is ScrollStartNotification) {
-            _onScrollStart(notification);
-          } else if (notification is ScrollUpdateNotification) {
-            _onScrollUpdate(notification);
-          } else if (notification is ScrollEndNotification) {
-            _onScrollEnd(notification);
-          }
-          return false;
-        },
-        child: ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          itemCount: lines.length,
-          itemExtent: _itemExtent,
-          itemBuilder: (context, index) {
-            final line = lines[index];
-            final isCurrent = index == currentIndex;
-            final isPast = index < currentIndex;
-
-            return GestureDetector(
-              onTap: () => _controller.seekTo(line.timestamp),
-              child: Container(
-                alignment: Alignment.center,
-                child: AnimatedDefaultTextStyle(
+          // Auto-scroll to current line (skip if user is scrolling)
+          if (!_isUserScrolling) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (currentIndex >= 0 && _scrollController.hasClients) {
+                final targetOffset = currentIndex * _itemExtent;
+                _scrollController.animateTo(
+                  targetOffset.clamp(
+                    0.0,
+                    _scrollController.position.maxScrollExtent,
+                  ),
                   duration: const Duration(milliseconds: 300),
-                  style: TextStyle(
-                    fontSize: isCurrent ? 20 : 14,
-                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                    color: isCurrent
-                        ? theme.colorScheme.primary
-                        : isPast
-                            ? theme.colorScheme.onSurface.withValues(alpha: 0.35)
-                            : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                  child: Text(
-                    line.text,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                  curve: Curves.easeOutCubic,
+                );
+              }
+            });
+          }
+
+          final listView = NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification is ScrollStartNotification) {
+                _onScrollStart(notification);
+              } else if (notification is ScrollUpdateNotification) {
+                _onScrollUpdate(notification);
+              } else if (notification is ScrollEndNotification) {
+                _onScrollEnd(notification);
+              }
+              return false;
+            },
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.symmetric(
+                horizontal: 32,
+                vertical: verticalPadding,
               ),
-            );
-          },
-        ),
-      );
+              itemCount: lines.length,
+              itemExtent: _itemExtent,
+              itemBuilder: (context, index) {
+                final line = lines[index];
+                final isCurrent = index == currentIndex;
+                final isPast = index < currentIndex;
 
-      // When user is scrolling, overlay a time indicator at the center
-      if (!_isUserScrolling) return listView;
-
-      final centerTimestamp = (_centerLineIndex >= 0 && _centerLineIndex < lines.length)
-          ? lines[_centerLineIndex].timestamp
-          : Duration.zero;
-
-      return Stack(
-        children: [
-          listView,
-          // Rectangular highlight indicator at center
-          Center(
-            child: IgnorePointer(
-              ignoring: false,
-              child: GestureDetector(
-                onTap: _seekToCenterLine,
-                child: Container(
-                  width: double.infinity,
-                  height: _itemExtent,
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                      width: 1,
+                return GestureDetector(
+                  onTap: () => _controller.seekTo(line.timestamp),
+                  child: Container(
+                    alignment: Alignment.center,
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: TextStyle(
+                        fontSize: isCurrent ? 20 : 14,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrent
+                            ? theme.colorScheme.primary
+                            : isPast
+                                ? theme.colorScheme.onSurface.withValues(alpha: 0.35)
+                                : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                      child: Text(
+                        line.text,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
+                );
+              },
+            ),
+          );
+
+          // When user is scrolling, overlay a time indicator at the center
+          if (!_isUserScrolling) return listView;
+
+          final centerTimestamp = (_centerLineIndex >= 0 && _centerLineIndex < lines.length)
+              ? lines[_centerLineIndex].timestamp
+              : Duration.zero;
+
+          return Stack(
+            children: [
+              listView,
+              // Rectangular highlight indicator at center
+              Center(
+                child: IgnorePointer(
+                  ignoring: false,
+                  child: GestureDetector(
+                    onTap: _seekToCenterLine,
+                    child: Container(
+                      width: double.infinity,
+                      height: _itemExtent,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                          width: 1,
                         ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          _formatDuration(centerTimestamp),
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _formatDuration(centerTimestamp),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                        ),
+                          const Spacer(),
+                          Icon(
+                            Icons.play_arrow_rounded,
+                            size: 22,
+                            color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                          ),
+                          const SizedBox(width: 8),
+                        ],
                       ),
-                      const Spacer(),
-                      Icon(
-                        Icons.play_arrow_rounded,
-                        size: 22,
-                        color: theme.colorScheme.primary.withValues(alpha: 0.7),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       );
     });
   }
