@@ -1,10 +1,13 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../shared/utils/app_toast.dart';
@@ -44,6 +47,8 @@ class UpdateService {
   static const _repo = 'linghuaplayer';
   static const _apiUrl =
       'https://api.github.com/repos/$_owner/$_repo/releases/latest';
+  static const _updateChannel =
+      MethodChannel('com.flamekit.flamekit/app_update');
 
   static final _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 10),
@@ -112,6 +117,149 @@ class UpdateService {
     _showUpdateDialog(info);
   }
 
+  static String _mirrorUrl(String url) {
+    if (url.startsWith('https://github.com/')) {
+      return 'https://gh.llkk.cc/$url';
+    }
+    return url;
+  }
+
+  static bool get _isAndroid {
+    try {
+      return Platform.isAndroid;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> _downloadAndInstall(UpdateInfo info) async {
+    final url = _mirrorUrl(info.downloadUrl);
+    final dir = await getTemporaryDirectory();
+    final savePath = '${dir.path}/update.apk';
+
+    final progress = ValueNotifier<double>(0);
+    final status = ValueNotifier<_DownloadStatus>(_DownloadStatus.downloading);
+
+    _showDownloadProgress(progress, status, () {
+      _downloadAndInstall(info);
+    });
+
+    try {
+      final downloadDio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(minutes: 10),
+      ));
+
+      await downloadDio.download(
+        url,
+        savePath,
+        onReceiveProgress: (received, total) {
+          if (total > 0) {
+            progress.value = received / total;
+          }
+        },
+      );
+
+      status.value = _DownloadStatus.installing;
+
+      await _updateChannel.invokeMethod('installApk', {
+        'filePath': savePath,
+      });
+    } catch (e) {
+      log('Download failed: $e');
+      status.value = _DownloadStatus.failed;
+    }
+  }
+
+  static void _showDownloadProgress(
+    ValueNotifier<double> progress,
+    ValueNotifier<_DownloadStatus> status,
+    VoidCallback onRetry,
+  ) {
+    Get.bottomSheet(
+      PopScope(
+        canPop: false,
+        child: ValueListenableBuilder<_DownloadStatus>(
+          valueListenable: status,
+          builder: (context, currentStatus, _) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        currentStatus == _DownloadStatus.failed
+                            ? Icons.error_outline
+                            : Icons.system_update,
+                        color: currentStatus == _DownloadStatus.failed
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        currentStatus == _DownloadStatus.downloading
+                            ? '正在下载更新...'
+                            : currentStatus == _DownloadStatus.installing
+                                ? '下载完成，正在安装...'
+                                : '下载失败',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (currentStatus == _DownloadStatus.downloading)
+                    ValueListenableBuilder<double>(
+                      valueListenable: progress,
+                      builder: (context, value, _) {
+                        return Column(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: value,
+                                minHeight: 8,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '${(value * 100).toStringAsFixed(1)}%',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  if (currentStatus == _DownloadStatus.installing)
+                    const LinearProgressIndicator(),
+                  if (currentStatus == _DownloadStatus.failed) ...[
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Get.back();
+                        onRetry();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('重试'),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      isDismissible: false,
+      enableDrag: false,
+    );
+  }
+
   static void _showUpdateDialog(UpdateInfo info) {
     Get.dialog(
       AlertDialog(
@@ -168,16 +316,27 @@ class UpdateService {
           FilledButton(
             onPressed: () {
               Get.back();
-              final url = info.downloadUrl.isNotEmpty
-                  ? info.downloadUrl
-                  : info.htmlUrl;
-              launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              if (_isAndroid && info.downloadUrl.isNotEmpty) {
+                _downloadAndInstall(info);
+              } else {
+                final url = info.downloadUrl.isNotEmpty
+                    ? info.downloadUrl
+                    : info.htmlUrl;
+                launchUrl(Uri.parse(url),
+                    mode: LaunchMode.externalApplication);
+              }
             },
-            child: const Text('前往下载'),
+            child: Text(_isAndroid ? '立即更新' : '前往下载'),
           ),
         ],
       ),
       barrierDismissible: false,
     );
   }
+}
+
+enum _DownloadStatus {
+  downloading,
+  installing,
+  failed,
 }
