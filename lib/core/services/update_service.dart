@@ -31,8 +31,8 @@ class UpdateInfo {
   bool get hasUpdate => _compareVersions(latestVersion, currentVersion) > 0;
 
   static int _compareVersions(String a, String b) {
-    final aParts = a.replaceAll(RegExp(r'^v'), '').split('.');
-    final bParts = b.replaceAll(RegExp(r'^v'), '').split('.');
+    final aParts = a.replaceAll(RegExp(r'^v'), '').split('+').first.split('.');
+    final bParts = b.replaceAll(RegExp(r'^v'), '').split('+').first.split('.');
     for (var i = 0; i < 3; i++) {
       final av = i < aParts.length ? int.tryParse(aParts[i]) ?? 0 : 0;
       final bv = i < bParts.length ? int.tryParse(bParts[i]) ?? 0 : 0;
