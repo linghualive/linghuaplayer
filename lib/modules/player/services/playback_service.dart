@@ -187,6 +187,14 @@ class PlaybackService {
     }
   }
 
+  void pause() {
+    if (isVideoMode.value || _useMediaKit) {
+      _mediaKitPlayer?.pause();
+    } else {
+      audioPlayer.pause();
+    }
+  }
+
   // ── Audio Playback (with Bilibili headers) ──
 
   /// Play a Bilibili audio URL with referer/UA headers.

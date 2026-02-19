@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:audio_service/audio_service.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -19,6 +20,7 @@ import 'core/http/netease_http_client.dart';
 import 'core/http/qqmusic_http_client.dart';
 import 'core/storage/storage_service.dart';
 import 'data/services/user_profile_service.dart';
+import 'modules/player/services/media_session_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +33,7 @@ void main() async {
       size: Size(1280, 800),
       minimumSize: Size(1000, 600),
       center: true,
-      title: 'FlameKit',
+      title: '玲华音乐',
       titleBarStyle: TitleBarStyle.normal,
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
@@ -74,6 +76,20 @@ void main() async {
     final profileService = UserProfileService();
     Get.put(profileService, permanent: true);
     profileService.buildProfile();
+  }
+
+  // Initialize MediaSession (mobile only)
+  if (MediaSessionService.isSupported) {
+    final mediaSession = await AudioService.init(
+      builder: () => MediaSessionService(),
+      config: const AudioServiceConfig(
+        androidNotificationChannelId: 'com.example.flamekit.audio',
+        androidNotificationChannelName: '玲华音乐播放',
+        androidNotificationOngoing: true,
+        androidStopForegroundOnPause: true,
+      ),
+    );
+    Get.put<MediaSessionService>(mediaSession, permanent: true);
   }
 
   // Initialize theme controller
@@ -139,7 +155,7 @@ class FlameKitApp extends StatelessWidget {
           }
 
           return GetMaterialApp(
-            title: 'FlameKit',
+            title: '玲华音乐',
             debugShowCheckedModeBanner: false,
             theme: lightTheme,
             darkTheme: darkTheme,

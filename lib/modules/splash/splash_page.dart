@@ -230,7 +230,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       },
       blendMode: BlendMode.modulate,
       child: Text(
-        'FlameKit',
+        '玲华音乐',
         style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: primaryColor,

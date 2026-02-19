@@ -82,12 +82,6 @@ class AudioOutputService {
   // ── Android ──
 
   Future<void> _showAndroidOutputSwitcher() async {
-    // Try system media output dialog (broadcast to SystemUI).
-    // This is unreliable across OEMs, so always load the device list
-    // as fallback for the Flutter sheet.
-    try {
-      await _channel.invokeMethod<bool>('showOutputSwitcher');
-    } catch (_) {}
     await _loadAndroidDevices();
   }
 

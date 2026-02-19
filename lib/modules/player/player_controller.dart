@@ -21,6 +21,7 @@ import '../../data/sources/music_source_registry.dart';
 import '../../shared/utils/app_toast.dart';
 import 'services/audio_output_service.dart';
 import 'services/heart_mode_service.dart';
+import 'services/media_session_service.dart';
 import 'services/playback_service.dart';
 
 enum PlayMode { sequential, shuffle, repeatOne }
@@ -103,6 +104,11 @@ class PlayerController extends GetxController {
   // Bilibili uploader mid — preserved across cross-source fallback
   final uploaderMid = 0.obs;
 
+  // MediaSession (mobile only)
+  MediaSessionService? get _mediaSession =>
+      MediaSessionService.isSupported ? Get.find<MediaSessionService>() : null;
+  DateTime _lastPositionUpdate = DateTime(0);
+
   // Auto-play guard
   bool _hasAutoPlayed = false;
 
@@ -135,6 +141,69 @@ class PlayerController extends GetxController {
         _playStartTime = null;
       }
     });
+
+    // MediaSession integration (mobile only)
+    _initMediaSession();
+  }
+
+  void _initMediaSession() {
+    final ms = _mediaSession;
+    if (ms == null) return;
+
+    // Bind OS media button callbacks
+    ms.onPlayCallback = () => _playback.play();
+    ms.onPauseCallback = () => _playback.pause();
+    ms.onSkipNextCallback = () => skipNext();
+    ms.onSkipPreviousCallback = () => skipPrevious();
+    ms.onStopCallback = () => clearQueue();
+    ms.onSeekToCallback = (pos) => _playback.seekTo(pos);
+
+    // Push play/pause state changes
+    ever(isPlaying, (bool playing) {
+      ms.updatePlaybackState(
+        playing: playing,
+        position: position.value,
+        bufferedPosition: buffered.value,
+      );
+    });
+
+    // Push position updates (throttled to 1s)
+    ever(position, (Duration pos) {
+      final now = DateTime.now();
+      if (now.difference(_lastPositionUpdate).inMilliseconds < 1000) return;
+      _lastPositionUpdate = now;
+      ms.updatePlaybackState(
+        playing: isPlaying.value,
+        position: pos,
+        bufferedPosition: buffered.value,
+      );
+    });
+
+    // Push metadata when current video changes
+    ever(currentVideo, (SearchVideoModel? video) {
+      if (video == null) {
+        ms.setIdle();
+        return;
+      }
+      ms.setMediaMetadata(
+        title: video.title,
+        artist: video.author,
+        artUri: video.pic,
+        duration: duration.value > Duration.zero ? duration.value : null,
+      );
+    });
+
+    // Update duration in metadata when it becomes available
+    ever(duration, (Duration dur) {
+      final video = currentVideo.value;
+      if (video == null || dur <= Duration.zero) return;
+      ms.setMediaMetadata(
+        title: video.title,
+        artist: video.author,
+        artUri: video.pic,
+        duration: dur,
+      );
+    });
   }
 
   void _connectAudioOutputIfNeeded() {
@@ -146,6 +215,7 @@ class PlayerController extends GetxController {
 
   @override
   void onClose() {
+    _mediaSession?.setIdle();
     _playback.dispose();
     super.onClose();
   }
@@ -737,6 +807,7 @@ class PlayerController extends GetxController {
     lyricsLoading.value = false;
     relatedMusic.clear();
     relatedMusicLoading.value = false;
+    _mediaSession?.setIdle();
   }
 
   // -- Related Music --

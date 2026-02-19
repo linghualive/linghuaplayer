@@ -1,10 +1,10 @@
-# FlameKit
+# 玲华音乐
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-blue?logo=flutter)](https://flutter.dev)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20macOS-green)](https://github.com/user/flamekit)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%20v3-blue)](LICENSE)
 
-FlameKit 是一款多源音乐播放器，支持从 Bilibili 和网易云音乐搜索、发现和播放音乐，适配手机和电脑。
+玲华音乐是一款多源音乐播放器，支持从 Bilibili、网易云音乐和 QQ 音乐搜索、发现和播放音乐，适配手机和电脑。
 
 ## 预览
 
@@ -35,7 +35,7 @@ FlameKit 是一款多源音乐播放器，支持从 Bilibili 和网易云音乐�
 
 ### 播放
 
-- 支持播放 B 站和网易云的音乐，可随时切换音乐源
+- 支持播放 B 站、网易云和 QQ 音乐的音乐，可随时切换音乐源
 - 支持视频模式播放，可在音频和视频之间切换
 - 播放队列管理：添加、删除、拖拽排序
 - 多种播放模式：顺序播放、随机播放、单曲循环
@@ -46,7 +46,7 @@ FlameKit 是一款多源音乐播放器，支持从 Bilibili 和网易云音乐�
 
 ### 搜索
 
-- 在 B 站和网易云之间切换搜索
+- 在 B 站、网易云和 QQ 音乐之间切换搜索
 - 支持热搜词和搜索建议
 - 保留搜索历史，方便回顾
 

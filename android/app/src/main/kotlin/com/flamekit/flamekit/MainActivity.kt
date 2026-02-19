@@ -5,13 +5,13 @@ import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaRouter
 import android.os.Build
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONArray
 import org.json.JSONObject
 
-class MainActivity : FlutterActivity() {
+class MainActivity : AudioServiceActivity() {
     private val CHANNEL = "com.flamekit.flamekit/audio_output"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

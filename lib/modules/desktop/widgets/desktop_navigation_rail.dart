@@ -39,7 +39,7 @@ class DesktopNavigationRail extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'FlameKit',
+                    '玲华音乐',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: colorScheme.primary,
                           fontWeight: FontWeight.bold,
