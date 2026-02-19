@@ -50,6 +50,9 @@ android/app/upload-keystore.jks
 *.jks
 
 
+# Claude Code
+claude.md
+
 # Flamekit Config
 .flamekit-config/
 flamekit-config.md
