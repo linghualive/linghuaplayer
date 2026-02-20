@@ -44,6 +44,8 @@ import '../../modules/netease_hot_playlists/netease_hot_playlists_page.dart';
 import '../../modules/netease_hot_playlists/netease_hot_playlists_controller.dart';
 import '../../modules/qqmusic_playlist_detail/qqmusic_playlist_detail_page.dart';
 import '../../modules/qqmusic_playlist_detail/qqmusic_playlist_detail_controller.dart';
+import '../../modules/local_playlist_detail/local_playlist_detail_page.dart';
+import '../../modules/local_playlist_detail/local_playlist_detail_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -203,6 +205,13 @@ class AppPages {
       page: () => const QqMusicPlaylistDetailPage(),
       binding: BindingsBuilder(() {
         Get.put(QqMusicPlaylistDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.localPlaylistDetail,
+      page: () => const LocalPlaylistDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(LocalPlaylistDetailController());
       }),
     ),
   ];

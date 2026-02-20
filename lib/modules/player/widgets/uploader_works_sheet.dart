@@ -3,10 +3,9 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../../core/storage/storage_service.dart';
 import '../../../data/models/search/search_video_model.dart';
 import '../../../data/repositories/music_repository.dart';
-import '../../../data/repositories/user_repository.dart';
+import '../../../data/services/local_playlist_service.dart';
 import '../../../shared/utils/app_toast.dart';
 import '../player_controller.dart';
 
@@ -208,8 +207,8 @@ class _SeasonTileState extends State<_SeasonTile> {
               ),
               const SizedBox(width: 8),
               _ActionChip(
-                icon: Icons.favorite_border,
-                label: '收藏合集',
+                icon: Icons.playlist_add,
+                label: '导入为歌单',
                 enabled: !_actionRunning,
                 onPressed: _favoriteSeason,
               ),
@@ -400,12 +399,6 @@ class _SeasonTileState extends State<_SeasonTile> {
   Future<void> _favoriteSeason() async {
     if (_actionRunning) return;
 
-    final storage = Get.find<StorageService>();
-    if (!storage.isLoggedIn) {
-      AppToast.show('请先登录哔哩哔哩');
-      return;
-    }
-
     setState(() => _actionRunning = true);
 
     try {
@@ -416,54 +409,18 @@ class _SeasonTileState extends State<_SeasonTile> {
         return;
       }
 
-      final repo = Get.find<UserRepository>();
+      final service = Get.find<LocalPlaylistService>();
+      service.importPlaylist(
+        name: widget.season.name,
+        sourceTag: 'bilibili',
+        remoteId: 'season_${widget.season.seasonId}_${widget.season.seriesId}',
+        tracks: videos,
+      );
 
-      // Create a new fav folder
-      AppToast.show('正在创建收藏夹...');
-      final folderId = await repo.addFavFolder(title: widget.season.name);
-      if (folderId == null) {
-        AppToast.error('创建收藏夹失败');
-        return;
-      }
-
-      // Add each video to the folder
-      int success = 0;
-      int failed = 0;
-      for (int i = 0; i < videos.length; i++) {
-        final video = videos[i];
-        if (video.id <= 0) {
-          failed++;
-          continue;
-        }
-        try {
-          final ok = await repo.favResourceDeal(
-            rid: video.id,
-            addIds: [folderId],
-            delIds: [],
-          );
-          if (ok) {
-            success++;
-          } else {
-            failed++;
-          }
-        } catch (e) {
-          log('Fav video ${video.id} error: $e');
-          failed++;
-        }
-        // Show progress every 5 videos
-        if ((i + 1) % 5 == 0 && mounted) {
-          AppToast.show('收藏进度: ${i + 1}/${videos.length}');
-        }
-      }
-
-      if (failed == 0) {
-        AppToast.show('已收藏 $success 个视频到「${widget.season.name}」');
-      } else {
-        AppToast.show('收藏完成: $success 成功, $failed 失败');
-      }
+      AppToast.show('已导入 ${videos.length} 首到「${widget.season.name}」');
     } catch (e) {
-      log('Favorite season error: $e');
-      AppToast.error('收藏失败: $e');
+      log('Import season error: $e');
+      AppToast.error('导入失败: $e');
     } finally {
       if (mounted) setState(() => _actionRunning = false);
     }

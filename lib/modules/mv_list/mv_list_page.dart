@@ -2,8 +2,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/storage/storage_service.dart';
-import '../../shared/utils/app_toast.dart';
 import '../../shared/utils/duration_formatter.dart';
 import '../../shared/widgets/fav_panel.dart';
 import '../player/player_controller.dart';
@@ -146,27 +144,20 @@ class MvListPage extends StatelessWidget {
                                               mv.toSearchVideoModel());
                                         },
                                       ),
-                                      if (mv.id > 0)
-                                        IconButton(
-                                          icon: const Icon(
-                                              Icons.favorite_border,
-                                              size: 20),
-                                          padding: EdgeInsets.zero,
-                                          constraints:
-                                              const BoxConstraints(),
-                                          visualDensity:
-                                              VisualDensity.compact,
-                                          tooltip: '收藏',
-                                          onPressed: () {
-                                            final storage =
-                                                Get.find<StorageService>();
-                                            if (!storage.isLoggedIn) {
-                                              AppToast.show('请先登录哔哩哔哩');
-                                              return;
-                                            }
-                                            FavPanel.show(context, mv.id);
-                                          },
-                                        ),
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.favorite_border,
+                                            size: 20),
+                                        padding: EdgeInsets.zero,
+                                        constraints:
+                                            const BoxConstraints(),
+                                        visualDensity:
+                                            VisualDensity.compact,
+                                        tooltip: '收藏到歌单',
+                                        onPressed: () => FavPanel.show(
+                                            context,
+                                            mv.toSearchVideoModel()),
+                                      ),
                                     ],
                                   ),
                                 ),

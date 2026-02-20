@@ -1,94 +1,78 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../playlist_controller.dart';
+import '../../../data/services/local_playlist_service.dart';
 
-class PlaylistConfigSheet extends StatefulWidget {
+class PlaylistConfigSheet extends StatelessWidget {
   const PlaylistConfigSheet({super.key});
 
   static void show(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true,
       builder: (_) => const PlaylistConfigSheet(),
     );
   }
 
   @override
-  State<PlaylistConfigSheet> createState() => _PlaylistConfigSheetState();
-}
-
-class _PlaylistConfigSheetState extends State<PlaylistConfigSheet> {
-  final _controller = Get.find<PlaylistController>();
-  late Map<int, bool> _visible;
-
-  @override
-  void initState() {
-    super.initState();
-    final visibleIds =
-        _controller.visibleFolders.map((f) => f.id).toSet();
-    _visible = {
-      for (final f in _controller.folders) f.id: visibleIds.contains(f.id),
-    };
-  }
-
-  void _onSave() {
-    final ids = _visible.entries
-        .where((e) => e.value)
-        .map((e) => e.key)
-        .toList();
-    _controller.saveVisibleConfig(ids);
-    Navigator.pop(context);
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final service = Get.find<LocalPlaylistService>();
+    final theme = Theme.of(context);
+
     return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(
-              '显示的收藏夹',
-              style: Theme.of(context).textTheme.titleMedium,
+      child: Obx(() {
+        final total = service.playlists.length;
+        final bySource = service.playlistsBySource;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('歌单统计', style: theme.textTheme.titleMedium),
             ),
-          ),
-          if (_controller.folders.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Text('暂无收藏夹'),
-            )
-          else
-            Flexible(
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _controller.folders.length,
-                itemBuilder: (context, index) {
-                  final folder = _controller.folders[index];
-                  return SwitchListTile(
-                    title: Text(folder.title),
-                    subtitle: Text('${folder.mediaCount}个内容'),
-                    value: _visible[folder.id] ?? false,
-                    onChanged: (val) {
-                      setState(() => _visible[folder.id] = val);
-                    },
-                  );
-                },
+            ListTile(
+              leading: const Icon(Icons.library_music),
+              title: const Text('全部歌单'),
+              trailing: Text('$total'),
+            ),
+            for (final entry in bySource.entries)
+              ListTile(
+                leading: Icon(_iconFor(entry.key)),
+                title: Text(_labelFor(entry.key)),
+                trailing: Text('${entry.value.length}'),
               ),
-            ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _onSave,
-                child: const Text('保存'),
-              ),
-            ),
-          ),
-        ],
-      ),
+            const SizedBox(height: 8),
+          ],
+        );
+      }),
     );
+  }
+
+  static IconData _iconFor(String source) {
+    switch (source) {
+      case 'bilibili':
+        return Icons.smart_display;
+      case 'netease':
+        return Icons.cloud;
+      case 'qqmusic':
+        return Icons.queue_music;
+      default:
+        return Icons.library_music;
+    }
+  }
+
+  static String _labelFor(String source) {
+    switch (source) {
+      case 'bilibili':
+        return '哔哩哔哩';
+      case 'netease':
+        return '网易云';
+      case 'qqmusic':
+        return 'QQ音乐';
+      case 'local':
+        return '本地创建';
+      default:
+        return source;
+    }
   }
 }

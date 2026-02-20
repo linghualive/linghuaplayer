@@ -17,7 +17,6 @@ import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/qqmusic_repository.dart';
 import '../../modules/home/home_controller.dart';
 import '../../modules/music_discovery/music_discovery_controller.dart';
-import '../../modules/playlist/playlist_controller.dart';
 import '../../shared/utils/app_toast.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
@@ -251,9 +250,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       if (Get.isRegistered<MusicDiscoveryController>()) {
         Get.find<MusicDiscoveryController>().loadAll();
       }
-      if (Get.isRegistered<PlaylistController>()) {
-        Get.find<PlaylistController>().loadNeteasePlaylists();
-      }
       Get.back();
       AppToast.success(userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败');
     } catch (e) {
@@ -351,9 +347,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
       if (Get.isRegistered<HomeController>()) {
         Get.find<HomeController>().refreshLoginStatus();
-      }
-      if (Get.isRegistered<PlaylistController>()) {
-        Get.find<PlaylistController>().loadQqMusicPlaylists();
       }
       Get.back();
       AppToast.success('QQ音乐登录成功');
@@ -545,9 +538,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     final success = await _authRepo.confirmLogin();
     if (Get.isRegistered<HomeController>()) {
       Get.find<HomeController>().refreshLoginStatus();
-    }
-    if (Get.isRegistered<PlaylistController>()) {
-      Get.find<PlaylistController>().loadFolders();
     }
     Get.back();
     AppToast.success(success ? '登录成功' : '登录成功，但获取用户信息失败');

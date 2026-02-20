@@ -26,40 +26,18 @@ class ProfilePage extends StatelessWidget {
         return ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           children: [
-            // Bilibili account card
-            _buildBilibiliCard(context, controller),
+            // Linked accounts card
+            _buildAccountsCard(context, controller),
             const SizedBox(height: 12),
 
-            // NetEase account card
-            _buildNeteaseCard(context, controller),
-            const SizedBox(height: 12),
-
-            // QQ Music account card
-            _buildQqMusicCard(context, controller),
-            const SizedBox(height: 12),
-
-            // Play history (always visible, local storage)
+            // Play history & favorites
             Card(
               clipBehavior: Clip.antiAlias,
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.history),
-                    title: const Text('播放历史'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Get.toNamed(AppRoutes.watchHistory),
-                  ),
-                  // Favorites (only if bilibili logged in)
-                  if (controller.isLoggedIn.value) ...[
-                    const Divider(height: 1, indent: 56),
-                    ListTile(
-                      leading: const Icon(Icons.favorite_outline),
-                      title: const Text('我的收藏'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Get.toNamed(AppRoutes.favorites),
-                    ),
-                  ],
-                ],
+              child: ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('播放历史'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Get.toNamed(AppRoutes.watchHistory),
               ),
             ),
             const SizedBox(height: 12),
@@ -80,448 +58,134 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildBilibiliCard(BuildContext context, HomeController controller) {
+  Widget _buildAccountsCard(
+      BuildContext context, HomeController controller) {
     final theme = Theme.of(context);
+    final hasBili = controller.isLoggedIn.value;
+    final hasNetease = controller.isNeteaseLoggedIn.value;
+    final hasQq = controller.isQqMusicLoggedIn.value;
+    final hasAny = hasBili || hasNetease || hasQq;
 
-    if (!controller.isLoggedIn.value) {
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => Get.toNamed(AppRoutes.login),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.smart_display_outlined,
-                    size: 24,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '哔哩哔哩',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '点击登录',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.outline,
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final user = controller.userInfo.value;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                ClipOval(
-                  child: CachedImage(
-                    imageUrl: user?.face,
-                    width: 48,
-                    height: 48,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            user?.uname ?? '用户',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '哔哩哔哩',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Lv.${user?.currentLevel ?? 0}',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: theme.colorScheme.onPrimaryContainer,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          if (user?.isVip ?? false) ...[
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.amber.shade100,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                '大会员',
-                                style: theme.textTheme.labelSmall?.copyWith(
-                                  color: Colors.amber.shade800,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              '已关联账号',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: Icon(Icons.logout, color: theme.colorScheme.error),
-            title: Text(
-              '退出哔哩哔哩登录',
-              style: TextStyle(color: theme.colorScheme.error),
+          if (!hasAny)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+              child: Text(
+                '暂无关联账号，可在歌单页面导入时登录',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.outline,
+                ),
+              ),
             ),
-            dense: true,
-            onTap: () async {
-              await controller.logout();
-            },
-          ),
+
+          // Bilibili
+          if (hasBili) ...[
+            _buildAccountTile(
+              context,
+              icon: Icons.smart_display,
+              platform: '哔哩哔哩',
+              name: controller.userInfo.value?.uname ?? '用户',
+              avatarUrl: controller.userInfo.value?.face,
+              color: const Color(0xFFFB7299),
+              onLogout: () => controller.logout(),
+            ),
+          ],
+
+          // Netease
+          if (hasNetease) ...[
+            if (hasBili) const Divider(height: 1, indent: 56),
+            _buildAccountTile(
+              context,
+              icon: Icons.cloud,
+              platform: '网易云',
+              name: controller.neteaseUserInfo.value?.nickname ?? '网易云用户',
+              avatarUrl: controller.neteaseUserInfo.value?.avatarUrl,
+              color: const Color(0xFFE60026),
+              onLogout: () => controller.logoutNetease(),
+            ),
+          ],
+
+          // QQ Music
+          if (hasQq) ...[
+            if (hasBili || hasNetease) const Divider(height: 1, indent: 56),
+            _buildAccountTile(
+              context,
+              icon: Icons.queue_music,
+              platform: 'QQ音乐',
+              name: controller.qqMusicUserInfo.value?.nickname ?? 'QQ音乐用户',
+              avatarUrl: controller.qqMusicUserInfo.value?.avatarUrl,
+              color: const Color(0xFF31C27C),
+              onLogout: () => controller.logoutQqMusic(),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildNeteaseCard(BuildContext context, HomeController controller) {
+  Widget _buildAccountTile(
+    BuildContext context, {
+    required IconData icon,
+    required String platform,
+    required String name,
+    String? avatarUrl,
+    required Color color,
+    required VoidCallback onLogout,
+  }) {
     final theme = Theme.of(context);
 
-    if (!controller.isNeteaseLoggedIn.value) {
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => Get.toNamed(AppRoutes.login),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.cloud_outlined,
-                    size: 24,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '网易云音乐',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '点击登录',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.outline,
-                ),
-              ],
+    return ListTile(
+      leading: avatarUrl != null && avatarUrl.isNotEmpty
+          ? ClipOval(
+              child: CachedImage(imageUrl: avatarUrl, width: 36, height: 36),
+            )
+          : CircleAvatar(
+              radius: 18,
+              backgroundColor: color.withValues(alpha: 0.15),
+              child: Icon(icon, size: 18, color: color),
             ),
-          ),
-        ),
-      );
-    }
-
-    final neteaseUser = controller.neteaseUserInfo.value;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
+      title: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                ClipOval(
-                  child: CachedImage(
-                    imageUrl: neteaseUser?.avatarUrl,
-                    width: 48,
-                    height: 48,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            neteaseUser?.nickname ?? '网易云用户',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              '网易云',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.red.shade700,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (neteaseUser?.isVip ?? false) ...[
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.amber.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'VIP',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.amber.shade800,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          Flexible(
+            child:
+                Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: Icon(Icons.logout, color: theme.colorScheme.error),
-            title: Text(
-              '退出网易云登录',
-              style: TextStyle(color: theme.colorScheme.error),
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(3),
             ),
-            dense: true,
-            onTap: () async {
-              await controller.logoutNetease();
-            },
+            child: Text(
+              platform,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontSize: 10,
+              ),
+            ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildQqMusicCard(BuildContext context, HomeController controller) {
-    final theme = Theme.of(context);
-
-    if (!controller.isQqMusicLoggedIn.value) {
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => Get.toNamed(AppRoutes.login, arguments: {'platform': 2}),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.queue_music_outlined,
-                    size: 24,
-                    color: theme.colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'QQ音乐',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '点击登录',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: theme.colorScheme.outline,
-                ),
-              ],
-            ),
-          ),
+      trailing: TextButton(
+        onPressed: onLogout,
+        child: Text(
+          '退出',
+          style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
         ),
-      );
-    }
-
-    final qqUser = controller.qqMusicUserInfo.value;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(
-                    Icons.queue_music,
-                    size: 24,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            qqUser?.nickname ?? 'QQ音乐用户',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'QQ音乐',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: Colors.green.shade700,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'QQ号: ${qqUser?.uin ?? ''}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.outline,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          ListTile(
-            leading: Icon(Icons.logout, color: theme.colorScheme.error),
-            title: Text(
-              '退出QQ音乐登录',
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-            dense: true,
-            onTap: () async {
-              await controller.logoutQqMusic();
-            },
-          ),
-        ],
       ),
     );
   }

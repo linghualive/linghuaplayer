@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
-import '../../modules/home/home_controller.dart';
+import '../../data/models/local_playlist_model.dart';
+import '../../shared/utils/app_toast.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/create_fav_dialog.dart';
 import 'playlist_controller.dart';
-import 'widgets/playlist_config_sheet.dart';
+import 'widgets/import_playlist_sheet.dart';
 
 class PlaylistPage extends StatelessWidget {
   const PlaylistPage({super.key});
@@ -22,9 +23,42 @@ class PlaylistPage extends StatelessWidget {
             tooltip: '新建歌单',
             onPressed: () => CreateFavDialog.show(context),
           ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () => PlaylistConfigSheet.show(context),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.download),
+            tooltip: '导入歌单',
+            onSelected: (tag) => ImportPlaylistSheet.show(context, tag),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'bilibili',
+                child: Row(
+                  children: [
+                    Icon(Icons.smart_display, size: 20),
+                    SizedBox(width: 8),
+                    Text('哔哩哔哩'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'netease',
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud, size: 20),
+                    SizedBox(width: 8),
+                    Text('网易云音乐'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'qqmusic',
+                child: Row(
+                  children: [
+                    Icon(Icons.queue_music, size: 20),
+                    SizedBox(width: 8),
+                    Text('QQ音乐'),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -39,25 +73,15 @@ class _PlaylistBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<PlaylistController>();
-    final homeController = Get.find<HomeController>();
+    final theme = Theme.of(context);
 
     return Obx(() {
-      final biliLoggedIn = homeController.isLoggedIn.value;
-      final neteaseLoggedIn = homeController.isNeteaseLoggedIn.value;
-      final qqMusicLoggedIn = homeController.isQqMusicLoggedIn.value;
-      final biliLoading = controller.isLoading.value;
-      final neteaseLoading = controller.neteaseIsLoading.value;
-      final qqMusicLoading = controller.qqMusicIsLoading.value;
+      controller.allPlaylists.length;
       controller.searchQuery.value;
-      controller.visibleFolders.length;
-      controller.neteasePlaylists.length;
-      controller.qqMusicPlaylists.length;
 
-      final biliFolders = controller.filteredFolders;
-      final neteasePlaylists = controller.filteredNeteasePlaylists;
-      final qqMusicPlaylists = controller.filteredQqMusicPlaylists;
+      final playlists = controller.filteredPlaylists;
 
-      return ListView(
+      return Column(
         children: [
           // Search box
           Padding(
@@ -76,186 +100,183 @@ class _PlaylistBody extends StatelessWidget {
             ),
           ),
 
-          // ── Bilibili section ──
-          _SectionHeader(
-            title: '哔哩哔哩收藏夹',
-            icon: Icons.smart_display,
-          ),
-          if (!biliLoggedIn)
-            _LoginPromptCard(
-              icon: Icons.smart_display_outlined,
-              label: '登录哔哩哔哩查看收藏夹',
-              onTap: () => Get.toNamed(AppRoutes.login),
-            )
-          else if (biliLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (biliFolders.isEmpty)
-            _EmptyHint(
-              text: controller.searchQuery.value.isEmpty
-                  ? '暂无收藏夹'
-                  : '无匹配结果',
-            )
-          else
-            ...biliFolders.map((folder) => ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: CachedImage(
-                      imageUrl: folder.cover,
-                      width: 48,
-                      height: 48,
+          // Playlist list
+          Expanded(
+            child: playlists.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.library_music,
+                            size: 48, color: theme.colorScheme.outline),
+                        const SizedBox(height: 12),
+                        Text(
+                          controller.searchQuery.value.isEmpty
+                              ? '暂无歌单\n点击 + 新建或导入歌单'
+                              : '无匹配结果',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
                     ),
+                  )
+                : ListView.builder(
+                    itemCount: playlists.length,
+                    itemBuilder: (context, index) =>
+                        _PlaylistTile(playlist: playlists[index]),
                   ),
-                  title: Text(
-                    folder.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text('${folder.mediaCount} 个内容'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Get.toNamed(
-                    AppRoutes.favoriteDetail,
-                    arguments: {
-                      'mediaId': folder.id,
-                      'title': folder.title,
-                    },
-                  ),
-                )),
-
-          const SizedBox(height: 8),
-
-          // ── Netease section ──
-          _SectionHeader(
-            title: '网易云歌单',
-            icon: Icons.cloud,
           ),
-          if (!neteaseLoggedIn)
-            _LoginPromptCard(
-              icon: Icons.cloud_outlined,
-              label: '登录网易云查看歌单',
-              onTap: () => Get.toNamed(
-                AppRoutes.login,
-                arguments: {'platform': 1},
-              ),
-            )
-          else if (neteaseLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (neteasePlaylists.isEmpty)
-            _EmptyHint(
-              text: controller.searchQuery.value.isEmpty
-                  ? '暂无歌单'
-                  : '无匹配结果',
-            )
-          else
-            ...neteasePlaylists.map((playlist) => ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: CachedImage(
-                      imageUrl: playlist.coverUrl,
-                      width: 48,
-                      height: 48,
-                    ),
-                  ),
-                  title: Text(
-                    playlist.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text('${playlist.playCount} 次播放'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Get.toNamed(
-                    AppRoutes.neteasePlaylistDetail,
-                    arguments: {
-                      'playlistId': playlist.id,
-                      'title': playlist.name,
-                    },
-                  ),
-                )),
-
-          const SizedBox(height: 8),
-
-          // ── QQ Music section ──
-          _SectionHeader(
-            title: 'QQ音乐歌单',
-            icon: Icons.queue_music,
-          ),
-          if (!qqMusicLoggedIn)
-            _LoginPromptCard(
-              icon: Icons.queue_music_outlined,
-              label: '登录QQ音乐查看歌单',
-              onTap: () => Get.toNamed(
-                AppRoutes.login,
-                arguments: {'platform': 2},
-              ),
-            )
-          else if (qqMusicLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (qqMusicPlaylists.isEmpty)
-            _EmptyHint(
-              text: controller.searchQuery.value.isEmpty
-                  ? '暂无歌单'
-                  : '无匹配结果',
-            )
-          else
-            ...qqMusicPlaylists.map((playlist) => ListTile(
-                  leading: ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: CachedImage(
-                      imageUrl: playlist.coverUrl,
-                      width: 48,
-                      height: 48,
-                    ),
-                  ),
-                  title: Text(
-                    playlist.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text('${playlist.songCount} 首'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Get.toNamed(
-                    AppRoutes.qqMusicPlaylistDetail,
-                    arguments: {
-                      'disstid': playlist.id,
-                      'title': playlist.name,
-                    },
-                  ),
-                )),
         ],
       );
     });
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final IconData icon;
+class _PlaylistTile extends StatelessWidget {
+  final LocalPlaylist playlist;
 
-  const _SectionHeader({required this.title, required this.icon});
+  const _PlaylistTile({required this.playlist});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
+    final controller = Get.find<PlaylistController>();
+
+    return ListTile(
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: playlist.coverUrl.isNotEmpty
+            ? CachedImage(imageUrl: playlist.coverUrl, width: 48, height: 48)
+            : Container(
+                width: 48,
+                height: 48,
+                color: theme.colorScheme.surfaceContainerHighest,
+                child: const Icon(Icons.queue_music, size: 24),
+              ),
+      ),
+      title: Row(
         children: [
-          Icon(icon, size: 20, color: theme.colorScheme.primary),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              playlist.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
+          ),
+          if (playlist.sourceTag != 'local') ...[
+            const SizedBox(width: 6),
+            _SourceBadge(sourceTag: playlist.sourceTag),
+          ],
+        ],
+      ),
+      subtitle: Text('${playlist.trackCount} 首'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => Get.toNamed(
+        AppRoutes.localPlaylistDetail,
+        arguments: {'playlistId': playlist.id},
+      ),
+      onLongPress: () => _showContextMenu(context, controller),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, PlaylistController controller) {
+    final theme = Theme.of(context);
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit),
+              title: const Text('重命名'),
+              onTap: () {
+                Navigator.pop(context);
+                _showRenameDialog(context, controller);
+              },
+            ),
+            if (playlist.remoteId != null)
+              ListTile(
+                leading: const Icon(Icons.refresh),
+                title: const Text('刷新'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Get.toNamed(
+                    AppRoutes.localPlaylistDetail,
+                    arguments: {'playlistId': playlist.id},
+                  );
+                },
+              ),
+            ListTile(
+              leading: Icon(Icons.delete, color: theme.colorScheme.error),
+              title: Text('删除',
+                  style: TextStyle(color: theme.colorScheme.error)),
+              onTap: () {
+                Navigator.pop(context);
+                _showDeleteConfirm(context, controller);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRenameDialog(BuildContext context, PlaylistController controller) {
+    final textController = TextEditingController(text: playlist.name);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('重命名歌单'),
+        content: TextField(
+          controller: textController,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: '歌单名称'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = textController.text.trim();
+              if (name.isNotEmpty) {
+                controller.renamePlaylist(playlist.id, name);
+                Navigator.pop(context);
+                AppToast.show('已重命名');
+              }
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirm(BuildContext context, PlaylistController controller) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('删除歌单'),
+        content: Text('确定要删除「${playlist.name}」吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () {
+              controller.deletePlaylist(playlist.id);
+              Navigator.pop(context);
+              AppToast.show('已删除');
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: const Text('删除'),
           ),
         ],
       ),
@@ -263,70 +284,55 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _LoginPromptCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+class _SourceBadge extends StatelessWidget {
+  final String sourceTag;
 
-  const _LoginPromptCard({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
+  const _SourceBadge({required this.sourceTag});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Row(
-              children: [
-                Icon(icon, size: 32, color: theme.colorScheme.outline),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.outline,
-                    ),
-                  ),
-                ),
-                FilledButton.tonal(
-                  onPressed: onTap,
-                  child: const Text('去登录'),
-                ),
-              ],
-            ),
-          ),
+    final color = _sourceColor(theme);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Text(
+        _sourceLabel,
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: color,
+          fontSize: 10,
         ),
       ),
     );
   }
-}
 
-class _EmptyHint extends StatelessWidget {
-  final String text;
+  String get _sourceLabel {
+    switch (sourceTag) {
+      case 'bilibili':
+        return 'B站';
+      case 'netease':
+        return '网易云';
+      case 'qqmusic':
+        return 'QQ';
+      default:
+        return sourceTag;
+    }
+  }
 
-  const _EmptyHint({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: Text(
-          text,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-        ),
-      ),
-    );
+  Color _sourceColor(ThemeData theme) {
+    switch (sourceTag) {
+      case 'bilibili':
+        return const Color(0xFFFB7299);
+      case 'netease':
+        return const Color(0xFFE60026);
+      case 'qqmusic':
+        return const Color(0xFF31C27C);
+      default:
+        return theme.colorScheme.outline;
+    }
   }
 }

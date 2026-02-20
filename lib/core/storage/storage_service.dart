@@ -173,6 +173,16 @@ class StorageService extends GetxService {
   int get playlistViewMode => _box.read<int>('playlist_view_mode') ?? 0;
   set playlistViewMode(int value) => _box.write('playlist_view_mode', value);
 
+  // Playlist section collapsed states
+  Map<String, bool> get playlistSectionExpanded {
+    final raw = _box.read<Map>('playlist_section_expanded');
+    if (raw == null) return {};
+    return raw.map((k, v) => MapEntry(k.toString(), v as bool));
+  }
+
+  set playlistSectionExpanded(Map<String, bool> value) =>
+      _box.write('playlist_section_expanded', value);
+
   // Update
   String? get skippedUpdateVersion =>
       _box.read<String>('skipped_update_version');

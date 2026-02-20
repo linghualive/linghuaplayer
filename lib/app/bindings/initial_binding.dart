@@ -20,6 +20,7 @@ import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/qqmusic_repository.dart';
 import '../../data/repositories/gdstudio_repository.dart';
+import '../../data/services/local_playlist_service.dart';
 import '../../data/services/recommendation_service.dart';
 import '../../data/services/user_profile_service.dart';
 import '../../data/sources/bilibili_source_adapter.dart';
@@ -57,6 +58,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => DeepSeekRepository(), fenix: true);
 
     // Services
+    Get.lazyPut(() => LocalPlaylistService()..init(), fenix: true);
     Get.lazyPut(() => RecommendationService(), fenix: true);
     Get.lazyPut(() => UserProfileService(), fenix: true);
 

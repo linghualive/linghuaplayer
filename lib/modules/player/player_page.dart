@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/storage/storage_service.dart';
-import '../../shared/utils/app_toast.dart';
 import '../../shared/utils/platform_utils.dart';
 import '../../shared/widgets/fav_panel.dart';
 import 'player_controller.dart';
@@ -29,20 +27,11 @@ class PlayerPage extends GetView<PlayerController> {
         actions: [
           Obx(() {
             final video = controller.currentVideo.value;
-            if (video == null || video.id <= 0 || !video.isBilibili) {
-              return const SizedBox.shrink();
-            }
+            if (video == null) return const SizedBox.shrink();
             return IconButton(
               icon: const Icon(Icons.favorite_border),
-              tooltip: '收藏',
-              onPressed: () {
-                final storage = Get.find<StorageService>();
-                if (!storage.isLoggedIn) {
-                  AppToast.show('请先登录哔哩哔哩');
-                  return;
-                }
-                FavPanel.show(context, video.id);
-              },
+              tooltip: '收藏到歌单',
+              onPressed: () => FavPanel.show(context, video),
             );
           }),
           IconButton(

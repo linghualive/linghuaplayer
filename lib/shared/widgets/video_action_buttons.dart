@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/storage/storage_service.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../modules/player/player_controller.dart';
-import '../utils/app_toast.dart';
 import 'fav_panel.dart';
 
 /// Reusable action buttons for adding a video to queue and opening the
@@ -31,21 +29,13 @@ class VideoActionColumn extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           padding: EdgeInsets.zero,
         ),
-        if (video.isBilibili)
-          IconButton(
-            icon: const Icon(Icons.favorite_border, size: 20),
-            tooltip: '收藏',
-            onPressed: () {
-              final storage = Get.find<StorageService>();
-              if (!storage.isLoggedIn) {
-                AppToast.show('请先登录哔哩哔哩');
-                return;
-              }
-              FavPanel.show(context, video.id);
-            },
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            padding: EdgeInsets.zero,
-          ),
+        IconButton(
+          icon: const Icon(Icons.favorite_border, size: 20),
+          tooltip: '收藏到歌单',
+          onPressed: () => FavPanel.show(context, video),
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          padding: EdgeInsets.zero,
+        ),
       ],
     );
   }
@@ -71,21 +61,13 @@ class VideoActionRow extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           padding: EdgeInsets.zero,
         ),
-        if (video.isBilibili)
-          IconButton(
-            icon: const Icon(Icons.favorite_border, size: 20),
-            tooltip: '收藏',
-            onPressed: () {
-              final storage = Get.find<StorageService>();
-              if (!storage.isLoggedIn) {
-                AppToast.show('请先登录哔哩哔哩');
-                return;
-              }
-              FavPanel.show(context, video.id);
-            },
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            padding: EdgeInsets.zero,
-          ),
+        IconButton(
+          icon: const Icon(Icons.favorite_border, size: 20),
+          tooltip: '收藏到歌单',
+          onPressed: () => FavPanel.show(context, video),
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          padding: EdgeInsets.zero,
+        ),
       ],
     );
   }
