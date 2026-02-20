@@ -53,13 +53,13 @@ class NeteaseAlbumDetailController extends GetxController {
 
   void playSong(SearchVideoModel song) {
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(song);
+    playerCtrl.playFromSearch(song, preferredSourceId: null);
   }
 
   void playAll() {
     if (tracks.isEmpty) return;
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(tracks.first);
+    playerCtrl.playFromSearch(tracks.first, preferredSourceId: null);
     for (int i = 1; i < tracks.length; i++) {
       playerCtrl.addToQueueSilent(tracks[i]);
     }

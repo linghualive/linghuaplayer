@@ -44,6 +44,6 @@ class SubscriptionDetailController extends GetxController {
 
   void playVideo(SubResourceModel video) {
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(video.toSearchVideoModel());
+    playerCtrl.playFromSearch(video.toSearchVideoModel(), preferredSourceId: null);
   }
 }

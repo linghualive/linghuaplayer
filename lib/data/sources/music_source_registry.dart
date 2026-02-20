@@ -60,18 +60,68 @@ class MusicSourceRegistry extends GetxService {
   /// Returns a tuple of (PlaybackInfo, SearchVideoModel) because the
   /// track may change if fallback to another source occurred.
   ///
+  /// When [preferredSourceId] is set, try that source first (via search)
+  /// before the track's own source. This is used to route search/recommendation
+  /// playback through GD Studio by default.
+  ///
   /// Fallback logic:
-  /// 1. Try the track's own source
-  /// 2. If [enableFallback] is true and the own source fails,
+  /// 1. If [preferredSourceId] is set, search and resolve via that source
+  /// 2. Try the track's own source
+  /// 3. If [enableFallback] is true and both fail,
   ///    search other sources for the same song and try to resolve
   Future<(PlaybackInfo, SearchVideoModel)?> resolvePlaybackWithFallback(
     SearchVideoModel track, {
     bool videoMode = false,
     bool enableFallback = true,
+    String? preferredSourceId,
   }) async {
-    // 1. Try the track's own source
+    final keyword = '${track.title} ${track.author}'.trim();
+
+    // 1. Try preferred source first (e.g. gdstudio for search/recommendation)
+    if (preferredSourceId != null) {
+      final preferredSource = getSource(preferredSourceId);
+      if (preferredSource != null) {
+        // If the track already belongs to this source, resolve directly
+        if (track.source.name == preferredSourceId) {
+          try {
+            final info = await preferredSource.resolvePlayback(
+                track, videoMode: videoMode);
+            if (info != null) return (info, track);
+          } catch (e) {
+            log('MusicSourceRegistry: preferred source $preferredSourceId '
+                'direct resolve failed: $e');
+          }
+        }
+
+        // Otherwise search and resolve
+        try {
+          final searchResult = await preferredSource.searchTracks(
+            keyword: keyword,
+            limit: 5,
+          );
+          if (searchResult.tracks.isNotEmpty) {
+            final preferredTrack = searchResult.tracks.first;
+            final info = await preferredSource.resolvePlayback(
+              preferredTrack,
+              videoMode: videoMode,
+            );
+            if (info != null) {
+              log('MusicSourceRegistry: resolved via preferred source '
+                  '$preferredSourceId for "${track.title}"');
+              return (info, preferredTrack);
+            }
+          }
+        } catch (e) {
+          log('MusicSourceRegistry: preferred source $preferredSourceId '
+              'search failed: $e');
+        }
+      }
+    }
+
+    // 2. Try the track's own source
     final ownSource = getSourceForTrack(track);
-    if (ownSource != null) {
+    if (ownSource != null &&
+        ownSource.sourceId != preferredSourceId) {
       try {
         final info = await ownSource.resolvePlayback(track, videoMode: videoMode);
         if (info != null) return (info, track);
@@ -82,10 +132,14 @@ class MusicSourceRegistry extends GetxService {
 
     if (!enableFallback) return null;
 
-    // 2. Try other sources as fallback
-    final keyword = '${track.title} ${track.author}'.trim();
+    // 3. Try other sources as fallback
+    final triedSources = <String>{
+      if (preferredSourceId != null) preferredSourceId,
+      if (ownSource != null) ownSource.sourceId,
+    };
+
     for (final source in _sources.values) {
-      if (source.sourceId == ownSource?.sourceId) continue;
+      if (triedSources.contains(source.sourceId)) continue;
 
       try {
         final searchResult = await source.searchTracks(

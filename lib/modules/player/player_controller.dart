@@ -78,6 +78,9 @@ class PlayerController extends GetxController {
   final audioQualityLabel = ''.obs;
   final videoQualityLabel = ''.obs;
 
+  // Current playback source
+  final currentPlaybackSourceId = 'gdstudio'.obs;
+
   // Related music
   final relatedMusic = <SearchVideoModel>[].obs;
   final relatedMusicLoading = false.obs;
@@ -262,8 +265,15 @@ class PlayerController extends GetxController {
     _listenedMs = 0;
   }
 
-  /// Play from search result and navigate to player page
-  Future<void> playFromSearch(SearchVideoModel video) async {
+  /// Play from search result and navigate to player page.
+  ///
+  /// [preferredSourceId] specifies which source to try first.
+  /// Defaults to 'gdstudio' so search/recommendation results play via GD.
+  /// Pass `null` to use the track's own source (e.g. from favorites).
+  Future<void> playFromSearch(
+    SearchVideoModel video, {
+    String? preferredSourceId = 'gdstudio',
+  }) async {
     _saveListenDuration();
     isLoading.value = true;
     currentVideo.value = video;
@@ -277,6 +287,7 @@ class PlayerController extends GetxController {
       final resolved = await _registry.resolvePlaybackWithFallback(
         video,
         videoMode: _storage.enableVideo,
+        preferredSourceId: preferredSourceId,
       );
 
       if (resolved == null) {
@@ -290,6 +301,7 @@ class PlayerController extends GetxController {
         currentVideo.value = resolvedVideo;
       }
 
+      currentPlaybackSourceId.value = info.sourceId;
       await _playFromInfo(info, resolvedVideo);
       _storage.addPlayHistory(resolvedVideo);
     } catch (e) {
@@ -299,6 +311,45 @@ class PlayerController extends GetxController {
     isLoading.value = false;
     _fetchLyrics(currentVideo.value ?? video);
     _loadRelatedMusic(currentVideo.value ?? video);
+  }
+
+  /// Switch the current song's playback source manually.
+  ///
+  /// Re-resolves the current track via the specified source and replays.
+  Future<void> switchPlaybackSource(String sourceId) async {
+    final video = currentVideo.value;
+    if (video == null) return;
+
+    isLoading.value = true;
+    try {
+      final resolved = await _registry.resolvePlaybackWithFallback(
+        video,
+        videoMode: _storage.enableVideo,
+        preferredSourceId: sourceId,
+        enableFallback: false,
+      );
+
+      if (resolved == null) {
+        AppToast.error('该音乐源无法播放此歌曲');
+        isLoading.value = false;
+        return;
+      }
+
+      final (info, resolvedVideo) = resolved;
+      currentPlaybackSourceId.value = info.sourceId;
+
+      if (resolvedVideo.uniqueId != video.uniqueId) {
+        currentVideo.value = resolvedVideo;
+      }
+
+      await _playFromInfo(info, resolvedVideo);
+      _fetchLyrics(resolvedVideo);
+      AppToast.show('已切换到 ${_registry.getSource(info.sourceId)?.displayName ?? info.sourceId}');
+    } catch (e) {
+      log('Switch source failed: $e');
+      AppToast.error('切换音乐源失败');
+    }
+    isLoading.value = false;
   }
 
   /// Unified playback from resolved PlaybackInfo.
