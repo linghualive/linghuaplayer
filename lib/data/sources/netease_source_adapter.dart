@@ -79,12 +79,31 @@ class NeteaseSourceAdapter extends MusicSourceAdapter
 
   @override
   Future<List<SearchVideoModel>> getRelatedTracks(SearchVideoModel track) async {
-    if (track.author.isEmpty) return [];
+    if (track.author.isEmpty && track.title.isEmpty) return [];
+
+    // Use varied search keywords for diversity
+    final keywords = <String>[];
+    if (track.author.isNotEmpty) {
+      keywords.add(track.author);
+      keywords.add('${track.author} 热门');
+    }
+    if (track.title.isNotEmpty) {
+      keywords.add(track.title);
+    }
+    // Album as keyword
+    if (track.description.isNotEmpty && track.description.length > 1) {
+      keywords.add(track.description);
+    }
+
+    // Pick a random keyword for variety
+    final keyword = (keywords..shuffle()).first;
     final result = await _neteaseRepo.searchSongs(
-      keyword: '${track.author} 歌曲',
+      keyword: keyword,
       limit: 20,
     );
-    return result.songs.where((s) => s.id != track.id).toList();
+    final filtered = result.songs.where((s) => s.id != track.id).toList();
+    filtered.shuffle();
+    return filtered;
   }
 
   // ── LyricsCapability ──

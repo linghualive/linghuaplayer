@@ -93,8 +93,18 @@ class SearchPage extends GetView<app.SearchController> {
   Widget _buildSourceChips() {
     return Obx(() => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
             children: [
+              ChoiceChip(
+                label: const Text('GD音乐台'),
+                selected:
+                    controller.searchSource.value == 'gdstudio',
+                onSelected: (_) =>
+                    controller.switchSource(MusicSource.gdstudio),
+              ),
+              const SizedBox(width: 8),
               ChoiceChip(
                 label: const Text('网易云'),
                 selected:
@@ -119,6 +129,7 @@ class SearchPage extends GetView<app.SearchController> {
                     controller.switchSource(MusicSource.bilibili),
               ),
             ],
+          ),
           ),
         ));
   }
@@ -216,7 +227,7 @@ class SearchPage extends GetView<app.SearchController> {
     final item = controller.allResults[index];
 
     if (item is SearchVideoModel) {
-      if (item.isNetease || item.isQQMusic) {
+      if (item.isNetease || item.isQQMusic || item.isGdStudio) {
         return _buildNeteaseSongCard(context, item);
       }
       return SearchResultCard(video: item);

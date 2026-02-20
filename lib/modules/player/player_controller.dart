@@ -583,6 +583,8 @@ class PlayerController extends GetxController {
       return;
     }
 
+    final rng = Random();
+
     // Exclude both queue and recently played history to avoid ping-ponging
     final excludeIds = <String>{
       ...queue.map((q) => q.video.uniqueId),
@@ -590,28 +592,37 @@ class PlayerController extends GetxController {
       video.uniqueId,
     };
 
-    // 1. Try related music not already played
-    final candidates = relatedMusic
-        .where((s) => !excludeIds.contains(s.uniqueId))
-        .toList();
+    // Also exclude by normalized title to avoid the same song from different sources
+    final excludeTitles = <String>{
+      _normalizeTitle(video.title),
+      ...queue.map((q) => _normalizeTitle(q.video.title)),
+      ...playHistory.map((q) => _normalizeTitle(q.video.title)),
+    };
+
+    bool _isExcluded(SearchVideoModel s) =>
+        excludeIds.contains(s.uniqueId) ||
+        excludeTitles.contains(_normalizeTitle(s.title));
+
+    // 1. Try related music not already played (random pick)
+    final candidates = relatedMusic.where((s) => !_isExcluded(s)).toList();
 
     if (candidates.isNotEmpty) {
+      final pick = candidates[rng.nextInt(candidates.length)];
       AppToast.show('已为你自动推荐');
-      await playFromSearch(candidates.first);
+      await playFromSearch(pick);
       return;
     }
 
-    // 2. Discover more songs via source adapter
+    // 2. Discover more songs via varied search strategies
     try {
       final source = _registry.getSourceForTrack(video);
       if (source != null) {
-        final moreSongs = await source.getRelatedTracks(video);
-        final filtered = moreSongs
-            .where((s) => !excludeIds.contains(s.uniqueId))
-            .toList();
+        final moreSongs = await _getVariedRelatedTracks(source, video, rng);
+        final filtered = moreSongs.where((s) => !_isExcluded(s)).toList();
         if (filtered.isNotEmpty) {
+          final pick = filtered[rng.nextInt(filtered.length)];
           AppToast.show('已为你自动推荐');
-          await playFromSearch(filtered.first);
+          await playFromSearch(pick);
           return;
         }
       }
@@ -619,9 +630,113 @@ class PlayerController extends GetxController {
       log('Auto-play discover error: $e');
     }
 
-    // 3. Nothing left, stop
+    // 3. Try cross-source discovery with varied keywords
+    try {
+      final crossResult = await _crossSourceDiscover(video, _isExcluded, rng);
+      if (crossResult != null) {
+        AppToast.show('已为你自动推荐');
+        await playFromSearch(crossResult);
+        return;
+      }
+    } catch (e) {
+      log('Auto-play cross-source error: $e');
+    }
+
+    // 4. Nothing left, stop
     _manualStop = true;
     _playback.stop();
+  }
+
+  /// Search for related tracks using varied keywords to avoid returning
+  /// the same results every time.
+  Future<List<SearchVideoModel>> _getVariedRelatedTracks(
+    MusicSourceAdapter source,
+    SearchVideoModel video,
+    Random rng,
+  ) async {
+    final strategies = <String>[];
+
+    // Strategy variations based on available metadata
+    if (video.author.isNotEmpty) {
+      strategies.add(video.author); // just artist name
+      strategies.add('${video.author} 热门');
+      strategies.add('${video.author} 精选');
+    }
+    if (video.title.isNotEmpty) {
+      // Use title keywords (first few chars to find similar songs)
+      final titleKeyword = video.title.length > 4
+          ? video.title.substring(0, 4)
+          : video.title;
+      strategies.add(titleKeyword);
+    }
+    if (video.description.isNotEmpty && video.description.length > 1) {
+      // Search by album name
+      strategies.add(video.description);
+    }
+
+    // Shuffle and try each strategy
+    strategies.shuffle(rng);
+
+    for (final keyword in strategies) {
+      try {
+        final result = await source.searchTracks(
+          keyword: keyword,
+          limit: 20,
+          offset: rng.nextInt(3) * 20, // random page for variety
+        );
+        if (result.tracks.isNotEmpty) return result.tracks;
+      } catch (_) {}
+    }
+
+    return [];
+  }
+
+  /// Try discovering songs from other sources when the current source
+  /// is exhausted.
+  Future<SearchVideoModel?> _crossSourceDiscover(
+    SearchVideoModel video,
+    bool Function(SearchVideoModel) isExcluded,
+    Random rng,
+  ) async {
+    // Build varied keywords from recent play history
+    final recentTitles = playHistory
+        .take(5)
+        .map((q) => q.video.author)
+        .where((a) => a.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final keywords = <String>[
+      if (video.author.isNotEmpty) video.author,
+      ...recentTitles,
+      // Generic discovery keywords as last resort
+      '热门歌曲', '流行音乐', '经典老歌', '华语金曲',
+      '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
+    ];
+    keywords.shuffle(rng);
+
+    final sources = _registry.availableSources
+        .where((s) => s.sourceId != 'bilibili')
+        .toList()
+      ..shuffle(rng);
+
+    for (final keyword in keywords.take(4)) {
+      for (final source in sources) {
+        try {
+          final result = await source.searchTracks(
+            keyword: keyword,
+            limit: 15,
+            offset: rng.nextInt(2) * 15,
+          );
+          final filtered =
+              result.tracks.where((s) => !isExcluded(s)).toList();
+          if (filtered.isNotEmpty) {
+            return filtered[rng.nextInt(filtered.length)];
+          }
+        } catch (_) {}
+      }
+    }
+    return null;
   }
 
   // ── Heart Mode ──
@@ -836,6 +951,8 @@ class PlayerController extends GetxController {
         };
         final filtered =
             deduped.where((s) => !excludeIds.contains(s.uniqueId)).toList();
+        // Shuffle for variety so auto-play doesn't always pick the same order
+        filtered.shuffle();
         relatedMusic.assignAll(filtered);
         relatedMusicLoading.value = false;
       }

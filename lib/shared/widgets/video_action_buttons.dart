@@ -31,7 +31,7 @@ class VideoActionColumn extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           padding: EdgeInsets.zero,
         ),
-        if (!video.isNetease)
+        if (video.isBilibili)
           IconButton(
             icon: const Icon(Icons.favorite_border, size: 20),
             tooltip: '收藏',
@@ -71,7 +71,7 @@ class VideoActionRow extends StatelessWidget {
           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
           padding: EdgeInsets.zero,
         ),
-        if (!video.isNetease)
+        if (video.isBilibili)
           IconButton(
             icon: const Icon(Icons.favorite_border, size: 20),
             tooltip: '收藏',

@@ -88,12 +88,26 @@ class QqMusicSourceAdapter extends MusicSourceAdapter
 
   @override
   Future<List<SearchVideoModel>> getRelatedTracks(SearchVideoModel track) async {
-    if (track.author.isEmpty) return [];
-    final result = await _repo.searchSongs(
-      keyword: '${track.author} 歌曲',
-      limit: 20,
-    );
-    return result.tracks.where((s) => s.id != track.id).toList();
+    if (track.author.isEmpty && track.title.isEmpty) return [];
+
+    // Use varied search keywords for diversity
+    final keywords = <String>[];
+    if (track.author.isNotEmpty) {
+      keywords.add(track.author);
+      keywords.add('${track.author} 热门');
+    }
+    if (track.title.isNotEmpty) {
+      keywords.add(track.title);
+    }
+    if (track.description.isNotEmpty && track.description.length > 1) {
+      keywords.add(track.description);
+    }
+
+    final keyword = (keywords..shuffle()).first;
+    final result = await _repo.searchSongs(keyword: keyword, limit: 20);
+    final filtered = result.tracks.where((s) => s.id != track.id).toList();
+    filtered.shuffle();
+    return filtered;
   }
 
   // ── LyricsCapability ──
