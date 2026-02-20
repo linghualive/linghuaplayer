@@ -45,14 +45,14 @@ class WatchLaterController extends GetxController {
 
   void playVideo(WatchLaterModel video) {
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(video.toSearchVideoModel());
+    playerCtrl.playFromSearch(video.toSearchVideoModel(), preferredSourceId: null);
   }
 
   void playAll() {
     if (videos.isEmpty) return;
     final playerCtrl = Get.find<PlayerController>();
     // Play the first video
-    playerCtrl.playFromSearch(videos.first.toSearchVideoModel());
+    playerCtrl.playFromSearch(videos.first.toSearchVideoModel(), preferredSourceId: null);
     // Add the rest to queue
     for (var i = 1; i < videos.length; i++) {
       playerCtrl.addToQueueSilent(videos[i].toSearchVideoModel());

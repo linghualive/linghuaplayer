@@ -52,6 +52,6 @@ class WatchHistoryController extends GetxController {
 
   void playVideo(SearchVideoModel video) {
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(video);
+    playerCtrl.playFromSearch(video, preferredSourceId: null);
   }
 }

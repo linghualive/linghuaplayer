@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../../core/storage/storage_service.dart';
+import '../../../data/sources/music_source_registry.dart';
 import '../player_controller.dart';
 import '../services/audio_output_service.dart';
 import 'audio_output_sheet.dart';
@@ -222,76 +223,92 @@ class PlayerControls extends GetView<PlayerController> {
               ),
             ],
           ),
-          // Heart mode + MV toggle
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextButton.icon(
-                onPressed: controller.isHeartModeLoading.value
-                    ? null
-                    : controller.isHeartMode.value
-                        ? controller.deactivateHeartMode
-                        : () {
-                            final tags =
-                                Get.find<StorageService>().preferenceTags;
-                            controller.activateHeartMode(tags);
-                          },
-                icon: controller.isHeartModeLoading.value
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(Icons.auto_awesome, size: 18),
-                label: Text(
-                  controller.isHeartMode.value ? '心动中' : '心动模式',
-                  style: Theme.of(context).textTheme.labelMedium,
+          // Heart mode + MV toggle + Source switch
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _showSourcePicker(context),
+                  icon: Icon(Icons.library_music, size: 18),
+                  label: Text(
+                    _sourceDisplayName(
+                        controller.currentPlaybackSourceId.value),
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
-                style: TextButton.styleFrom(
-                  foregroundColor: controller.isHeartMode.value
-                      ? Colors.pink
-                      : Theme.of(context).colorScheme.outline,
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: controller.isHeartModeLoading.value
+                      ? null
+                      : controller.isHeartMode.value
+                          ? controller.deactivateHeartMode
+                          : () {
+                              final tags =
+                                  Get.find<StorageService>().preferenceTags;
+                              controller.activateHeartMode(tags);
+                            },
+                  icon: controller.isHeartModeLoading.value
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(Icons.auto_awesome, size: 18),
+                  label: Text(
+                    controller.isHeartMode.value ? '心动中' : '心动模式',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: controller.isHeartMode.value
+                        ? Colors.pink
+                        : Theme.of(context).colorScheme.outline,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: controller.toggleVideoMode,
-                icon: Icon(
-                  Icons.music_video,
-                  size: 18,
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: controller.toggleVideoMode,
+                  icon: Icon(
+                    Icons.music_video,
+                    size: 18,
+                  ),
+                  label: Text(
+                    controller.isVideoMode.value ? 'MV 播放中' : 'MV',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: controller.isVideoMode.value
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.outline,
+                  ),
                 ),
-                label: Text(
-                  controller.isVideoMode.value ? 'MV 播放中' : 'MV',
-                  style: Theme.of(context).textTheme.labelMedium,
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () async {
+                    await controller.audioOutput.showOutputPicker();
+                    if (!controller.audioOutput.usesSystemPicker &&
+                        controller.audioOutput.devices.isNotEmpty) {
+                      AudioOutputSheet.show();
+                    }
+                  },
+                  icon: Icon(
+                    _outputIcon(controller.audioOutput.activeType),
+                    size: 18,
+                  ),
+                  label: Text(
+                    '输出',
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.outline,
+                  ),
                 ),
-                style: TextButton.styleFrom(
-                  foregroundColor: controller.isVideoMode.value
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.outline,
-                ),
-              ),
-              const SizedBox(width: 12),
-              TextButton.icon(
-                onPressed: () async {
-                  await controller.audioOutput.showOutputPicker();
-                  if (!controller.audioOutput.usesSystemPicker &&
-                      controller.audioOutput.devices.isNotEmpty) {
-                    AudioOutputSheet.show();
-                  }
-                },
-                icon: Icon(
-                  _outputIcon(controller.audioOutput.activeType),
-                  size: 18,
-                ),
-                label: Text(
-                  '输出',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-                style: TextButton.styleFrom(
-                  foregroundColor: Theme.of(context).colorScheme.outline,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       );
@@ -355,6 +372,62 @@ class PlayerControls extends GetView<PlayerController> {
               fontSize: 10,
             ),
       ),
+    );
+  }
+
+  String _sourceDisplayName(String sourceId) {
+    final registry = Get.find<MusicSourceRegistry>();
+    return registry.getSource(sourceId)?.displayName ?? sourceId;
+  }
+
+  void _showSourcePicker(BuildContext context) {
+    final registry = Get.find<MusicSourceRegistry>();
+    final sources = registry.availableSources;
+    final controller = Get.find<PlayerController>();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  '切换音乐源',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              ...sources.map((source) {
+                final isActive =
+                    controller.currentPlaybackSourceId.value == source.sourceId;
+                return ListTile(
+                  leading: Icon(
+                    Icons.music_note,
+                    color: isActive
+                        ? Theme.of(ctx).colorScheme.primary
+                        : null,
+                  ),
+                  title: Text(source.displayName),
+                  trailing: isActive
+                      ? Icon(Icons.check,
+                          color: Theme.of(ctx).colorScheme.primary)
+                      : null,
+                  selected: isActive,
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    if (!isActive) {
+                      controller.switchPlaybackSource(source.sourceId);
+                    }
+                  },
+                );
+              }),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
   }
 
