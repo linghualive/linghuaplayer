@@ -16,7 +16,6 @@ class MusicDiscoveryController extends GetxController {
   final _storage = Get.find<StorageService>();
 
   // ── Existing state (kept) ──
-  final neteaseNewSongs = <SearchVideoModel>[].obs;
   final dailyRecommendSongs = <SearchVideoModel>[].obs;
   final dailyRecommendPlaylists = <NeteasePlaylistBrief>[].obs;
   final neteaseToplistPreview = <NeteaseToplistItem>[].obs;
@@ -43,7 +42,6 @@ class MusicDiscoveryController extends GetxController {
     isLoading.value = true;
     try {
       final futures = <Future>[
-        _loadNeteaseNewSongs(),
         _loadCuratedPlaylists(),
         _loadNeteaseToplistPreview(),
         _loadQqMusicToplistPreview(),
@@ -65,15 +63,6 @@ class MusicDiscoveryController extends GetxController {
   }
 
   // ── Load methods ──
-
-  Future<void> _loadNeteaseNewSongs() async {
-    try {
-      final songs = await _neteaseRepo.getTopSongs(type: 0);
-      neteaseNewSongs.assignAll(songs.take(10));
-    } catch (e) {
-      log('Load NetEase new songs error: $e');
-    }
-  }
 
   Future<void> _loadCuratedPlaylists() async {
     try {
@@ -205,11 +194,6 @@ class MusicDiscoveryController extends GetxController {
 
   void onSingerTap(QqMusicSingerBrief singer) {
     Get.toNamed(AppRoutes.qqMusicArtistDetail, arguments: singer);
-  }
-
-  void onNeteaseNewSongTap(SearchVideoModel song) {
-    final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(song);
   }
 
   void onDailyRecommendSongTap(SearchVideoModel song) {

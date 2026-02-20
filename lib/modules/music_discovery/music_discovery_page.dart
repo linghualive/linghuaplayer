@@ -51,7 +51,6 @@ class MusicDiscoveryPage extends StatelessWidget {
       ),
       body: Obx(() {
         if (controller.isLoading.value &&
-            controller.neteaseNewSongs.isEmpty &&
             controller.curatedPlaylists.isEmpty) {
           return const LoadingWidget();
         }
@@ -80,15 +79,8 @@ class MusicDiscoveryPage extends StatelessWidget {
                 ],
               ],
 
-              // ── 2. 新歌速递 ──
-              if (controller.neteaseNewSongs.isNotEmpty) ...[
-                const SectionHeader(title: '新歌速递'),
-                _buildHorizontalSongList(
-                  songs: controller.neteaseNewSongs,
-                  onTap: controller.onNeteaseNewSongTap,
-                  theme: theme,
-                ),
-              ],
+              // ── 2. 风格分类歌单 ──
+              _buildGenreSection(controller, theme),
 
               // ── 3. 精选歌单推荐 ──
               if (controller.curatedPlaylists.isNotEmpty) ...[
@@ -117,9 +109,6 @@ class MusicDiscoveryPage extends StatelessWidget {
                   _buildQqToplistRow(controller, theme),
                 ],
               ],
-
-              // ── 5. 风格分类歌单 ──
-              _buildGenreSection(controller, theme),
 
               // ── 6. 热门歌手推荐 ──
               _buildSingerSection(controller, theme),
@@ -208,9 +197,9 @@ class MusicDiscoveryPage extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.75,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.78,
         ),
         itemCount: playlists.length,
         itemBuilder: (context, index) {
@@ -241,9 +230,9 @@ class MusicDiscoveryPage extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.75,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.78,
         ),
         itemCount: playlists.length,
         itemBuilder: (context, index) {

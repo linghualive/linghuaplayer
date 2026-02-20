@@ -20,7 +20,6 @@ class DesktopMusicDiscoveryPage extends GetView<MusicDiscoveryController> {
     return Scaffold(
       body: Obx(() {
         if (controller.isLoading.value &&
-            controller.neteaseNewSongs.isEmpty &&
             controller.curatedPlaylists.isEmpty) {
           return const Center(child: LoadingWidget());
         }
@@ -48,15 +47,7 @@ class DesktopMusicDiscoveryPage extends GetView<MusicDiscoveryController> {
                 ),
               ],
 
-              // ── 2. 新歌速递 ──
-              if (controller.neteaseNewSongs.isNotEmpty) ...[
-                _buildSectionSliver('新歌速递'),
-                SliverToBoxAdapter(
-                  child: _buildNewSongsList(context),
-                ),
-              ],
-
-              // ── 3. 精选歌单推荐 ──
+              // ── 2. 精选歌单推荐 ──
               if (controller.curatedPlaylists.isNotEmpty) ...[
                 _buildSectionSliverWithAction(
                   '精选歌单推荐',
@@ -247,62 +238,6 @@ class DesktopMusicDiscoveryPage extends GetView<MusicDiscoveryController> {
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(
               onTap: () => controller.onDailyRecommendSongTap(song),
-              child: SizedBox(
-                width: 220,
-                child: Row(
-                  children: [
-                    CachedImage(
-                      imageUrl: song.pic,
-                      width: 56,
-                      height: 56,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(song.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodyMedium),
-                          const SizedBox(height: 2),
-                          Text(
-                            song.author,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.outline,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildNewSongsList(BuildContext context) {
-    final theme = Theme.of(context);
-    return SizedBox(
-      height: 72,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        itemCount: controller.neteaseNewSongs.length,
-        itemBuilder: (context, index) {
-          final song = controller.neteaseNewSongs[index];
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: GestureDetector(
-              onTap: () => controller.onNeteaseNewSongTap(song),
               child: SizedBox(
                 width: 220,
                 child: Row(
