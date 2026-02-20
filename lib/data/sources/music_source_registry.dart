@@ -14,7 +14,7 @@ class MusicSourceRegistry extends GetxService {
   final _sources = <String, MusicSourceAdapter>{};
 
   /// The currently active source for search (observable).
-  final activeSourceId = 'qqmusic'.obs;
+  final activeSourceId = 'gdstudio'.obs;
 
   /// Register a source adapter. Overwrites any existing adapter with
   /// the same [sourceId].

@@ -44,6 +44,21 @@ class Track {
         },
       );
     }
+    if (video.isGdStudio) {
+      return Track(
+        sourceTrackId: video.id.toString(),
+        sourceId: 'gdstudio',
+        title: video.title,
+        artist: video.author,
+        album: video.description,
+        coverUrl: video.pic,
+        durationText: video.duration,
+        uniqueId: video.uniqueId,
+        extra: {
+          'gdstudioBvid': video.bvid, // "source:trackId:lyricId"
+        },
+      );
+    }
     return Track(
       sourceTrackId: video.bvid,
       sourceId: 'bilibili',
@@ -75,6 +90,18 @@ class Track {
         pic: coverUrl,
         duration: durationText,
         source: MusicSource.netease,
+      );
+    }
+    if (sourceId == 'gdstudio') {
+      return SearchVideoModel(
+        id: int.tryParse(sourceTrackId) ?? 0,
+        author: artist,
+        title: title,
+        description: album,
+        pic: coverUrl,
+        duration: durationText,
+        bvid: extra['gdstudioBvid'] as String? ?? '',
+        source: MusicSource.gdstudio,
       );
     }
     return SearchVideoModel(

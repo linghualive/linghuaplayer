@@ -157,6 +157,10 @@ lib/
 
 <img src="docs/pay.jpg" alt="Buy Me a Coffee" width="300">
 
+## 🤝 参与贡献
+
+感谢 [GD音乐台(music.gdstudio.xyz)](https://music.gdstudio.xyz) 提供的免费API
+
 ## 免责声明
 
 本项目仅供学习交流和个人使用，**请勿用于任何商业用途**。

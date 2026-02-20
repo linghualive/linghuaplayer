@@ -1,12 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../data/models/search/search_video_model.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/video_action_buttons.dart';
 import 'watch_history_controller.dart';
 
 class WatchHistoryPage extends StatelessWidget {
   const WatchHistoryPage({super.key});
+
+  String _sourceLabel(SearchVideoModel video) {
+    if (video.isNetease) return '网易云';
+    if (video.isQQMusic) return 'QQ音乐';
+    if (video.isGdStudio) return 'GD音乐台';
+    return 'B站';
+  }
+
+  Color _sourceColor(SearchVideoModel video) {
+    if (video.isNetease) return Colors.red;
+    if (video.isQQMusic) return Colors.green;
+    if (video.isGdStudio) return Colors.orange;
+    return Colors.blue;
+  }
 
   String _relativeTime(int playedAtMs) {
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -131,21 +146,16 @@ class WatchHistoryPage extends StatelessWidget {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 4, vertical: 1),
                                       decoration: BoxDecoration(
-                                        color: video.isNetease
-                                            ? Colors.red.withValues(
-                                                alpha: 0.1)
-                                            : Colors.blue.withValues(
-                                                alpha: 0.1),
+                                        color: _sourceColor(video)
+                                            .withValues(alpha: 0.1),
                                         borderRadius:
                                             BorderRadius.circular(4),
                                       ),
                                       child: Text(
-                                        video.isNetease ? '网易云' : 'B站',
+                                        _sourceLabel(video),
                                         style: TextStyle(
                                           fontSize: 10,
-                                          color: video.isNetease
-                                              ? Colors.red
-                                              : Colors.blue,
+                                          color: _sourceColor(video),
                                         ),
                                       ),
                                     ),

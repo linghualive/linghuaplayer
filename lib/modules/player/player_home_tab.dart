@@ -87,7 +87,7 @@ class PlayerHomeTab extends StatelessWidget {
     return [
       Obx(() {
         final video = playerCtrl.currentVideo.value;
-        if (video == null || video.id <= 0 || video.isNetease) {
+        if (video == null || video.id <= 0 || !video.isBilibili) {
           return const SizedBox.shrink();
         }
         return IconButton(

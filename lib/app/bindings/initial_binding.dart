@@ -15,12 +15,15 @@ import '../../data/providers/lyrics_provider.dart';
 import '../../data/providers/deepseek_provider.dart';
 import '../../data/providers/netease_provider.dart';
 import '../../data/providers/qqmusic_provider.dart';
+import '../../data/providers/gdstudio_provider.dart';
 import '../../data/repositories/deepseek_repository.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../data/repositories/qqmusic_repository.dart';
+import '../../data/repositories/gdstudio_repository.dart';
 import '../../data/services/recommendation_service.dart';
 import '../../data/services/user_profile_service.dart';
 import '../../data/sources/bilibili_source_adapter.dart';
+import '../../data/sources/gdstudio_source_adapter.dart';
 import '../../data/sources/music_source_registry.dart';
 import '../../data/sources/netease_source_adapter.dart';
 import '../../data/sources/qqmusic_source_adapter.dart';
@@ -38,6 +41,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => LyricsProvider(), fenix: true);
     Get.lazyPut(() => NeteaseProvider(), fenix: true);
     Get.lazyPut(() => QqMusicProvider(), fenix: true);
+    Get.lazyPut(() => GdStudioProvider(), fenix: true);
     Get.lazyPut(() => DeepSeekProvider(), fenix: true);
 
     // Repositories
@@ -49,6 +53,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut(() => LyricsRepository(), fenix: true);
     Get.lazyPut(() => NeteaseRepository(), fenix: true);
     Get.lazyPut(() => QqMusicRepository(), fenix: true);
+    Get.lazyPut(() => GdStudioRepository(), fenix: true);
     Get.lazyPut(() => DeepSeekRepository(), fenix: true);
 
     // Services
@@ -57,6 +62,7 @@ class InitialBinding extends Bindings {
 
     // Music Source Registry (order determines search/fallback priority)
     final registry = MusicSourceRegistry();
+    registry.register(GdStudioSourceAdapter());
     registry.register(QqMusicSourceAdapter());
     registry.register(NeteaseSourceAdapter());
     registry.register(BilibiliSourceAdapter());
