@@ -599,6 +599,46 @@ class QqMusicRepository {
     }
   }
 
+  // ── Singer List ───────────────────────────────────────
+
+  /// Get singer list with area/genre filters.
+  ///
+  /// Area constants: 200=内地, 2=港台, 5=欧美, 4=日本, 3=韩国
+  Future<List<QqMusicSingerBrief>> getSingerList({
+    int area = 200,
+    int sex = -100,
+    int genre = -100,
+    int index = -100,
+    int page = 1,
+  }) async {
+    try {
+      final res = await _provider.getSingerList(
+        area: area,
+        sex: sex,
+        genre: genre,
+        index: index,
+        page: page,
+      );
+      final data = res.data as Map<String, dynamic>;
+
+      final singerList =
+          data['singerList']?['data']?['singerlist'] as List<dynamic>? ?? [];
+      return singerList.map((s) {
+        final m = s as Map<String, dynamic>;
+        final mid = m['singer_mid'] as String? ?? '';
+        return QqMusicSingerBrief(
+          singerMid: mid,
+          name: m['singer_name'] as String? ?? '',
+          picUrl: _buildSingerPicUrl(mid),
+          songCount: m['total'] as int? ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      log('QqMusic getSingerList error: $e');
+      return [];
+    }
+  }
+
   // ── Helpers ─────────────────────────────────────────
 
   /// Convert a QQ Music song JSON to SearchVideoModel.
@@ -694,5 +734,19 @@ class QqMusicPlaylistBrief {
     required this.name,
     required this.coverUrl,
     required this.songCount,
+  });
+}
+
+class QqMusicSingerBrief {
+  final String singerMid;
+  final String name;
+  final String picUrl;
+  final int songCount;
+
+  QqMusicSingerBrief({
+    required this.singerMid,
+    required this.name,
+    required this.picUrl,
+    this.songCount = 0,
   });
 }

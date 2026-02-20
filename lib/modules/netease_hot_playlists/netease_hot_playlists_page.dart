@@ -45,22 +45,22 @@ class NeteaseHotPlaylistsPage extends StatelessWidget {
       appBar: AppBar(
         title: const Text('热门歌单'),
         actions: [
-          Obx(() => PopupMenuButton<String>(
-                icon: const Icon(Icons.sort),
-                onSelected: controller.switchOrder,
-                itemBuilder: (_) => [
-                  CheckedPopupMenuItem(
-                    value: 'hot',
-                    checked: controller.sortOrder.value == 'hot',
-                    child: const Text('热门'),
-                  ),
-                  CheckedPopupMenuItem(
-                    value: 'new',
-                    checked: controller.sortOrder.value == 'new',
-                    child: const Text('最新'),
-                  ),
-                ],
-              )),
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.sort),
+            onSelected: controller.switchOrder,
+            itemBuilder: (_) => [
+              CheckedPopupMenuItem(
+                value: 'hot',
+                checked: controller.sortOrder.value == 'hot',
+                child: const Text('热门'),
+              ),
+              CheckedPopupMenuItem(
+                value: 'new',
+                checked: controller.sortOrder.value == 'new',
+                child: const Text('最新'),
+              ),
+            ],
+          ),
         ],
       ),
       body: Column(
@@ -68,24 +68,24 @@ class NeteaseHotPlaylistsPage extends StatelessWidget {
           // Category chips
           SizedBox(
             height: 48,
-            child: Obx(() => ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: _defaultCategories.length,
-                  itemBuilder: (context, index) {
-                    final cat = _defaultCategories[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ChoiceChip(
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              itemCount: _defaultCategories.length,
+              itemBuilder: (context, index) {
+                final cat = _defaultCategories[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Obx(() => ChoiceChip(
                         label: Text(cat),
                         selected:
                             controller.selectedCategory.value == cat,
                         onSelected: (_) =>
                             controller.switchCategory(cat),
-                      ),
-                    );
-                  },
-                )),
+                      )),
+                );
+              },
+            ),
           ),
 
           // Playlist grid

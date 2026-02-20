@@ -35,8 +35,9 @@ class AppTheme {
         centerTitle: true,
         backgroundColor: colorScheme.surface,
         foregroundColor: colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
-        scrolledUnderElevation: 1,
+        scrolledUnderElevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
         indicatorColor: colorScheme.secondaryContainer,

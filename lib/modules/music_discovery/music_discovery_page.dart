@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../app/routes/app_routes.dart';
+import '../../data/models/browse_models.dart';
+import '../../data/models/genre_categories.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/netease_repository.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/loading_widget.dart';
 import 'music_discovery_controller.dart';
-import 'widgets/hot_playlist_card.dart';
-import 'widgets/mv_card.dart';
-import 'widgets/rank_song_card.dart';
 import 'widgets/section_header.dart';
 
 class MusicDiscoveryPage extends StatelessWidget {
@@ -52,9 +51,8 @@ class MusicDiscoveryPage extends StatelessWidget {
       ),
       body: Obx(() {
         if (controller.isLoading.value &&
-            controller.rankSongs.isEmpty &&
-            controller.hotPlaylists.isEmpty &&
-            controller.mvList.isEmpty) {
+            controller.neteaseNewSongs.isEmpty &&
+            controller.curatedPlaylists.isEmpty) {
           return const LoadingWidget();
         }
 
@@ -63,7 +61,7 @@ class MusicDiscoveryPage extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.only(top: 4),
             children: [
-              // ── 分组 A: 个性推荐 (网易云登录) ──
+              // ── 1. 每日推荐（需网易云登录）──
               if (controller.dailyRecommendSongs.isNotEmpty ||
                   controller.dailyRecommendPlaylists.isNotEmpty) ...[
                 if (controller.dailyRecommendSongs.isNotEmpty) ...[
@@ -76,25 +74,13 @@ class MusicDiscoveryPage extends StatelessWidget {
                 ],
                 if (controller.dailyRecommendPlaylists.isNotEmpty) ...[
                   const SectionHeader(title: '每日推荐歌单'),
-                  _buildPlaylistGrid(
-                    itemCount: controller.dailyRecommendPlaylists.length,
-                    itemBuilder: (index) {
-                      final playlist =
-                          controller.dailyRecommendPlaylists[index];
-                      return _NeteasePlaylistCard(
-                        playlist: playlist,
-                        onTap: () => Get.toNamed(
-                          AppRoutes.neteasePlaylistDetail,
-                          arguments: playlist,
-                        ),
-                      );
-                    },
+                  _buildNeteasePlaylistGrid(
+                    playlists: controller.dailyRecommendPlaylists,
                   ),
                 ],
-                const SizedBox(height: 24),
               ],
 
-              // ── 分组 B: 新歌 & 排行 ──
+              // ── 2. 新歌速递 ──
               if (controller.neteaseNewSongs.isNotEmpty) ...[
                 const SectionHeader(title: '新歌速递'),
                 _buildHorizontalSongList(
@@ -103,168 +89,42 @@ class MusicDiscoveryPage extends StatelessWidget {
                   theme: theme,
                 ),
               ],
-              if (controller.neteaseToplistPreview.isNotEmpty) ...[
-                SectionHeader(
-                  title: '网易云排行榜',
-                  onViewAll: () => Get.toNamed(AppRoutes.neteaseToplist),
-                ),
-                SizedBox(
-                  height: 80,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.neteaseToplistPreview.length,
-                    itemBuilder: (context, index) {
-                      final toplist =
-                          controller.neteaseToplistPreview[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: () => Get.toNamed(
-                            AppRoutes.neteasePlaylistDetail,
-                            arguments: toplist.id,
-                          ),
-                          child: SizedBox(
-                            width: 80,
-                            child: Column(
-                              children: [
-                                CachedImage(
-                                  imageUrl: toplist.coverUrl,
-                                  width: 60,
-                                  height: 60,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  toplist.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.bodySmall,
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-              if (controller.rankSongs.isNotEmpty) ...[
-                Obx(() => SectionHeader(
-                      title: controller.rankTitle.value.isNotEmpty
-                          ? '音乐排行榜 · ${controller.rankTitle.value}'
-                          : '音乐排行榜',
-                      onViewAll: () =>
-                          Get.toNamed(AppRoutes.musicRanking),
-                    )),
-                SizedBox(
-                  height: 64,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.rankSongs.length,
-                    itemBuilder: (context, index) {
-                      final song = controller.rankSongs[index];
-                      return RankSongCard(
-                        song: song,
-                        onTap: () => controller.onRankSongTap(song),
-                      );
-                    },
-                  ),
-                ),
-              ],
-              if (controller.biliMusicRanking.isNotEmpty) ...[
-                const SectionHeader(title: 'B站音乐热榜'),
-                _buildHorizontalSongList(
-                  songs: controller.biliMusicRanking,
-                  onTap: controller.onBiliMusicRankingTap,
-                  theme: theme,
-                ),
-              ],
-              if (controller.neteaseNewSongs.isNotEmpty ||
-                  controller.neteaseToplistPreview.isNotEmpty ||
-                  controller.rankSongs.isNotEmpty ||
-                  controller.biliMusicRanking.isNotEmpty)
-                const SizedBox(height: 24),
 
-              // ── 分组 C: 推荐歌单 ──
-              if (controller.neteaseRecommendPlaylists.isNotEmpty) ...[
+              // ── 3. 精选歌单推荐 ──
+              if (controller.curatedPlaylists.isNotEmpty) ...[
                 SectionHeader(
-                  title: '推荐歌单',
+                  title: '精选歌单推荐',
                   onViewAll: () =>
                       Get.toNamed(AppRoutes.neteaseHotPlaylists),
                 ),
-                _buildPlaylistGrid(
-                  itemCount:
-                      controller.neteaseRecommendPlaylists.length,
-                  itemBuilder: (index) {
-                    final playlist =
-                        controller.neteaseRecommendPlaylists[index];
-                    return _NeteasePlaylistCard(
-                      playlist: playlist,
-                      onTap: () => Get.toNamed(
-                        AppRoutes.neteasePlaylistDetail,
-                        arguments: playlist,
-                      ),
-                    );
-                  },
-                ),
-              ],
-              if (controller.hotPlaylists.isNotEmpty) ...[
-                SectionHeader(
-                  title: '热门歌单',
-                  onViewAll: () => Get.toNamed(AppRoutes.hotPlaylists),
-                ),
-                _buildPlaylistGrid(
-                  itemCount: controller.hotPlaylists.length,
-                  itemBuilder: (index) {
-                    final playlist = controller.hotPlaylists[index];
-                    return HotPlaylistCard(
-                      playlist: playlist,
-                      onTap: () => Get.toNamed(
-                        AppRoutes.audioPlaylistDetail,
-                        arguments: playlist,
-                      ),
-                    );
-                  },
-                ),
-              ],
-              if (controller.neteaseRecommendPlaylists.isNotEmpty ||
-                  controller.hotPlaylists.isNotEmpty)
-                const SizedBox(height: 24),
-
-              // ── 分组 D: 音乐视频 ──
-              if (controller.mvList.isNotEmpty) ...[
-                SectionHeader(
-                  title: '音乐视频',
-                  onViewAll: () => Get.toNamed(AppRoutes.mvList),
-                ),
-                SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: controller.mvList.length,
-                    itemBuilder: (context, index) {
-                      final mv = controller.mvList[index];
-                      return SizedBox(
-                        width: 200,
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: MvCard(
-                            mv: mv,
-                            onTap: () => controller.onMvTap(mv),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                _buildUnifiedPlaylistGrid(
+                  playlists: controller.curatedPlaylists,
+                  onTap: controller.navigateToPlaylist,
+                  theme: theme,
                 ),
               ],
 
-              // 底部留白，避开底部导航栏
+              // ── 4. 多源排行榜 ──
+              if (controller.neteaseToplistPreview.isNotEmpty ||
+                  controller.qqMusicToplistPreview.isNotEmpty) ...[
+                const SectionHeader(title: '多源排行榜'),
+                if (controller.neteaseToplistPreview.isNotEmpty) ...[
+                  _buildSourceLabel('网易云', theme),
+                  _buildNeteaseToplistRow(controller, theme),
+                ],
+                if (controller.qqMusicToplistPreview.isNotEmpty) ...[
+                  _buildSourceLabel('QQ音乐', theme),
+                  _buildQqToplistRow(controller, theme),
+                ],
+              ],
+
+              // ── 5. 风格分类歌单 ──
+              _buildGenreSection(controller, theme),
+
+              // ── 6. 热门歌手推荐 ──
+              _buildSingerSection(controller, theme),
+
+              // 底部留白
               const SizedBox(height: 64),
             ],
           ),
@@ -273,7 +133,8 @@ class MusicDiscoveryPage extends StatelessWidget {
     );
   }
 
-  /// 通用水平歌曲列表（复用于每日推荐、新歌速递、B站热榜）
+  // ── 通用水平歌曲列表 ──
+
   Widget _buildHorizontalSongList({
     required List<SearchVideoModel> songs,
     required void Function(SearchVideoModel) onTap,
@@ -335,10 +196,10 @@ class MusicDiscoveryPage extends StatelessWidget {
     );
   }
 
-  /// 通用歌单网格（复用于推荐歌单、热门歌单、每日推荐歌单）
-  Widget _buildPlaylistGrid({
-    required int itemCount,
-    required Widget Function(int index) itemBuilder,
+  // ── 网易云歌单网格（NeteasePlaylistBrief）──
+
+  Widget _buildNeteasePlaylistGrid({
+    required List<NeteasePlaylistBrief> playlists,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -351,12 +212,347 @@ class MusicDiscoveryPage extends StatelessWidget {
           crossAxisSpacing: 12,
           childAspectRatio: 0.75,
         ),
-        itemCount: itemCount,
-        itemBuilder: (context, index) => itemBuilder(index),
+        itemCount: playlists.length,
+        itemBuilder: (context, index) {
+          final playlist = playlists[index];
+          return _NeteasePlaylistCard(
+            playlist: playlist,
+            onTap: () => Get.toNamed(
+              AppRoutes.neteasePlaylistDetail,
+              arguments: playlist,
+            ),
+          );
+        },
       ),
     );
   }
+
+  // ── 统一歌单网格（PlaylistBrief，多源）──
+
+  Widget _buildUnifiedPlaylistGrid({
+    required List<PlaylistBrief> playlists,
+    required void Function(PlaylistBrief) onTap,
+    required ThemeData theme,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.75,
+        ),
+        itemCount: playlists.length,
+        itemBuilder: (context, index) {
+          final playlist = playlists[index];
+          return _UnifiedPlaylistCard(
+            playlist: playlist,
+            onTap: () => onTap(playlist),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── 来源标签 ──
+
+  Widget _buildSourceLabel(String label, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, top: 4, bottom: 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 网易云排行榜横向滚动 ──
+
+  Widget _buildNeteaseToplistRow(
+      MusicDiscoveryController controller, ThemeData theme) {
+    return SizedBox(
+      height: 80,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: controller.neteaseToplistPreview.length,
+        itemBuilder: (context, index) {
+          final toplist = controller.neteaseToplistPreview[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => Get.toNamed(
+                AppRoutes.neteasePlaylistDetail,
+                arguments: toplist.id,
+              ),
+              child: SizedBox(
+                width: 80,
+                child: Column(
+                  children: [
+                    CachedImage(
+                      imageUrl: toplist.coverUrl,
+                      width: 60,
+                      height: 60,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      toplist.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── QQ音乐排行榜横向滚动 ──
+
+  Widget _buildQqToplistRow(
+      MusicDiscoveryController controller, ThemeData theme) {
+    return SizedBox(
+      height: 80,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: controller.qqMusicToplistPreview.length,
+        itemBuilder: (context, index) {
+          final toplist = controller.qqMusicToplistPreview[index];
+          return Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: () => Get.toNamed(
+                AppRoutes.qqMusicPlaylistDetail,
+                arguments: {
+                  'disstid': toplist.id,
+                  'title': toplist.name,
+                },
+              ),
+              child: SizedBox(
+                width: 80,
+                child: Column(
+                  children: [
+                    CachedImage(
+                      imageUrl: toplist.coverUrl,
+                      width: 60,
+                      height: 60,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      toplist.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ── 风格分类歌单板块 ──
+
+  Widget _buildGenreSection(
+      MusicDiscoveryController controller, ThemeData theme) {
+    // Flatten all genre tags for the selector
+    final allTags = <String>[];
+    for (final category in kGenreCategories) {
+      allTags.addAll(category.tags);
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(
+          title: '风格分类歌单',
+          onViewAll: () => Get.toNamed(AppRoutes.neteaseHotPlaylists),
+        ),
+        // Genre tag selector
+        SizedBox(
+          height: 36,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: allTags.length,
+            itemBuilder: (context, index) {
+              final tag = allTags[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Obx(() {
+                  final isSelected = controller.selectedGenre.value == tag;
+                  return ChoiceChip(
+                    label: Text(tag),
+                    selected: isSelected,
+                    onSelected: (_) => controller.onGenreChanged(tag),
+                    labelStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  );
+                }),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Genre playlists grid
+        Obx(() {
+          if (controller.isLoadingGenre.value) {
+            return const SizedBox(
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (controller.genrePlaylists.isEmpty) {
+            return const SizedBox(
+              height: 60,
+              child: Center(child: Text('暂无歌单')),
+            );
+          }
+          return _buildNeteasePlaylistGrid(
+            playlists: controller.genrePlaylists,
+          );
+        }),
+      ],
+    );
+  }
+
+  // ── 热门歌手推荐板块 ──
+
+  Widget _buildSingerSection(
+      MusicDiscoveryController controller, ThemeData theme) {
+    const areaOptions = [
+      (200, '华语'),
+      (2, '港台'),
+      (5, '欧美'),
+      (4, '日本'),
+      (3, '韩国'),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: '热门歌手推荐'),
+        // Area selector
+        SizedBox(
+          height: 36,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: areaOptions.map((option) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Obx(() {
+                  final isSelected =
+                      controller.selectedSingerArea.value == option.$1;
+                  return ChoiceChip(
+                    label: Text(option.$2),
+                    selected: isSelected,
+                    onSelected: (_) =>
+                        controller.onSingerAreaChanged(option.$1),
+                    labelStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  );
+                }),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Singer horizontal scroll
+        Obx(() {
+          if (controller.isLoadingSingers.value) {
+            return const SizedBox(
+              height: 100,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (controller.hotSingers.isEmpty) {
+            return const SizedBox(
+              height: 60,
+              child: Center(child: Text('暂无歌手')),
+            );
+          }
+          return SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: controller.hotSingers.length,
+              itemBuilder: (context, index) {
+                final singer = controller.hotSingers[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 16),
+                  child: GestureDetector(
+                    onTap: () => controller.onSingerTap(singer),
+                    child: SizedBox(
+                      width: 72,
+                      child: Column(
+                        children: [
+                          CachedImage(
+                            imageUrl: singer.picUrl,
+                            width: 64,
+                            height: 64,
+                            borderRadius: BorderRadius.circular(32),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            singer.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodySmall,
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        }),
+      ],
+    );
+  }
 }
+
+// ── 网易云歌单卡片 ──
 
 class _NeteasePlaylistCard extends StatelessWidget {
   final NeteasePlaylistBrief playlist;
@@ -406,6 +602,100 @@ class _NeteasePlaylistCard extends StatelessWidget {
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            playlist.name,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── 统一歌单卡片（PlaylistBrief）──
+
+class _UnifiedPlaylistCard extends StatelessWidget {
+  final PlaylistBrief playlist;
+  final VoidCallback? onTap;
+
+  const _UnifiedPlaylistCard({required this.playlist, this.onTap});
+
+  String _formatPlayCount(int count) {
+    if (count >= 100000000) {
+      return '${(count / 100000000).toStringAsFixed(1)}亿';
+    }
+    if (count >= 10000) {
+      return '${(count / 10000).toStringAsFixed(1)}万';
+    }
+    return count.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Stack(
+              children: [
+                CachedImage(
+                  imageUrl: playlist.coverUrl,
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                if (playlist.playCount > 0)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _formatPlayCount(playlist.playCount),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ),
+                // Source badge
+                Positioned(
+                  bottom: 4,
+                  left: 4,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: playlist.sourceId == 'qqmusic'
+                          ? Colors.green.withValues(alpha: 0.8)
+                          : Colors.red.withValues(alpha: 0.8),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Text(
+                      playlist.sourceId == 'qqmusic' ? 'QQ' : '网易',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),

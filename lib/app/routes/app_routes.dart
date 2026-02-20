@@ -24,4 +24,5 @@ abstract class AppRoutes {
   static const neteaseHotPlaylists = '/netease-hot-playlists';
   static const qqMusicPlaylistDetail = '/qqmusic-playlist-detail';
   static const localPlaylistDetail = '/local-playlist-detail';
+  static const qqMusicArtistDetail = '/qqmusic-artist-detail';
 }

@@ -46,6 +46,8 @@ import '../../modules/qqmusic_playlist_detail/qqmusic_playlist_detail_page.dart'
 import '../../modules/qqmusic_playlist_detail/qqmusic_playlist_detail_controller.dart';
 import '../../modules/local_playlist_detail/local_playlist_detail_page.dart';
 import '../../modules/local_playlist_detail/local_playlist_detail_controller.dart';
+import '../../modules/qqmusic_artist_detail/qqmusic_artist_detail_page.dart';
+import '../../modules/qqmusic_artist_detail/qqmusic_artist_detail_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -212,6 +214,13 @@ class AppPages {
       page: () => const LocalPlaylistDetailPage(),
       binding: BindingsBuilder(() {
         Get.put(LocalPlaylistDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.qqMusicArtistDetail,
+      page: () => const QqMusicArtistDetailPage(),
+      binding: BindingsBuilder(() {
+        Get.put(QqMusicArtistDetailController());
       }),
     ),
   ];

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:media_kit/media_kit.dart';
@@ -25,6 +26,14 @@ import 'modules/player/services/media_session_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+
+  // Set transparent system bars for edge-to-edge on Android 15+
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: Colors.transparent,
+    systemNavigationBarDividerColor: Colors.transparent,
+  ));
 
   // Desktop window configuration
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
