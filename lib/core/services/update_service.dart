@@ -190,6 +190,9 @@ class UpdateService {
         await _updateChannel.invokeMethod('installApk', {
           'filePath': savePath,
         });
+        // System installer has been launched; close the progress sheet
+        // since installation is now handled by the OS.
+        Get.back();
       } catch (e) {
         log('Install APK failed: $e');
         status.value = _DownloadStatus.failed;
