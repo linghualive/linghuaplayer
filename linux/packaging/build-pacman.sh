@@ -3,36 +3,48 @@ set -e
 
 VERSION="$1"
 
-pacman -Sy --noconfirm zstd
+pacman -Sy --noconfirm base-devel
 
-STAGE=/tmp/pkg
-mkdir -p "$STAGE/usr/lib/flamekit"
-mkdir -p "$STAGE/usr/bin"
-mkdir -p "$STAGE/usr/share/applications"
-mkdir -p "$STAGE/usr/share/icons/hicolor/256x256/apps"
+# Copy pre-built files to accessible location
+cp -r /workspace/build/linux/x64/release/bundle /tmp/bundle
+cp /workspace/linux/packaging/flamekit.desktop /tmp/flamekit.desktop
+cp /workspace/logo.png /tmp/flamekit.png
+chmod -R a+rX /tmp/bundle /tmp/flamekit.desktop /tmp/flamekit.png
 
-cp -r /workspace/build/linux/x64/release/bundle/* "$STAGE/usr/lib/flamekit/"
+# Create build user (makepkg refuses to run as root)
+useradd -m builder
 
-printf '#!/bin/bash\nexec /usr/lib/flamekit/flamekit "$@"\n' > "$STAGE/usr/bin/flamekit"
-chmod 755 "$STAGE/usr/bin/flamekit"
+BUILD_DIR="/home/builder/build"
+mkdir -p "$BUILD_DIR"
 
-cp /workspace/linux/packaging/flamekit.desktop "$STAGE/usr/share/applications/"
-cp /workspace/logo.png "$STAGE/usr/share/icons/hicolor/256x256/apps/flamekit.png"
+# Write PKGBUILD (single-quoted heredoc to keep $pkgdir literal)
+cat > "$BUILD_DIR/PKGBUILD" << 'PKGEOF'
+pkgname=flamekit
+pkgrel=1
+pkgdesc='Multi-source Music Player'
+arch=('x86_64')
+url='https://github.com/linghualive/linghuaplayer'
+license=('GPL-3.0-or-later')
+depends=('gtk3' 'mpv')
 
-SIZE=$(du -sb "$STAGE/usr" | awk '{print $1}')
+package() {
+  install -dm755 "$pkgdir/usr/lib/flamekit"
+  cp -r /tmp/bundle/* "$pkgdir/usr/lib/flamekit/"
 
-cat > "$STAGE/.PKGINFO" << EOF
-pkgname = flamekit
-pkgver = ${VERSION}-1
-pkgdesc = Multi-source Music Player
-url = https://github.com/linghualive/linghuaplayer
-builddate = $(date +%s)
-packager = linghualive <linghualive@users.noreply.github.com>
-size = $SIZE
-arch = x86_64
-depend = gtk3
-depend = mpv
-EOF
+  install -dm755 "$pkgdir/usr/bin"
+  printf '#!/bin/bash\nexec /usr/lib/flamekit/flamekit "$@"\n' > "$pkgdir/usr/bin/flamekit"
+  chmod 755 "$pkgdir/usr/bin/flamekit"
 
-cd "$STAGE"
-tar cf - .PKGINFO usr | zstd -o /workspace/flamekit-linux-x64.pkg.tar.zst
+  install -Dm644 /tmp/flamekit.desktop "$pkgdir/usr/share/applications/flamekit.desktop"
+  install -Dm644 /tmp/flamekit.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/flamekit.png"
+}
+PKGEOF
+
+# Inject version into PKGBUILD
+sed -i "2i pkgver=$VERSION" "$BUILD_DIR/PKGBUILD"
+
+chown -R builder:builder "$BUILD_DIR"
+cd "$BUILD_DIR"
+su builder -c 'makepkg -d'
+
+cp "$BUILD_DIR"/flamekit-*.pkg.tar.zst /workspace/flamekit-linux-x64.pkg.tar.zst
