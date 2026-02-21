@@ -10,7 +10,7 @@
 ![GitHub all releases](https://img.shields.io/github/downloads/linghualive/linghuaplayer/total)
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%20v3-blue)](LICENSE)
 
-<p>使用 Flutter 开发的多源音乐播放器，支持 Bilibili、网易云音乐、QQ 音乐</p>
+<p>使用 Flutter 开发的多源音乐播放器，支持 Bilibili、网易云音乐、QQ 音乐、GD 音乐台</p>
 
 <img src="docs/preview/player.png" width="19%" alt="播放" />
 <img src="docs/preview/discover.png" width="19%" alt="发现" />
@@ -29,7 +29,7 @@ QQ 频道：https://pd.qq.com/s/7jeytjyww?b=9
 适配移动端 (Android) 和桌面端 (macOS、Linux)
 
 - [x] 播放相关
-  - [x] 多源播放：B 站、网易云、QQ 音乐，可随时切换音乐源
+  - [x] 多源播放：B 站、网易云、QQ 音乐、GD 音乐台，可随时切换音乐源
   - [x] 播放队列管理：添加、删除、拖拽排序
   - [x] 多种播放模式：顺序播放、随机播放、单曲循环
   - [x] Mini 播放器和全屏播放器自由切换
@@ -39,7 +39,7 @@ QQ 频道：https://pd.qq.com/s/7jeytjyww?b=9
   - [x] 心动模式：AI 根据偏好自动推荐
 
 - [x] 搜索相关
-  - [x] 多源搜索：B 站、网易云、QQ 音乐切换
+  - [x] 多源搜索：B 站、网易云、QQ 音乐、GD 音乐台切换
   - [x] 热搜词和搜索建议
   - [x] 热门歌手快捷入口
   - [x] 搜索历史记录

@@ -461,6 +461,8 @@ class PlayerController extends GetxController {
     final bestAudio = info.bestAudio;
     if (bestAudio == null) throw Exception('No audio stream available');
 
+    _manualStop = false;
+
     // Try audio streams with fallback through backup URLs
     String? playedUrl;
     String playedLabel = '';
@@ -591,8 +593,22 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _playQueueItem(QueueItem item) async {
+    _manualStop = false;
     await _playback.ensureMediaKit();
-    await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
+    try {
+      await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
+    } catch (e) {
+      log('Queue item playback failed, re-resolving: $e');
+      // URL might be expired, try to re-resolve
+      final resolved = await _registry.resolvePlaybackWithFallback(item.video);
+      if (resolved != null) {
+        final (info, resolvedVideo) = resolved;
+        _putCachedResolve(item.video.uniqueId, info, resolvedVideo);
+        await _playFromInfo(info, resolvedVideo);
+      } else {
+        rethrow;
+      }
+    }
   }
 
   void togglePlay() {
@@ -853,15 +869,7 @@ class PlayerController extends GetxController {
       _pushToHistory();
       queue.removeAt(0);
       currentIndex.value = 0;
-      final item = queue[0];
-      currentVideo.value = item.video;
-      _updateUploaderMid(item.video);
-      audioQualityLabel.value = item.qualityLabel;
-
-      await _playQueueItem(item);
-      _fetchLyrics(item.video);
-      _loadRelatedMusic(item.video);
-      _prefetchQueueIfNeeded();
+      await _playCurrentQueueItem();
     } else {
       _autoPlayNext();
     }
@@ -874,17 +882,36 @@ class PlayerController extends GetxController {
       _pushToHistory();
       queue.removeAt(0);
       currentIndex.value = 0;
-      final item = queue[0];
-      currentVideo.value = item.video;
-      _updateUploaderMid(item.video);
-      audioQualityLabel.value = item.qualityLabel;
+      await _playCurrentQueueItem();
+    } else {
+      _autoPlayNext();
+    }
+  }
 
+  /// Play the current queue[0] item with error handling.
+  /// On failure, skips to next or triggers auto-play.
+  Future<void> _playCurrentQueueItem() async {
+    final item = queue[0];
+    currentVideo.value = item.video;
+    _updateUploaderMid(item.video);
+    audioQualityLabel.value = item.qualityLabel;
+
+    try {
       await _playQueueItem(item);
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
       _prefetchQueueIfNeeded();
-    } else {
-      _autoPlayNext();
+    } catch (e) {
+      log('Play queue item failed: $e');
+      AppToast.error('播放失败，跳到下一首');
+      // Remove failed item and try next
+      if (queue.isNotEmpty) queue.removeAt(0);
+      if (queue.isNotEmpty) {
+        currentIndex.value = 0;
+        await _playCurrentQueueItem();
+      } else {
+        _autoPlayNext();
+      }
     }
   }
 
@@ -901,13 +928,7 @@ class PlayerController extends GetxController {
       // Current song goes back to the front of the queue
       queue.insert(0, previous);
       currentIndex.value = 0;
-      currentVideo.value = previous.video;
-      _updateUploaderMid(previous.video);
-      audioQualityLabel.value = previous.qualityLabel;
-
-      await _playQueueItem(previous);
-      _fetchLyrics(previous.video);
-      _loadRelatedMusic(previous.video);
+      await _playCurrentQueueItem();
     } else if (hasCurrentTrack) {
       // No history, just restart current track
       seekTo(Duration.zero);
@@ -946,12 +967,7 @@ class PlayerController extends GetxController {
     final item = queue.removeAt(index - 1);
     queue.insert(0, item);
     currentIndex.value = 0;
-    currentVideo.value = item.video;
-    _updateUploaderMid(item.video);
-    audioQualityLabel.value = item.qualityLabel;
-    await _playQueueItem(item);
-    _fetchLyrics(item.video);
-    _loadRelatedMusic(item.video);
+    await _playCurrentQueueItem();
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
