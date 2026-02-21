@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=玲华音乐
+GenericName=Music Player
+Comment=Multi-source Music Player
+Exec=flamekit
+Icon=flamekit
+Terminal=false
+Type=Application
+Categories=Audio;Music;Player;AudioVideo;
+StartupNotify=true
