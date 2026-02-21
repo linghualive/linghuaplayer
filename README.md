@@ -12,11 +12,11 @@
 
 <p>使用 Flutter 开发的多源音乐播放器，支持 Bilibili、网易云音乐、QQ 音乐</p>
 
-<img src="docs/preview/播放页面.png" width="19%" alt="播放" />
-<img src="docs/preview/发现页面.png" width="19%" alt="发现" />
-<img src="docs/preview/搜索页面.png" width="19%" alt="搜索" />
-<img src="docs/preview/收藏页面.png" width="19%" alt="收藏" />
-<img src="docs/preview/我的页面.png" width="19%" alt="我的" />
+<img src="docs/preview/%E6%92%AD%E6%94%BE%E9%A1%B5%E9%9D%A2.png" width="19%" alt="播放" />
+<img src="docs/preview/%E5%8F%91%E7%8E%B0%E9%A1%B5%E9%9D%A2.png" width="19%" alt="发现" />
+<img src="docs/preview/%E6%90%9C%E7%B4%A2%E9%A1%B5%E9%9D%A2.png" width="19%" alt="搜索" />
+<img src="docs/preview/%E6%94%B6%E8%97%8F%E9%A1%B5%E9%9D%A2.png" width="19%" alt="收藏" />
+<img src="docs/preview/%E6%88%91%E7%9A%84%E9%A1%B5%E9%9D%A2.png" width="19%" alt="我的" />
 <br/>
 </div>
 
