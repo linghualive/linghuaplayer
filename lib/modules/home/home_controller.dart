@@ -11,6 +11,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../discover/discover_controller.dart';
 import '../music_discovery/music_discovery_controller.dart';
 import '../music_discovery/music_discovery_page.dart';
+import '../player/player_controller.dart';
 import '../player/player_home_tab.dart';
 import '../playlist/playlist_controller.dart';
 import '../playlist/playlist_page.dart';
@@ -47,6 +48,10 @@ class HomeController extends GetxController {
     refreshLoginStatus();
     _initializeControllers();
     _initializePages();
+
+    // Auto-play: trigger after splash completes and home page is ready
+    final playerCtrl = Get.find<PlayerController>();
+    playerCtrl.playRandomIfNeeded();
   }
 
   void _initializePages() {

@@ -1,7 +1,7 @@
 name: flamekit
 description: "Multi-source Music Player"
 publish_to: 'none'
-version: 2.9.0+25
+version: 2.10.0+26
 
 environment:
   sdk: ^3.9.2

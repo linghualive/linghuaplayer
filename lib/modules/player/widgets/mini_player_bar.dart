@@ -125,10 +125,12 @@ class MiniPlayerBar extends GetView<PlayerController> {
                       ),
                     IconButton(
                       icon: const Icon(Icons.skip_next_rounded, size: 24),
-                      onPressed: () {
-                        HapticFeedback.mediumImpact();
-                        controller.skipNext();
-                      },
+                      onPressed: controller.isLoading.value
+                          ? null
+                          : () {
+                              HapticFeedback.mediumImpact();
+                              controller.skipNext();
+                            },
                       visualDensity: VisualDensity.compact,
                     ),
                     IconButton(

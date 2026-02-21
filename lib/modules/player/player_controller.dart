@@ -117,8 +117,8 @@ class PlayerController extends GetxController {
   // Caches (PlaybackInfo, SearchVideoModel) by uniqueId to avoid
   // repeated network calls for recently resolved songs.
   final _resolveCache = <String, _CachedResolve>{};
-  static const _resolveCacheTtl = Duration(minutes: 20);
-  static const _maxCacheSize = 50;
+  static const _resolveCacheTtl = Duration(minutes: 10);
+  static const _maxCacheSize = 30;
 
   // Queue prefetch guard
   bool _isPrefetching = false;
@@ -281,8 +281,15 @@ class PlayerController extends GetxController {
     return (entry.info, entry.resolvedVideo);
   }
 
+  void _cleanExpiredCache() {
+    final now = DateTime.now();
+    _resolveCache.removeWhere(
+        (_, entry) => now.difference(entry.cachedAt) > _resolveCacheTtl);
+  }
+
   void _putCachedResolve(
       String uniqueId, PlaybackInfo info, SearchVideoModel video) {
+    _cleanExpiredCache();
     _resolveCache[uniqueId] = _CachedResolve(info, video);
     // Evict oldest if over capacity
     if (_resolveCache.length > _maxCacheSize) {
@@ -306,6 +313,7 @@ class PlayerController extends GetxController {
   Future<void> playFromSearch(
     SearchVideoModel video, {
     String? preferredSourceId = 'gdstudio',
+    bool navigate = true,
   }) async {
     // Increment generation to cancel any in-flight playFromSearch
     final gen = ++_playGeneration;
@@ -315,10 +323,11 @@ class PlayerController extends GetxController {
     // Stop current playback immediately
     _manualStop = true;
     _playback.stop();
+    isLoading.value = true;
 
     currentVideo.value = video;
     _updateUploaderMid(video);
-    _navigateToPlayer();
+    if (navigate) _navigateToPlayer();
 
     // ── Fast path 1: song already in queue (URL already resolved) ──
     final queuedIndex =
@@ -332,6 +341,7 @@ class PlayerController extends GetxController {
       audioQualityLabel.value = item.qualityLabel;
       await _playQueueItem(item);
       if (gen != _playGeneration) return;
+      isLoading.value = false;
       _storage.addPlayHistory(item.video);
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
@@ -340,7 +350,6 @@ class PlayerController extends GetxController {
     }
 
     // ── Fast path 2: URL in resolve cache ──
-    isLoading.value = true;
     final cached = _getCachedResolve(video.uniqueId);
     if (cached != null) {
       try {
@@ -491,7 +500,7 @@ class PlayerController extends GetxController {
 
   /// Auto-play a random song (called when player tab opens with empty queue).
   Future<void> playRandomIfNeeded() async {
-    if (_hasAutoPlayed || currentVideo.value != null || isLoading.value) return;
+    if (_hasAutoPlayed || currentVideo.value != null) return;
     _hasAutoPlayed = true;
 
     // 1. Try personalized recommendations using preference tags
@@ -514,7 +523,7 @@ class PlayerController extends GetxController {
           recentPlayed: recentHistory,
         );
         if (songs.isNotEmpty) {
-          await playFromSearch(songs.first);
+          await playFromSearch(songs.first, navigate: false);
           for (int i = 1; i < songs.length && i < 5; i++) {
             await addToQueueSilent(songs[i]);
           }
@@ -534,22 +543,26 @@ class PlayerController extends GetxController {
     final random = Random();
     final keyword = keywords[random.nextInt(keywords.length)];
 
-    try {
-      final musicSources = _registry.availableSources
-          .where((s) => s.sourceId != 'bilibili')
-          .toList();
-      for (final source in musicSources) {
+    // Skip gdstudio (may be slow/down) and bilibili (non-music results)
+    final musicSources = _registry.availableSources
+        .where((s) => s.sourceId != 'bilibili' && s.sourceId != 'gdstudio')
+        .toList();
+    for (final source in musicSources) {
+      try {
         final result = await source.searchTracks(keyword: keyword, limit: 10);
         if (result.tracks.isNotEmpty) {
           final maxIndex = result.tracks.length.clamp(1, 5);
           final video = result.tracks[random.nextInt(maxIndex)];
-          await playFromSearch(video);
+          await playFromSearch(video, navigate: false);
           return;
         }
+      } catch (e) {
+        log('playRandomIfNeeded ${source.sourceId} error: $e');
       }
-    } catch (e) {
-      log('playRandomIfNeeded error: $e');
     }
+
+    // All attempts failed — allow retry next time
+    _hasAutoPlayed = false;
   }
 
   void _addToQueue({
@@ -582,7 +595,27 @@ class PlayerController extends GetxController {
     await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
   }
 
-  void togglePlay() => _playback.togglePlay();
+  void togglePlay() {
+    if (!hasCurrentTrack) {
+      _triggerAutoPlay();
+      return;
+    }
+    _playback.togglePlay();
+  }
+
+  /// Trigger auto-play with loading feedback.
+  Future<void> _triggerAutoPlay() async {
+    if (isLoading.value) return;
+    isLoading.value = true;
+    _hasAutoPlayed = false;
+    try {
+      await playRandomIfNeeded();
+    } finally {
+      if (!hasCurrentTrack) {
+        isLoading.value = false;
+      }
+    }
+  }
 
   void seekTo(Duration pos) => _playback.seekTo(pos);
 
@@ -622,8 +655,7 @@ class PlayerController extends GetxController {
 
     final video = currentVideo.value;
     if (video == null) {
-      _hasAutoPlayed = false;
-      await playRandomIfNeeded();
+      await _triggerAutoPlay();
       return;
     }
 
@@ -876,9 +908,12 @@ class PlayerController extends GetxController {
       await _playQueueItem(previous);
       _fetchLyrics(previous.video);
       _loadRelatedMusic(previous.video);
-    } else {
+    } else if (hasCurrentTrack) {
       // No history, just restart current track
       seekTo(Duration.zero);
+    } else {
+      // No track at all, find something to play
+      _triggerAutoPlay();
     }
   }
 
@@ -998,9 +1033,10 @@ class PlayerController extends GetxController {
   /// Pre-resolve URLs for top related songs in background.
   /// Results are stored in cache so playFromSearch can use them instantly.
   void _preResolveRelatedMusic() {
+    _cleanExpiredCache();
     final candidates = relatedMusic
         .where((s) => !_resolveCache.containsKey(s.uniqueId))
-        .take(3)
+        .take(2)
         .toList();
 
     for (final song in candidates) {

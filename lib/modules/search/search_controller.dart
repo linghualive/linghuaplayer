@@ -21,6 +21,16 @@ enum SearchState { hot, suggesting, results, empty }
 enum NeteaseSearchType { song, artist, album, playlist }
 
 class SearchController extends GetxController {
+  // 热门歌手列表
+  static const hotArtists = [
+    '周杰伦', '林俊杰', '薛之谦', '邓紫棋', '毛不易',
+    '陈奕迅', '王菲', '李荣浩', '华晨宇', '许嵩',
+    '张学友', '刘德华', 'Beyond', '张国荣',
+    '米津玄師', 'YOASOBI', 'IU', 'BLACKPINK',
+    'Taylor Swift', 'Ed Sheeran',
+  ];
+
+
   final _registry = Get.find<MusicSourceRegistry>();
   final _neteaseRepo = Get.find<NeteaseRepository>();
   final _storage = Get.find<StorageService>();

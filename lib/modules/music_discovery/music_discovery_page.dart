@@ -121,7 +121,11 @@ class MusicDiscoveryPage extends StatelessWidget {
               _buildGenreSection(controller, theme),
               const SizedBox(height: 16),
 
-              // ── 5. 多源排行榜 ──
+              // ── 5. 发现音乐 ──
+              _buildDiscoverSection(controller, theme),
+              const SizedBox(height: 16),
+
+              // ── 7. 多源排行榜 ──
               if (controller.neteaseToplistPreview.isNotEmpty ||
                   controller.qqMusicToplistPreview.isNotEmpty) ...[
                 const SectionHeader(title: '排行榜'),
@@ -130,7 +134,7 @@ class MusicDiscoveryPage extends StatelessWidget {
                 const SizedBox(height: 16),
               ],
 
-              // ── 6. 热门歌手推荐 ──
+              // ── 8. 热门歌手推荐 ──
               _buildSingerSection(controller, theme),
 
               // 底部留白
@@ -445,6 +449,126 @@ class MusicDiscoveryPage extends StatelessWidget {
           }
           return _buildPlaylistScroll(
             playlists: controller.genrePlaylists
+                .map((p) => PlaylistBrief(
+                      id: p.id.toString(),
+                      sourceId: 'netease',
+                      name: p.name,
+                      coverUrl: p.coverUrl,
+                      playCount: p.playCount,
+                    ))
+                .toList(),
+            onTap: (p) => Get.toNamed(
+              AppRoutes.neteasePlaylistDetail,
+              arguments: NeteasePlaylistBrief(
+                id: int.tryParse(p.id) ?? 0,
+                name: p.name,
+                coverUrl: p.coverUrl,
+                playCount: p.playCount,
+              ),
+            ),
+            theme: theme,
+          );
+        }),
+      ],
+    );
+  }
+
+  // ── 发现音乐板块 ──
+
+  Widget _buildDiscoverSection(
+      MusicDiscoveryController controller, ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: '发现音乐'),
+        const SizedBox(height: 4),
+        // Category selector
+        SizedBox(
+          height: 36,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: MusicDiscoveryController.discoverCategories.length,
+            itemBuilder: (context, index) {
+              final cat =
+                  MusicDiscoveryController.discoverCategories[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Obx(() {
+                  final isSelected =
+                      controller.selectedDiscoverCategory.value ==
+                          cat['keyword'];
+                  return ChoiceChip(
+                    label: Text(cat['label']!),
+                    selected: isSelected,
+                    onSelected: (_) => controller
+                        .onDiscoverCategoryChanged(cat['keyword']!),
+                    labelStyle: theme.textTheme.bodySmall?.copyWith(
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  );
+                }),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Discover playlists
+        Obx(() {
+          if (controller.isLoadingDiscover.value) {
+            return SizedBox(
+              height: 190,
+              child: Shimmer.fromColors(
+                baseColor: theme.colorScheme.surfaceContainerHighest,
+                highlightColor: theme.colorScheme.surface,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: 4,
+                  itemBuilder: (_, __) => Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: SizedBox(
+                      width: 130,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 12,
+                            width: 100,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+          if (controller.discoverPlaylists.isEmpty) {
+            return const SizedBox(
+              height: 60,
+              child: Center(child: Text('暂无歌单')),
+            );
+          }
+          return _buildPlaylistScroll(
+            playlists: controller.discoverPlaylists
                 .map((p) => PlaylistBrief(
                       id: p.id.toString(),
                       sourceId: 'netease',

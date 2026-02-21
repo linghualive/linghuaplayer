@@ -83,6 +83,29 @@ class HotSearchList extends GetView<app.SearchController> {
               );
             }).toList(),
           ),
+
+          // 热门歌手
+          const SizedBox(height: 24),
+          Text(
+            '热门歌手',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: app.SearchController.hotArtists.map((artist) {
+              return ActionChip(
+                label: Text(artist),
+                onPressed: () => controller.onHotKeywordTap(artist),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              );
+            }).toList(),
+          ),
+
         ],
       );
     });

@@ -15,6 +15,20 @@ class MusicDiscoveryController extends GetxController {
   final _qqMusicRepo = Get.find<QqMusicRepository>();
   final _storage = Get.find<StorageService>();
 
+  // 发现音乐分类（使用 NetEase 官方歌单分类）
+  static const discoverCategories = [
+    {'label': '经典老歌', 'keyword': '经典'},
+    {'label': '80后', 'keyword': '80后'},
+    {'label': '90后', 'keyword': '90后'},
+    {'label': 'ACG动漫', 'keyword': 'ACG'},
+    {'label': '影视原声', 'keyword': '影视原声'},
+    {'label': 'KTV热歌', 'keyword': 'KTV'},
+    {'label': '网络歌曲', 'keyword': '网络歌曲'},
+    {'label': '校园', 'keyword': '校园'},
+    {'label': '游戏', 'keyword': '游戏'},
+    {'label': '翻唱', 'keyword': '翻唱'},
+  ];
+
   // ── Existing state (kept) ──
   final dailyRecommendSongs = <SearchVideoModel>[].obs;
   final dailyRecommendPlaylists = <NeteasePlaylistBrief>[].obs;
@@ -26,6 +40,9 @@ class MusicDiscoveryController extends GetxController {
   final selectedGenre = '流行'.obs;
   final genrePlaylists = <NeteasePlaylistBrief>[].obs;
   final isLoadingGenre = false.obs;
+  final selectedDiscoverCategory = '经典'.obs;
+  final discoverPlaylists = <NeteasePlaylistBrief>[].obs;
+  final isLoadingDiscover = false.obs;
   final selectedSingerArea = 200.obs;
   final hotSingers = <QqMusicSingerBrief>[].obs;
   final isLoadingSingers = false.obs;
@@ -46,6 +63,7 @@ class MusicDiscoveryController extends GetxController {
         _loadNeteaseToplistPreview(),
         _loadQqMusicToplistPreview(),
         _loadGenrePlaylists(),
+        _loadDiscoverPlaylists(),
         _loadHotSingers(),
       ];
       if (_storage.isNeteaseLoggedIn) {
@@ -130,6 +148,20 @@ class MusicDiscoveryController extends GetxController {
     isLoadingGenre.value = false;
   }
 
+  Future<void> _loadDiscoverPlaylists() async {
+    isLoadingDiscover.value = true;
+    try {
+      final playlists = await _neteaseRepo.getHotPlaylistsByCategory(
+        cat: selectedDiscoverCategory.value,
+        limit: 6,
+      );
+      discoverPlaylists.assignAll(playlists);
+    } catch (e) {
+      log('Load discover playlists error: $e');
+    }
+    isLoadingDiscover.value = false;
+  }
+
   Future<void> _loadHotSingers() async {
     isLoadingSingers.value = true;
     try {
@@ -166,6 +198,11 @@ class MusicDiscoveryController extends GetxController {
   void onGenreChanged(String genre) {
     selectedGenre.value = genre;
     _loadGenrePlaylists();
+  }
+
+  void onDiscoverCategoryChanged(String keyword) {
+    selectedDiscoverCategory.value = keyword;
+    _loadDiscoverPlaylists();
   }
 
   void onSingerAreaChanged(int area) {

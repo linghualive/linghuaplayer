@@ -193,40 +193,60 @@ class PlayerControls extends GetView<PlayerController> {
               IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_previous_rounded),
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  controller.skipPrevious();
-                },
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () {
+                        HapticFeedback.mediumImpact();
+                        controller.skipPrevious();
+                      },
               ),
               const SizedBox(width: 12),
               SizedBox(
                 width: 64,
                 height: 64,
-                child: FilledButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    controller.togglePlay();
-                  },
-                  style: FilledButton.styleFrom(
-                    shape: const CircleBorder(),
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: Icon(
-                    controller.isPlaying.value
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    size: 36,
-                  ),
-                ),
+                child: controller.isLoading.value
+                    ? FilledButton(
+                        onPressed: null,
+                        style: FilledButton.styleFrom(
+                          shape: const CircleBorder(),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : FilledButton(
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          controller.togglePlay();
+                        },
+                        style: FilledButton.styleFrom(
+                          shape: const CircleBorder(),
+                          padding: EdgeInsets.zero,
+                        ),
+                        child: Icon(
+                          controller.isPlaying.value
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 36,
+                        ),
+                      ),
               ),
               const SizedBox(width: 12),
               IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_next_rounded),
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  controller.skipNext();
-                },
+                onPressed: controller.isLoading.value
+                    ? null
+                    : () {
+                        HapticFeedback.mediumImpact();
+                        controller.skipNext();
+                      },
               ),
               const SizedBox(width: 8),
               IconButton(

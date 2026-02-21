@@ -77,7 +77,10 @@ class DesktopMusicDiscoveryPage extends GetView<MusicDiscoveryController> {
               // ── 5. 风格分类歌单 ──
               _buildGenreSliver(context),
 
-              // ── 6. 热门歌手推荐 ──
+              // ── 6. 发现音乐 ──
+              _buildDiscoverSliver(context),
+
+              // ── 7. 热门歌手推荐 ──
               _buildSingerSliver(context),
 
               const SliverToBoxAdapter(
@@ -523,6 +526,109 @@ class DesktopMusicDiscoveryPage extends GetView<MusicDiscoveryController> {
                     itemBuilder: (context, index) {
                       final playlist =
                           controller.genrePlaylists[index];
+                      return _DesktopPlaylistCard(
+                        name: playlist.name,
+                        coverUrl: playlist.coverUrl,
+                        playCount: playlist.playCount,
+                        onTap: () => Get.toNamed(
+                          AppRoutes.neteasePlaylistDetail,
+                          arguments: playlist,
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // ── Discover section ──
+
+  SliverToBoxAdapter _buildDiscoverSliver(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: SectionHeader(title: '发现音乐'),
+          ),
+          // Category selector
+          SizedBox(
+            height: 36,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              itemCount:
+                  MusicDiscoveryController.discoverCategories.length,
+              itemBuilder: (context, index) {
+                final cat =
+                    MusicDiscoveryController.discoverCategories[index];
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Obx(() {
+                    final isSelected =
+                        controller.selectedDiscoverCategory.value ==
+                            cat['keyword'];
+                    return ChoiceChip(
+                      label: Text(cat['label']!),
+                      selected: isSelected,
+                      onSelected: (_) => controller
+                          .onDiscoverCategoryChanged(cat['keyword']!),
+                      labelStyle: theme.textTheme.bodySmall?.copyWith(
+                        color: isSelected
+                            ? theme.colorScheme.onPrimary
+                            : theme.colorScheme.onSurface,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    );
+                  }),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Discover playlists
+          Obx(() {
+            if (controller.isLoadingDiscover.value) {
+              return const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (controller.discoverPlaylists.isEmpty) {
+              return const SizedBox(
+                height: 60,
+                child: Center(child: Text('暂无歌单')),
+              );
+            }
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = Breakpoints.getGridColumns(
+                          constraints.maxWidth)
+                      .clamp(3, 6);
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 0.75,
+                    ),
+                    itemCount: controller.discoverPlaylists.length,
+                    itemBuilder: (context, index) {
+                      final playlist =
+                          controller.discoverPlaylists[index];
                       return _DesktopPlaylistCard(
                         name: playlist.name,
                         coverUrl: playlist.coverUrl,
