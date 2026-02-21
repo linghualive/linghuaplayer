@@ -26,6 +26,7 @@ arch=('x86_64')
 url='https://github.com/linghualive/linghuaplayer'
 license=('GPL-3.0-or-later')
 depends=('gtk3' 'mpv')
+options=('!strip' '!debug')
 
 package() {
   install -dm755 "$pkgdir/usr/lib/flamekit"
@@ -47,4 +48,4 @@ chown -R builder:builder "$BUILD_DIR"
 cd "$BUILD_DIR"
 su builder -c 'makepkg -d'
 
-cp "$BUILD_DIR"/flamekit-*.pkg.tar.zst /workspace/flamekit-linux-x64.pkg.tar.zst
+cp "$BUILD_DIR/flamekit-${VERSION}-1-x86_64.pkg.tar.zst" /workspace/flamekit-linux-x64.pkg.tar.zst
