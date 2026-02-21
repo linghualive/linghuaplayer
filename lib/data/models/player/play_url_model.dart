@@ -1,16 +1,14 @@
 import 'audio_stream_model.dart';
-import 'video_stream_model.dart';
 
 class PlayUrlModel {
   final List<AudioStreamModel> audioStreams;
-  final List<VideoStreamModel> videoStreams;
 
-  PlayUrlModel({required this.audioStreams, required this.videoStreams});
+  PlayUrlModel({required this.audioStreams});
 
   factory PlayUrlModel.fromJson(Map<String, dynamic> json) {
     final dash = json['dash'] as Map<String, dynamic>?;
     if (dash == null) {
-      return PlayUrlModel(audioStreams: [], videoStreams: []);
+      return PlayUrlModel(audioStreams: []);
     }
 
     final List<AudioStreamModel> streams = [];
@@ -63,46 +61,14 @@ class PlayUrlModel {
       return b.bandwidth.compareTo(a.bandwidth);
     });
 
-    // 4. Parse video streams
-    final List<VideoStreamModel> videoList = [];
-    final dashVideo = dash['video'];
-    if (dashVideo != null && dashVideo is List) {
-      for (final item in dashVideo) {
-        if (item is Map<String, dynamic>) {
-          final vs = VideoStreamModel.fromJson(item);
-          if (vs.baseUrl.isNotEmpty) {
-            videoList.add(vs);
-          }
-        }
-      }
-    }
-
-    // Sort video streams: highest quality first, prefer AVC at same quality
-    videoList.sort((a, b) {
-      final qualityCompare = b.id.compareTo(a.id);
-      if (qualityCompare != 0) return qualityCompare;
-      // At same quality, prefer AVC (codecid=7) for broadest hardware support
-      if (a.isAvc && !b.isAvc) return -1;
-      if (!a.isAvc && b.isAvc) return 1;
-      return b.bandwidth.compareTo(a.bandwidth);
-    });
-
-    return PlayUrlModel(audioStreams: streams, videoStreams: videoList);
+    return PlayUrlModel(audioStreams: streams);
   }
 
   /// Get the best quality audio stream available
   AudioStreamModel? get bestAudio =>
       audioStreams.isNotEmpty ? audioStreams.first : null;
 
-  /// Get the best quality video stream available (prefers AVC)
-  VideoStreamModel? get bestVideo =>
-      videoStreams.isNotEmpty ? videoStreams.first : null;
-
   /// Get all available audio quality labels
   List<String> get availableQualities =>
       audioStreams.map((s) => s.qualityLabel).toList();
-
-  /// Get all available video quality labels
-  List<String> get availableVideoQualities =>
-      videoStreams.map((s) => '${s.qualityLabel} ${s.codecs}').toList();
 }

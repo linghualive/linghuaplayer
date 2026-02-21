@@ -57,10 +57,7 @@ class NeteaseSourceAdapter extends MusicSourceAdapter
   }
 
   @override
-  Future<PlaybackInfo?> resolvePlayback(
-    SearchVideoModel track, {
-    bool videoMode = false,
-  }) async {
+  Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track) async {
     final url = await _neteaseRepo.getSongUrl(track.id);
     if (url == null || url.isEmpty) return null;
 

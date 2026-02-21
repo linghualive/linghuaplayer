@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../core/storage/storage_service.dart';
@@ -184,19 +185,28 @@ class PlayerControls extends GetView<PlayerController> {
                       ? Theme.of(context).colorScheme.outline
                       : Theme.of(context).colorScheme.primary,
                 ),
-                onPressed: controller.togglePlayMode,
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  controller.togglePlayMode();
+                },
               ),
               IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_previous_rounded),
-                onPressed: controller.skipPrevious,
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  controller.skipPrevious();
+                },
               ),
               const SizedBox(width: 12),
               SizedBox(
                 width: 64,
                 height: 64,
                 child: FilledButton(
-                  onPressed: controller.togglePlay,
+                  onPressed: () {
+                    HapticFeedback.lightImpact();
+                    controller.togglePlay();
+                  },
                   style: FilledButton.styleFrom(
                     shape: const CircleBorder(),
                     padding: EdgeInsets.zero,
@@ -213,7 +223,10 @@ class PlayerControls extends GetView<PlayerController> {
               IconButton(
                 iconSize: 32,
                 icon: const Icon(Icons.skip_next_rounded),
-                onPressed: controller.skipNext,
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  controller.skipNext();
+                },
               ),
               const SizedBox(width: 8),
               IconButton(
@@ -266,23 +279,6 @@ class PlayerControls extends GetView<PlayerController> {
                   style: TextButton.styleFrom(
                     foregroundColor: controller.isHeartMode.value
                         ? Colors.pink
-                        : Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: controller.toggleVideoMode,
-                  icon: Icon(
-                    Icons.music_video,
-                    size: 18,
-                  ),
-                  label: Text(
-                    controller.isVideoMode.value ? 'MV 播放中' : 'MV',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: controller.isVideoMode.value
-                        ? Theme.of(context).colorScheme.primary
                         : Theme.of(context).colorScheme.outline,
                   ),
                 ),

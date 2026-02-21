@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/theme/color_type.dart';
 import 'settings_controller.dart';
@@ -120,19 +121,6 @@ class SettingsPage extends GetView<SettingsController> {
 
           const Divider(),
 
-          // ── 播放设置 ──
-          _buildSectionHeader(theme, '播放设置'),
-
-          // Video Playback
-          Obx(() => SwitchListTile(
-                title: const Text('默认视频模式'),
-                subtitle: const Text('开启后默认播放视频画面，可在播放页切换'),
-                value: controller.enableVideo.value,
-                onChanged: (v) => controller.setEnableVideo(v),
-              )),
-
-          const Divider(),
-
           // ── AI 智能推荐 ──
           _buildSectionHeader(theme, 'AI 智能推荐'),
 
@@ -160,6 +148,22 @@ class SettingsPage extends GetView<SettingsController> {
                     ? null
                     : () => _showApiKeyDialog(context),
               )),
+
+          const Divider(),
+
+          // ── 交流反馈 ──
+          _buildSectionHeader(theme, '交流反馈'),
+
+          ListTile(
+            leading: const Icon(Icons.forum_outlined),
+            title: const Text('加入交流频道'),
+            subtitle: const Text('腾讯频道【玲华音乐】'),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () => launchUrl(
+              Uri.parse('https://pd.qq.com/s/7jeytjyww?b=9'),
+              mode: LaunchMode.externalApplication,
+            ),
+          ),
 
           const Divider(),
 

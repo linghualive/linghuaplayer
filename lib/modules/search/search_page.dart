@@ -11,6 +11,7 @@ import 'search_controller.dart' as app;
 import 'widgets/hot_search_list.dart';
 import 'widgets/search_suggestion_list.dart';
 import 'widgets/search_result_card.dart';
+import 'widgets/search_skeleton.dart';
 
 class SearchPage extends GetView<app.SearchController> {
   final bool isEmbedded;
@@ -201,7 +202,7 @@ class SearchPage extends GetView<app.SearchController> {
             child: Obx(() {
               if (controller.isLoading.value &&
                   controller.allResults.isEmpty) {
-                return const Center(child: CircularProgressIndicator());
+                return const SearchResultSkeleton();
               }
               return ListView.builder(
                 itemCount: controller.allResults.length +

@@ -11,7 +11,6 @@ class SettingsController extends GetxController {
   final themeCtrl = Get.find<ThemeController>();
   final _storage = Get.find<StorageService>();
 
-  final enableVideo = false.obs;
   final appVersion = ''.obs;
   final isCheckingUpdate = false.obs;
 
@@ -22,7 +21,6 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    enableVideo.value = _storage.enableVideo;
     deepseekApiKey.value = _storage.deepseekApiKey ?? '';
     _loadVersion();
   }
@@ -30,11 +28,6 @@ class SettingsController extends GetxController {
   Future<void> _loadVersion() async {
     final info = await PackageInfo.fromPlatform();
     appVersion.value = info.version;
-  }
-
-  void setEnableVideo(bool value) {
-    enableVideo.value = value;
-    _storage.enableVideo = value;
   }
 
   Future<void> checkForUpdate() async {

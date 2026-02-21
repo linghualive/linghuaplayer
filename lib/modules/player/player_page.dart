@@ -7,7 +7,6 @@ import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
 import 'widgets/player_lyrics.dart';
-import 'widgets/player_video.dart';
 import 'widgets/related_music_sheet.dart';
 
 class PlayerPage extends GetView<PlayerController> {
@@ -71,9 +70,6 @@ class PlayerPage extends GetView<PlayerController> {
 
   Widget _buildArtworkArea() {
     return Obx(() {
-      if (controller.isVideoMode.value) {
-        return const PlayerVideo();
-      }
       return GestureDetector(
         onTap: () => controller.toggleLyricsView(),
         child: controller.showLyrics.value

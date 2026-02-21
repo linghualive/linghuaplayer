@@ -71,14 +71,6 @@ class MusicProvider {
     );
   }
 
-  /// Get MV list
-  Future<Response> getMvList({int pn = 1, int ps = 10, int order = 0}) {
-    return _dio.get(
-      ApiConstants.mvList,
-      queryParameters: {'pn': pn, 'ps': ps, 'order': order},
-    );
-  }
-
   /// Get partition ranking (e.g. music zone rid=3)
   Future<Response> getPartitionRanking(Map<String, dynamic> params) {
     return _dio.get(

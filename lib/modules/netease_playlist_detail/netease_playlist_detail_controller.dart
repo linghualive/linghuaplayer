@@ -1,9 +1,9 @@
-import 'dart:developer';
-
 import 'package:get/get.dart';
 
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/netease_repository.dart';
+import '../../data/services/local_playlist_service.dart';
+import '../../shared/utils/app_toast.dart';
 import '../player/player_controller.dart';
 
 class NeteasePlaylistDetailController extends GetxController {
@@ -67,6 +67,37 @@ class NeteasePlaylistDetailController extends GetxController {
     playerCtrl.playFromSearch(tracks.first, preferredSourceId: null);
     for (int i = 1; i < tracks.length; i++) {
       playerCtrl.addToQueueSilent(tracks[i]);
+    }
+  }
+
+  /// Check if this playlist is already imported locally.
+  bool get isImported {
+    final service = Get.find<LocalPlaylistService>();
+    return service.findByRemoteId('netease', playlistId.toString()) != null;
+  }
+
+  /// Import this playlist to local collection, or update if already imported.
+  void importToLocal() {
+    final d = detail.value;
+    if (d == null || tracks.isEmpty) return;
+
+    final service = Get.find<LocalPlaylistService>();
+    final existing = service.findByRemoteId('netease', playlistId.toString());
+
+    if (existing != null) {
+      service.refreshPlaylist(existing.id, tracks);
+      AppToast.show('歌单已更新');
+    } else {
+      service.importPlaylist(
+        name: d.name,
+        coverUrl: d.coverUrl,
+        sourceTag: 'netease',
+        remoteId: playlistId.toString(),
+        tracks: tracks,
+        creatorName: d.creatorName,
+        description: d.description,
+      );
+      AppToast.show('已收藏到歌单');
     }
   }
 }

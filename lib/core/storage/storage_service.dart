@@ -151,10 +151,6 @@ class StorageService extends GetxService {
   int get customColor => _box.read<int>('custom_color') ?? 0;
   set customColor(int value) => _box.write('custom_color', value);
 
-  // Video playback
-  bool get enableVideo => _box.read<bool>('enable_video') ?? false;
-  set enableVideo(bool value) => _box.write('enable_video', value);
-
   // Grid settings
   int get customRows => _box.read<int>('custom_rows') ?? 2;
   set customRows(int value) => _box.write('custom_rows', value);

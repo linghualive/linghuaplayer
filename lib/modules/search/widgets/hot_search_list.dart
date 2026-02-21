@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../search_controller.dart' as app;
+import 'search_skeleton.dart';
 
 class HotSearchList extends GetView<app.SearchController> {
   const HotSearchList({super.key});
@@ -10,7 +11,7 @@ class HotSearchList extends GetView<app.SearchController> {
   Widget build(BuildContext context) {
     return Obx(() {
       if (controller.isLoading.value && controller.hotSearchList.isEmpty) {
-        return const Center(child: CircularProgressIndicator());
+        return const HotSearchSkeleton();
       }
 
       return ListView(

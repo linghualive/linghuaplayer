@@ -43,7 +43,7 @@ class QqMusicPlaylistDetailPage extends StatelessWidget {
                   child: _buildHeader(context, controller, theme),
                 ),
 
-              // Play all button
+              // Play all + import buttons
               SliverToBoxAdapter(
                 child: Padding(
                   padding:
@@ -54,6 +54,19 @@ class QqMusicPlaylistDetailPage extends StatelessWidget {
                         onPressed: controller.playAll,
                         icon: const Icon(Icons.play_arrow),
                         label: Text('播放全部 (${controller.tracks.length})'),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: controller.importToLocal,
+                        icon: Icon(
+                          controller.isImported
+                              ? Icons.sync
+                              : Icons.playlist_add,
+                          size: 20,
+                        ),
+                        label: Text(
+                          controller.isImported ? '更新歌单' : '收藏歌单',
+                        ),
                       ),
                     ],
                   ),

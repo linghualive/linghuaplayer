@@ -25,7 +25,11 @@ import 'modules/player/services/media_session_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  MediaKit.ensureInitialized();
+
+  // MediaKit is only needed on macOS/Linux for audio playback
+  if (Platform.isMacOS || Platform.isLinux) {
+    MediaKit.ensureInitialized();
+  }
 
   // Set transparent system bars for edge-to-edge on Android 15+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(

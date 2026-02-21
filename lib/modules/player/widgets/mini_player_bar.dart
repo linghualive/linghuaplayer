@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
@@ -116,12 +117,18 @@ class MiniPlayerBar extends GetView<PlayerController> {
                               : Icons.play_arrow_rounded,
                           size: 28,
                         ),
-                        onPressed: controller.togglePlay,
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          controller.togglePlay();
+                        },
                         visualDensity: VisualDensity.compact,
                       ),
                     IconButton(
                       icon: const Icon(Icons.skip_next_rounded, size: 24),
-                      onPressed: controller.skipNext,
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        controller.skipNext();
+                      },
                       visualDensity: VisualDensity.compact,
                     ),
                     IconButton(

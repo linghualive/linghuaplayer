@@ -50,10 +50,7 @@ class QqMusicSourceAdapter extends MusicSourceAdapter
   // ── Core: resolvePlayback ──
 
   @override
-  Future<PlaybackInfo?> resolvePlayback(
-    SearchVideoModel track, {
-    bool videoMode = false,
-  }) async {
+  Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track) async {
     final songmid = track.bvid; // songmid stored in bvid field
     if (songmid.isEmpty) return null;
 

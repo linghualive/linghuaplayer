@@ -18,7 +18,7 @@ import 'music_source_adapter.dart';
 /// Thin wrapper around existing SearchRepository, PlayerRepository,
 /// MusicRepository, and LyricsRepository.
 class BilibiliSourceAdapter extends MusicSourceAdapter
-    with LyricsCapability, SearchSuggestCapability, VideoCapability, PlaylistCapability {
+    with LyricsCapability, SearchSuggestCapability, PlaylistCapability {
   final SearchRepository _searchRepo;
   final PlayerRepository _playerRepo;
   final MusicRepository _musicRepo;
@@ -64,49 +64,10 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
   }
 
   @override
-  Future<PlaybackInfo?> resolvePlayback(
-    SearchVideoModel track, {
-    bool videoMode = false,
-  }) async {
+  Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track) async {
     final bvid = track.bvid;
     if (bvid.isEmpty) return null;
 
-    if (videoMode) {
-      final playUrl = await _playerRepo.getFullPlayUrl(bvid);
-      if (playUrl == null) return null;
-
-      final audioStreams = playUrl.audioStreams
-          .map((s) => StreamOption(
-                url: s.baseUrl,
-                backupUrl: s.backupUrl,
-                qualityLabel: s.qualityLabel,
-                bandwidth: s.bandwidth,
-                codec: s.codecs,
-                headers: _bilibiliHeaders,
-              ))
-          .toList();
-
-      final videoStreams = playUrl.videoStreams
-          .map((s) => StreamOption(
-                url: s.baseUrl,
-                backupUrl: s.backupUrl,
-                qualityLabel: s.qualityLabel,
-                bandwidth: s.bandwidth,
-                codec: s.codecs,
-                headers: _bilibiliHeaders,
-              ))
-          .toList();
-
-      if (audioStreams.isEmpty) return null;
-
-      return PlaybackInfo(
-        audioStreams: audioStreams,
-        videoStreams: videoStreams,
-        sourceId: sourceId,
-      );
-    }
-
-    // Audio-only
     final streams = await _playerRepo.getAudioStreams(bvid);
     if (streams.isEmpty) return null;
 
@@ -150,11 +111,6 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
     final suggestions = await _searchRepo.getSuggestions(term);
     return suggestions.map((s) => s.value).toList();
   }
-
-  // ── VideoCapability ──
-
-  @override
-  bool hasVideo(SearchVideoModel track) => track.bvid.isNotEmpty;
 
   // ── PlaylistCapability ──
 

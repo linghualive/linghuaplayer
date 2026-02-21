@@ -42,10 +42,7 @@ class GdStudioSourceAdapter extends MusicSourceAdapter with LyricsCapability {
   // ── Core: resolvePlayback ──
 
   @override
-  Future<PlaybackInfo?> resolvePlayback(
-    SearchVideoModel track, {
-    bool videoMode = false,
-  }) async {
+  Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track) async {
     return _repo.resolvePlayback(track);
   }
 

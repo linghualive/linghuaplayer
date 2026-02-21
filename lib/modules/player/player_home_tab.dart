@@ -7,7 +7,6 @@ import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
 import 'widgets/player_lyrics.dart';
-import 'widgets/player_video.dart';
 import 'widgets/related_music_sheet.dart';
 
 class PlayerHomeTab extends StatelessWidget {
@@ -92,20 +91,6 @@ class PlayerHomeTab extends StatelessWidget {
           onPressed: () => FavPanel.show(context, video),
         );
       }),
-      Obx(() {
-        final video = playerCtrl.currentVideo.value;
-        if (video == null) return const SizedBox.shrink();
-        return IconButton(
-          icon: Icon(
-            Icons.music_video,
-            color: playerCtrl.isVideoMode.value
-                ? Theme.of(context).colorScheme.primary
-                : null,
-          ),
-          tooltip: playerCtrl.isVideoMode.value ? 'MV 播放中' : 'MV',
-          onPressed: playerCtrl.toggleVideoMode,
-        );
-      }),
       IconButton(
         icon: const Icon(Icons.explore),
         tooltip: '相关推荐',
@@ -177,9 +162,6 @@ class PlayerHomeTab extends StatelessWidget {
 
   Widget _buildArtworkArea(PlayerController playerCtrl) {
     return Obx(() {
-      if (playerCtrl.isVideoMode.value) {
-        return const PlayerVideo();
-      }
       return GestureDetector(
         onTap: () => playerCtrl.toggleLyricsView(),
         child: playerCtrl.showLyrics.value

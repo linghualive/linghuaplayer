@@ -8,7 +8,6 @@ import '../models/music/audio_song_model.dart';
 import '../models/music/hot_playlist_model.dart';
 import '../models/music/music_rank_period_model.dart';
 import '../models/music/music_rank_song_model.dart';
-import '../models/music/mv_item_model.dart';
 import '../models/music/playlist_detail_model.dart';
 import '../models/search/search_video_model.dart';
 import '../providers/music_provider.dart';
@@ -97,19 +96,6 @@ class MusicRepository {
       return list
           .map((e) =>
               MusicRankSongModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    return [];
-  }
-
-  /// Get MV list
-  Future<List<MvItemModel>> getMvList(
-      {int pn = 1, int ps = 10, int order = 0}) async {
-    final res = await _provider.getMvList(pn: pn, ps: ps, order: order);
-    if (res.data['code'] == 0 && res.data['data'] != null) {
-      final list = res.data['data']['result'] as List<dynamic>? ?? [];
-      return list
-          .map((e) => MvItemModel.fromJson(e as Map<String, dynamic>))
           .toList();
     }
     return [];

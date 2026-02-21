@@ -1,10 +1,8 @@
 import 'dart:developer';
 import 'dart:math' show Random;
 
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:media_kit_video/media_kit_video.dart' as mkv;
 
 import '../../app/routes/app_routes.dart';
 import '../../core/storage/storage_service.dart';
@@ -30,16 +28,12 @@ class QueueItem {
   final SearchVideoModel video;
   final String audioUrl;
   final String qualityLabel;
-  final String? videoUrl;
-  final String? videoQualityLabel;
   final Map<String, String> headers;
 
   QueueItem({
     required this.video,
     required this.audioUrl,
     this.qualityLabel = '',
-    this.videoUrl,
-    this.videoQualityLabel,
     this.headers = const {},
   });
 }
@@ -55,13 +49,11 @@ class PlayerController extends GetxController {
   // Reactive state (delegated from PlaybackService)
   final currentVideo = Rxn<SearchVideoModel>();
   final isLoading = false.obs;
-  final isFullScreen = false.obs;
 
   RxBool get isPlaying => _playback.isPlaying;
   Rx<Duration> get position => _playback.position;
   Rx<Duration> get duration => _playback.duration;
   Rx<Duration> get buffered => _playback.buffered;
-  RxBool get isVideoMode => _playback.isVideoMode;
 
   // Queue
   final queue = <QueueItem>[].obs;
@@ -76,7 +68,6 @@ class PlayerController extends GetxController {
 
   // Audio quality
   final audioQualityLabel = ''.obs;
-  final videoQualityLabel = ''.obs;
 
   // Current playback source
   final currentPlaybackSourceId = 'gdstudio'.obs;
@@ -97,7 +88,6 @@ class PlayerController extends GetxController {
   final lyricsLoading = false.obs;
 
   AudioPlayer get audioPlayer => _playback.audioPlayer;
-  mkv.VideoController? get videoController => _playback.videoController;
 
   // Listen duration tracking
   int _listenedMs = 0;
@@ -275,6 +265,12 @@ class PlayerController extends GetxController {
     String? preferredSourceId = 'gdstudio',
   }) async {
     _saveListenDuration();
+
+    // Stop current playback immediately to avoid old song continuing
+    // while the new URL is being resolved
+    _manualStop = true;
+    _playback.stop();
+
     isLoading.value = true;
     currentVideo.value = video;
 
@@ -286,7 +282,6 @@ class PlayerController extends GetxController {
     try {
       final resolved = await _registry.resolvePlaybackWithFallback(
         video,
-        videoMode: _storage.enableVideo,
         preferredSourceId: preferredSourceId,
       );
 
@@ -324,7 +319,6 @@ class PlayerController extends GetxController {
     try {
       final resolved = await _registry.resolvePlaybackWithFallback(
         video,
-        videoMode: _storage.enableVideo,
         preferredSourceId: sourceId,
         enableFallback: false,
       );
@@ -357,61 +351,41 @@ class PlayerController extends GetxController {
     final bestAudio = info.bestAudio;
     if (bestAudio == null) throw Exception('No audio stream available');
 
-    if (info.hasVideo && _storage.enableVideo) {
-      await _playback.prepareForVideo();
-      final bestVideo = info.bestVideo!;
-      audioQualityLabel.value = bestAudio.qualityLabel;
-      videoQualityLabel.value = bestVideo.qualityLabel;
-      await _playback.playVideoWithAudio(bestVideo.url, bestAudio.url);
-
-      _addToQueue(
-        video: video,
-        audioUrl: bestAudio.url,
-        qualityLabel: bestAudio.qualityLabel,
-        videoUrl: bestVideo.url,
-        videoQualityLabel: bestVideo.qualityLabel,
-        headers: bestAudio.headers,
-      );
-    } else {
-      _playback.prepareForAudioOnly();
-
-      // Try audio streams with fallback through backup URLs
-      String? playedUrl;
-      String playedLabel = '';
-      for (final stream in info.audioStreams) {
-        try {
-          await _playback.playAudioWithHeaders(stream.url, stream.headers);
-          playedUrl = stream.url;
-          playedLabel = stream.qualityLabel;
-          break;
-        } catch (e) {
-          log('Audio stream ${stream.qualityLabel} failed: $e');
-          if (stream.backupUrl != null && stream.backupUrl!.isNotEmpty) {
-            try {
-              await _playback.playAudioWithHeaders(
-                  stream.backupUrl!, stream.headers);
-              playedUrl = stream.backupUrl!;
-              playedLabel = stream.qualityLabel;
-              break;
-            } catch (e2) {
-              log('Audio stream ${stream.qualityLabel} backup failed: $e2');
-            }
+    // Try audio streams with fallback through backup URLs
+    String? playedUrl;
+    String playedLabel = '';
+    for (final stream in info.audioStreams) {
+      try {
+        await _playback.playAudioWithHeaders(stream.url, stream.headers);
+        playedUrl = stream.url;
+        playedLabel = stream.qualityLabel;
+        break;
+      } catch (e) {
+        log('Audio stream ${stream.qualityLabel} failed: $e');
+        if (stream.backupUrl != null && stream.backupUrl!.isNotEmpty) {
+          try {
+            await _playback.playAudioWithHeaders(
+                stream.backupUrl!, stream.headers);
+            playedUrl = stream.backupUrl!;
+            playedLabel = stream.qualityLabel;
+            break;
+          } catch (e2) {
+            log('Audio stream ${stream.qualityLabel} backup failed: $e2');
           }
         }
       }
-
-      if (playedUrl == null) throw Exception('All audio streams failed');
-
-      audioQualityLabel.value = playedLabel;
-      videoQualityLabel.value = '';
-
-      _addToQueue(
-        video: video,
-        audioUrl: playedUrl,
-        qualityLabel: playedLabel,
-        headers: bestAudio.headers,
-      );
     }
+
+    if (playedUrl == null) throw Exception('All audio streams failed');
+
+    audioQualityLabel.value = playedLabel;
+
+    _addToQueue(
+      video: video,
+      audioUrl: playedUrl,
+      qualityLabel: playedLabel,
+      headers: bestAudio.headers,
+    );
   }
 
   /// Auto-play a random song (called when player tab opens with empty queue).
@@ -481,16 +455,12 @@ class PlayerController extends GetxController {
     required SearchVideoModel video,
     required String audioUrl,
     String qualityLabel = '',
-    String? videoUrl,
-    String? videoQualityLabel,
     Map<String, String> headers = const {},
   }) {
     final queueItem = QueueItem(
       video: video,
       audioUrl: audioUrl,
       qualityLabel: qualityLabel,
-      videoUrl: videoUrl,
-      videoQualityLabel: videoQualityLabel,
       headers: headers,
     );
 
@@ -507,86 +477,8 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _playQueueItem(QueueItem item) async {
-    if (item.videoUrl != null && _storage.enableVideo) {
-      videoQualityLabel.value = item.videoQualityLabel ?? '';
-      await _playback.playVideoWithAudio(item.videoUrl!, item.audioUrl);
-    } else {
-      await _playback.ensureMediaKit();
-      _playback.isVideoMode.value = false;
-      videoQualityLabel.value = '';
-      await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
-    }
-  }
-
-  /// Switch the current track between video and audio-only mode.
-  Future<void> toggleVideoMode() async {
-    if (currentIndex.value < 0 || currentIndex.value >= queue.length) return;
-    final item = queue[currentIndex.value];
-
-    // Check if source supports video
-    final source = _registry.getSourceForTrack(item.video);
-    if (source is! VideoCapability || !source.hasVideo(item.video)) {
-      AppToast.show('该音乐源暂不支持视频模式');
-      return;
-    }
-    final currentPos = position.value;
-
-    try {
-      if (isVideoMode.value) {
-        // Switch to audio-only
-        _playback.prepareForAudioOnly();
-        videoQualityLabel.value = '';
-        await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
-        if (currentPos > Duration.zero) {
-          await Future.delayed(const Duration(milliseconds: 200));
-          _playback.seekTo(currentPos);
-        }
-      } else {
-        // Switch to video
-        if (item.videoUrl != null) {
-          videoQualityLabel.value = item.videoQualityLabel ?? '';
-          await _playback.prepareForVideo();
-          await _playback.playVideoWithAudio(item.videoUrl!, item.audioUrl);
-          if (currentPos > Duration.zero) {
-            await Future.delayed(const Duration(milliseconds: 500));
-            _playback.seekTo(currentPos);
-          }
-        } else {
-          // No video URL cached, resolve with video mode
-          final info = await source.resolvePlayback(item.video, videoMode: true);
-          if (info != null && info.hasVideo && info.bestAudio != null) {
-            final bestVideo = info.bestVideo!;
-            final bestAudio = info.bestAudio!;
-            final newItem = QueueItem(
-              video: item.video,
-              audioUrl: bestAudio.url,
-              qualityLabel: bestAudio.qualityLabel,
-              videoUrl: bestVideo.url,
-              videoQualityLabel: bestVideo.qualityLabel,
-              headers: bestAudio.headers,
-            );
-            queue[currentIndex.value] = newItem;
-
-            audioQualityLabel.value = bestAudio.qualityLabel;
-            videoQualityLabel.value = bestVideo.qualityLabel;
-            await _playback.prepareForVideo();
-            await _playback.playVideoWithAudio(bestVideo.url, bestAudio.url);
-            if (currentPos > Duration.zero) {
-              await Future.delayed(const Duration(milliseconds: 500));
-              _playback.seekTo(currentPos);
-            }
-          } else {
-            AppToast.show('该视频无画面资源');
-          }
-        }
-      }
-    } catch (e) {
-      log('toggleVideoMode error: $e');
-      AppToast.error('视频模式切换失败');
-      // Fallback: ensure audio keeps playing
-      _playback.prepareForAudioOnly();
-      videoQualityLabel.value = '';
-    }
+    await _playback.ensureMediaKit();
+    await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
   }
 
   void togglePlay() => _playback.togglePlay();
@@ -931,25 +823,6 @@ class PlayerController extends GetxController {
     queue.insert(newIndex, item);
   }
 
-  void enterFullScreen() {
-    isFullScreen.value = true;
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-  }
-
-  void exitFullScreen() {
-    isFullScreen.value = false;
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.edgeToEdge,
-    );
-  }
-
   void removeFromQueue(int index) {
     if (index == 0) return;
     queue.removeAt(index);
@@ -959,7 +832,6 @@ class PlayerController extends GetxController {
     _saveListenDuration();
     _manualStop = true;
     _playback.stop();
-    _playback.isVideoMode.value = false;
     queue.clear();
     playHistory.clear();
     currentIndex.value = -1;
@@ -1140,6 +1012,11 @@ class PlayerController extends GetxController {
   /// Play from an AU audio song (Bilibili audio channel).
   Future<void> playFromAudioSong(AudioSongModel song) async {
     final video = song.toSearchVideoModel();
+
+    _saveListenDuration();
+    _manualStop = true;
+    _playback.stop();
+
     isLoading.value = true;
     currentVideo.value = video;
     _updateUploaderMid(video);
@@ -1150,10 +1027,8 @@ class PlayerController extends GetxController {
       final audioUrl = await _musicRepo.getAudioUrl(song.id);
 
       if (audioUrl != null && audioUrl.isNotEmpty) {
-        _playback.prepareForAudioOnly();
         await _playback.playBilibiliAudio(audioUrl);
         audioQualityLabel.value = 'AU';
-        videoQualityLabel.value = '';
 
         _addToQueue(
           video: video,
@@ -1164,7 +1039,6 @@ class PlayerController extends GetxController {
         // Fallback to normal Bilibili playback via adapter
         final resolved = await _registry.resolvePlaybackWithFallback(
           video,
-          videoMode: false,
           enableFallback: false,
         );
         if (resolved != null) {
@@ -1188,27 +1062,12 @@ class PlayerController extends GetxController {
   // ── Queue Resolution (shared by addToQueue and addToQueueSilent) ──
 
   Future<QueueItem?> _resolveQueueItem(SearchVideoModel video) async {
-    final resolved = await _registry.resolvePlaybackWithFallback(
-      video,
-      videoMode: _storage.enableVideo,
-    );
+    final resolved = await _registry.resolvePlaybackWithFallback(video);
     if (resolved == null) return null;
 
     final (info, resolvedVideo) = resolved;
     final bestAudio = info.bestAudio;
     if (bestAudio == null) return null;
-
-    if (info.hasVideo && _storage.enableVideo) {
-      final bestVideo = info.bestVideo!;
-      return QueueItem(
-        video: resolvedVideo,
-        audioUrl: bestAudio.url,
-        qualityLabel: bestAudio.qualityLabel,
-        videoUrl: bestVideo.url,
-        videoQualityLabel: bestVideo.qualityLabel,
-        headers: bestAudio.headers,
-      );
-    }
 
     return QueueItem(
       video: resolvedVideo,

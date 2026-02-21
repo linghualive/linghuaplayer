@@ -71,7 +71,6 @@ class MusicSourceRegistry extends GetxService {
   ///    search other sources for the same song and try to resolve
   Future<(PlaybackInfo, SearchVideoModel)?> resolvePlaybackWithFallback(
     SearchVideoModel track, {
-    bool videoMode = false,
     bool enableFallback = true,
     String? preferredSourceId,
   }) async {
@@ -84,8 +83,7 @@ class MusicSourceRegistry extends GetxService {
         // If the track already belongs to this source, resolve directly
         if (track.source.name == preferredSourceId) {
           try {
-            final info = await preferredSource.resolvePlayback(
-                track, videoMode: videoMode);
+            final info = await preferredSource.resolvePlayback(track);
             if (info != null) return (info, track);
           } catch (e) {
             log('MusicSourceRegistry: preferred source $preferredSourceId '
@@ -101,10 +99,7 @@ class MusicSourceRegistry extends GetxService {
           );
           if (searchResult.tracks.isNotEmpty) {
             final preferredTrack = searchResult.tracks.first;
-            final info = await preferredSource.resolvePlayback(
-              preferredTrack,
-              videoMode: videoMode,
-            );
+            final info = await preferredSource.resolvePlayback(preferredTrack);
             if (info != null) {
               log('MusicSourceRegistry: resolved via preferred source '
                   '$preferredSourceId for "${track.title}"');
@@ -123,7 +118,7 @@ class MusicSourceRegistry extends GetxService {
     if (ownSource != null &&
         ownSource.sourceId != preferredSourceId) {
       try {
-        final info = await ownSource.resolvePlayback(track, videoMode: videoMode);
+        final info = await ownSource.resolvePlayback(track);
         if (info != null) return (info, track);
       } catch (e) {
         log('MusicSourceRegistry: ${ownSource.sourceId} resolvePlayback failed: $e');
@@ -149,10 +144,7 @@ class MusicSourceRegistry extends GetxService {
         if (searchResult.tracks.isEmpty) continue;
 
         final fallbackTrack = searchResult.tracks.first;
-        final info = await source.resolvePlayback(
-          fallbackTrack,
-          videoMode: videoMode,
-        );
+        final info = await source.resolvePlayback(fallbackTrack);
         if (info != null) {
           log('MusicSourceRegistry: fallback to ${source.sourceId} '
               'for "${track.title}"');

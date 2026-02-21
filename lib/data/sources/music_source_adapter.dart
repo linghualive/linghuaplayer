@@ -21,15 +21,10 @@ abstract class MusicSourceAdapter {
     int offset = 0,
   });
 
-  /// Resolve a track to playable stream URLs.
+  /// Resolve a track to playable audio stream URLs.
   ///
   /// Returns null if the track cannot be played from this source.
-  /// When [videoMode] is true, the adapter should include video streams
-  /// if available.
-  Future<PlaybackInfo?> resolvePlayback(
-    SearchVideoModel track, {
-    bool videoMode = false,
-  });
+  Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track);
 
   /// Get related / similar tracks for auto-play continuation.
   Future<List<SearchVideoModel>> getRelatedTracks(SearchVideoModel track);
@@ -89,11 +84,6 @@ mixin AuthCapability on MusicSourceAdapter {
   bool get isLoggedIn;
   Future<List<PlaylistBrief>> getUserPlaylists();
   Future<List<SearchVideoModel>> getDailyRecommendations();
-}
-
-/// Source supports video playback for some tracks.
-mixin VideoCapability on MusicSourceAdapter {
-  bool hasVideo(SearchVideoModel track);
 }
 
 /// Source supports multi-type search (playlists, albums, artists).
