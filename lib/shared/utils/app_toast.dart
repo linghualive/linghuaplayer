@@ -6,7 +6,12 @@ import 'package:get/get.dart';
 /// and does not interfere with touch operations.
 /// Colors follow the current Material 3 theme.
 class AppToast {
+  /// Set to true in unit tests to suppress snackbar calls.
+  @visibleForTesting
+  static bool suppressInTests = false;
+
   static void show(String message) {
+    if (suppressInTests) return;
     if (Get.isSnackbarOpen) return;
     final cs = Get.theme.colorScheme;
     Get.rawSnackbar(
@@ -26,6 +31,7 @@ class AppToast {
   }
 
   static void success(String message) {
+    if (suppressInTests) return;
     if (Get.isSnackbarOpen) return;
     final cs = Get.theme.colorScheme;
     Get.rawSnackbar(
@@ -46,6 +52,7 @@ class AppToast {
   }
 
   static void error(String message) {
+    if (suppressInTests) return;
     if (Get.isSnackbarOpen) return;
     final cs = Get.theme.colorScheme;
     Get.rawSnackbar(

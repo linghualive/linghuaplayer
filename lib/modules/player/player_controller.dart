@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:math' show Random;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:get/get.dart';
 import 'package:just_audio/just_audio.dart';
 
@@ -36,6 +37,25 @@ class QueueItem {
     this.qualityLabel = '',
     this.headers = const {},
   });
+
+  Map<String, dynamic> toJson() => {
+        'video': video.toJson(),
+        'audioUrl': audioUrl,
+        'qualityLabel': qualityLabel,
+        'headers': headers,
+      };
+
+  factory QueueItem.fromJson(Map<String, dynamic> json) {
+    return QueueItem(
+      video: SearchVideoModel.fromJson(
+          json['video'] as Map<String, dynamic>? ?? {}),
+      audioUrl: json['audioUrl'] as String? ?? '',
+      qualityLabel: json['qualityLabel'] as String? ?? '',
+      headers: (json['headers'] as Map<String, dynamic>?)
+              ?.map((k, v) => MapEntry(k, v.toString())) ??
+          {},
+    );
+  }
 }
 
 class PlayerController extends GetxController {
@@ -402,6 +422,7 @@ class PlayerController extends GetxController {
       _storage.addPlayHistory(resolvedVideo);
     } catch (e) {
       if (gen != _playGeneration) return;
+      _manualStop = false;
       log('Playback failed: $e');
       AppToast.error('播放失败: $e');
     }
@@ -650,7 +671,7 @@ class PlayerController extends GetxController {
         break;
       case PlayMode.shuffle:
         if (queue.length <= 1) {
-          _autoPlayNext();
+          _autoPlayNext().catchError((e) => log('Auto-play error: $e'));
           return;
         }
         final rng = Random();
@@ -658,7 +679,7 @@ class PlayerController extends GetxController {
         playAt(next);
         break;
       case PlayMode.sequential:
-        _advanceNext();
+        _advanceNext().catchError((e) => log('Advance next error: $e'));
         break;
     }
   }
@@ -677,23 +698,31 @@ class PlayerController extends GetxController {
 
     final rng = Random();
 
-    // Exclude both queue and recently played history to avoid ping-ponging
+    // Exclude queue and recent history to avoid ping-ponging (limited scope)
+    final recentHistory = playHistory.length > 20
+        ? playHistory.sublist(playHistory.length - 20)
+        : playHistory;
+
     final excludeIds = <String>{
       ...queue.map((q) => q.video.uniqueId),
-      ...playHistory.map((q) => q.video.uniqueId),
+      ...recentHistory.map((q) => q.video.uniqueId),
       video.uniqueId,
     };
 
-    // Also exclude by normalized title to avoid the same song from different sources
+    // Also exclude by normalized title (limited to recent 10)
+    final recentForTitles = playHistory.length > 10
+        ? playHistory.sublist(playHistory.length - 10)
+        : playHistory;
+
     final excludeTitles = <String>{
-      _normalizeTitle(video.title),
-      ...queue.map((q) => _normalizeTitle(q.video.title)),
-      ...playHistory.map((q) => _normalizeTitle(q.video.title)),
+      normalizeTitle(video.title),
+      ...queue.map((q) => normalizeTitle(q.video.title)),
+      ...recentForTitles.map((q) => normalizeTitle(q.video.title)),
     };
 
     bool _isExcluded(SearchVideoModel s) =>
         excludeIds.contains(s.uniqueId) ||
-        excludeTitles.contains(_normalizeTitle(s.title));
+        excludeTitles.contains(normalizeTitle(s.title));
 
     // 1. Try related music not already played (random pick)
     final candidates = relatedMusic.where((s) => !_isExcluded(s)).toList();
@@ -734,9 +763,8 @@ class PlayerController extends GetxController {
       log('Auto-play cross-source error: $e');
     }
 
-    // 4. Nothing left, stop
-    _manualStop = true;
-    _playback.stop();
+    // 4. 最终兜底：尝试 AI/随机推荐
+    await _triggerAutoPlay();
   }
 
   /// Search for related tracks using varied keywords to avoid returning
@@ -871,7 +899,7 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       await _playCurrentQueueItem();
     } else {
-      _autoPlayNext();
+      await _autoPlayNext();
     }
   }
 
@@ -884,7 +912,7 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       await _playCurrentQueueItem();
     } else {
-      _autoPlayNext();
+      await _autoPlayNext();
     }
   }
 
@@ -977,7 +1005,7 @@ class PlayerController extends GetxController {
   }
 
   void removeFromQueue(int index) {
-    if (index == 0) return;
+    if (index == 0 || index < 0 || index >= queue.length) return;
     queue.removeAt(index);
   }
 
@@ -1016,9 +1044,9 @@ class PlayerController extends GetxController {
     source.getRelatedTracks(video).then((results) {
       if (currentVideo.value?.uniqueId == video.uniqueId) {
         // Deduplicate by normalized title
-        final seen = <String>{_normalizeTitle(video.title)};
+        final seen = <String>{normalizeTitle(video.title)};
         final deduped = results
-            .where((s) => seen.add(_normalizeTitle(s.title)))
+            .where((s) => seen.add(normalizeTitle(s.title)))
             .toList();
         // Filter out songs already in queue or recently played
         final excludeIds = <String>{
@@ -1074,18 +1102,27 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _prefetchNextSongs() async {
+    final recentHistory = playHistory.length > 20
+        ? playHistory.sublist(playHistory.length - 20)
+        : playHistory;
+
     final excludeIds = <String>{
       ...queue.map((q) => q.video.uniqueId),
-      ...playHistory.map((q) => q.video.uniqueId),
+      ...recentHistory.map((q) => q.video.uniqueId),
     };
+
+    final recentForTitles = playHistory.length > 10
+        ? playHistory.sublist(playHistory.length - 10)
+        : playHistory;
+
     final excludeTitles = <String>{
-      ...queue.map((q) => _normalizeTitle(q.video.title)),
-      ...playHistory.map((q) => _normalizeTitle(q.video.title)),
+      ...queue.map((q) => normalizeTitle(q.video.title)),
+      ...recentForTitles.map((q) => normalizeTitle(q.video.title)),
     };
 
     bool isExcluded(SearchVideoModel s) =>
         excludeIds.contains(s.uniqueId) ||
-        excludeTitles.contains(_normalizeTitle(s.title));
+        excludeTitles.contains(normalizeTitle(s.title));
 
     // Pull from related music (URLs may already be pre-resolved)
     final candidates =
@@ -1242,7 +1279,8 @@ class PlayerController extends GetxController {
   bool get hasCurrentTrack => currentVideo.value != null;
 
   /// Normalize a song title for fuzzy deduplication.
-  static String _normalizeTitle(String title) {
+  @visibleForTesting
+  static String normalizeTitle(String title) {
     return title
         .replaceAll(RegExp(r'\(.*?\)'), '')
         .replaceAll(RegExp(r'（.*?）'), '')
@@ -1272,6 +1310,7 @@ class PlayerController extends GetxController {
       if (gen != _playGeneration) return;
 
       if (audioUrl != null && audioUrl.isNotEmpty) {
+        _manualStop = false;
         await _playback.playBilibiliAudio(audioUrl);
         if (gen != _playGeneration) return;
         audioQualityLabel.value = 'AU';
@@ -1300,6 +1339,7 @@ class PlayerController extends GetxController {
       _storage.addPlayHistory(video);
     } catch (e) {
       if (gen != _playGeneration) return;
+      _manualStop = false;
       log('AU playback failed: $e');
       AppToast.error('播放失败: $e');
     }

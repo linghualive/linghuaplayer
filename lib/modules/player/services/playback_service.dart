@@ -17,7 +17,7 @@ bool get _useMediaKit => Platform.isMacOS || Platform.isLinux;
 /// Owns both player instances (just_audio + media_kit) and consolidates
 /// all `Platform.isMacOS || Platform.isLinux` checks into one place.
 class PlaybackService {
-  final AudioPlayer audioPlayer = AudioPlayer();
+  late final AudioPlayer audioPlayer;
 
   mk.Player? _mediaKitPlayer;
 
@@ -43,7 +43,8 @@ class PlaybackService {
     'referer': AppConstants.referer,
   };
 
-  PlaybackService() {
+  PlaybackService({AudioPlayer? justAudioPlayer})
+      : audioPlayer = justAudioPlayer ?? AudioPlayer() {
     _setupAudioListeners();
   }
 
