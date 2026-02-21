@@ -70,7 +70,7 @@ class HomePage extends GetView<HomeController> {
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
-    final extended = MediaQuery.of(context).size.width >= 1200;
+    const extended = true;
 
     return Scaffold(
       body: Column(

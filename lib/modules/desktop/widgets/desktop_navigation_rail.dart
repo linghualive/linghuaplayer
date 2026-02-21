@@ -32,10 +32,10 @@ class DesktopNavigationRail extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const SizedBox(width: 16),
-                  Icon(
-                    Icons.local_fire_department_rounded,
-                    color: colorScheme.primary,
-                    size: 32,
+                  Image.asset(
+                    'assets/logo.png',
+                    width: 32,
+                    height: 32,
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -47,10 +47,10 @@ class DesktopNavigationRail extends StatelessWidget {
                   ),
                 ],
               )
-            : Icon(
-                Icons.local_fire_department_rounded,
-                color: colorScheme.primary,
-                size: 32,
+            : Image.asset(
+                'assets/logo.png',
+                width: 32,
+                height: 32,
               ),
       ),
       destinations: const [

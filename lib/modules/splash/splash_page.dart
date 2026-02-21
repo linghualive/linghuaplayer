@@ -180,10 +180,10 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              Icons.local_fire_department,
-                              size: 80,
-                              color: primaryColor,
+                            child: Image.asset(
+                              'assets/logo.png',
+                              width: 80,
+                              height: 80,
                             ),
                           ),
                         ),
