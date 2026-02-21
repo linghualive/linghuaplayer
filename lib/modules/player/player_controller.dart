@@ -109,6 +109,20 @@ class PlayerController extends GetxController {
   // into _autoPlayNext when the stop was user-initiated.
   bool _manualStop = false;
 
+  // Generation counter for playFromSearch cancellation:
+  // each new call increments this, and stale requests bail out.
+  int _playGeneration = 0;
+
+  // ── Playback URL Resolution Cache ──
+  // Caches (PlaybackInfo, SearchVideoModel) by uniqueId to avoid
+  // repeated network calls for recently resolved songs.
+  final _resolveCache = <String, _CachedResolve>{};
+  static const _resolveCacheTtl = Duration(minutes: 20);
+  static const _maxCacheSize = 50;
+
+  // Queue prefetch guard
+  bool _isPrefetching = false;
+
   @override
   void onInit() {
     super.onInit();
@@ -255,6 +269,35 @@ class PlayerController extends GetxController {
     _listenedMs = 0;
   }
 
+  // ── Cache helpers ──
+
+  (PlaybackInfo, SearchVideoModel)? _getCachedResolve(String uniqueId) {
+    final entry = _resolveCache[uniqueId];
+    if (entry == null) return null;
+    if (DateTime.now().difference(entry.cachedAt) > _resolveCacheTtl) {
+      _resolveCache.remove(uniqueId);
+      return null;
+    }
+    return (entry.info, entry.resolvedVideo);
+  }
+
+  void _putCachedResolve(
+      String uniqueId, PlaybackInfo info, SearchVideoModel video) {
+    _resolveCache[uniqueId] = _CachedResolve(info, video);
+    // Evict oldest if over capacity
+    if (_resolveCache.length > _maxCacheSize) {
+      String? oldestKey;
+      DateTime? oldestTime;
+      for (final e in _resolveCache.entries) {
+        if (oldestTime == null || e.value.cachedAt.isBefore(oldestTime)) {
+          oldestKey = e.key;
+          oldestTime = e.value.cachedAt;
+        }
+      }
+      if (oldestKey != null) _resolveCache.remove(oldestKey);
+    }
+  }
+
   /// Play from search result and navigate to player page.
   ///
   /// [preferredSourceId] specifies which source to try first.
@@ -264,26 +307,70 @@ class PlayerController extends GetxController {
     SearchVideoModel video, {
     String? preferredSourceId = 'gdstudio',
   }) async {
+    // Increment generation to cancel any in-flight playFromSearch
+    final gen = ++_playGeneration;
+
     _saveListenDuration();
 
-    // Stop current playback immediately to avoid old song continuing
-    // while the new URL is being resolved
+    // Stop current playback immediately
     _manualStop = true;
     _playback.stop();
 
-    isLoading.value = true;
     currentVideo.value = video;
-
-    // Preserve the original Bilibili uploader mid before fallback
     _updateUploaderMid(video);
-
     _navigateToPlayer();
 
+    // ── Fast path 1: song already in queue (URL already resolved) ──
+    final queuedIndex =
+        queue.indexWhere((q) => q.video.uniqueId == video.uniqueId);
+    if (queuedIndex >= 0) {
+      final item = queue.removeAt(queuedIndex);
+      _pushToHistory();
+      queue.insert(0, item);
+      currentIndex.value = 0;
+      _manualStop = false;
+      audioQualityLabel.value = item.qualityLabel;
+      await _playQueueItem(item);
+      if (gen != _playGeneration) return;
+      _storage.addPlayHistory(item.video);
+      _fetchLyrics(item.video);
+      _loadRelatedMusic(item.video);
+      _prefetchQueueIfNeeded();
+      return;
+    }
+
+    // ── Fast path 2: URL in resolve cache ──
+    isLoading.value = true;
+    final cached = _getCachedResolve(video.uniqueId);
+    if (cached != null) {
+      try {
+        final (info, resolvedVideo) = cached;
+        if (resolvedVideo.uniqueId != video.uniqueId) {
+          currentVideo.value = resolvedVideo;
+        }
+        currentPlaybackSourceId.value = info.sourceId;
+        await _playFromInfo(info, resolvedVideo);
+        if (gen != _playGeneration) return;
+        _storage.addPlayHistory(resolvedVideo);
+        isLoading.value = false;
+        _fetchLyrics(currentVideo.value ?? video);
+        _loadRelatedMusic(currentVideo.value ?? video);
+        _prefetchQueueIfNeeded();
+        return;
+      } catch (_) {
+        // Cache hit but playback failed — fall through to normal resolve
+        _resolveCache.remove(video.uniqueId);
+      }
+    }
+
+    // ── Normal path: resolve URL from network ──
     try {
       final resolved = await _registry.resolvePlaybackWithFallback(
         video,
         preferredSourceId: preferredSourceId,
       );
+
+      if (gen != _playGeneration) return;
 
       if (resolved == null) {
         throw Exception('无法获取播放链接');
@@ -291,27 +378,36 @@ class PlayerController extends GetxController {
 
       final (info, resolvedVideo) = resolved;
 
-      // If fallback occurred, update the current video
+      // Cache the resolution for future use
+      _putCachedResolve(video.uniqueId, info, resolvedVideo);
+
       if (resolvedVideo.uniqueId != video.uniqueId) {
         currentVideo.value = resolvedVideo;
       }
 
       currentPlaybackSourceId.value = info.sourceId;
       await _playFromInfo(info, resolvedVideo);
+
+      if (gen != _playGeneration) return;
+
       _storage.addPlayHistory(resolvedVideo);
     } catch (e) {
+      if (gen != _playGeneration) return;
       log('Playback failed: $e');
       AppToast.error('播放失败: $e');
     }
+    if (gen != _playGeneration) return;
     isLoading.value = false;
     _fetchLyrics(currentVideo.value ?? video);
     _loadRelatedMusic(currentVideo.value ?? video);
+    _prefetchQueueIfNeeded();
   }
 
   /// Switch the current song's playback source manually.
   ///
   /// Re-resolves the current track via the specified source and replays.
   Future<void> switchPlaybackSource(String sourceId) async {
+    final gen = ++_playGeneration;
     final video = currentVideo.value;
     if (video == null) return;
 
@@ -322,6 +418,8 @@ class PlayerController extends GetxController {
         preferredSourceId: sourceId,
         enableFallback: false,
       );
+
+      if (gen != _playGeneration) return;
 
       if (resolved == null) {
         AppToast.error('该音乐源无法播放此歌曲');
@@ -337,12 +435,15 @@ class PlayerController extends GetxController {
       }
 
       await _playFromInfo(info, resolvedVideo);
+      if (gen != _playGeneration) return;
       _fetchLyrics(resolvedVideo);
       AppToast.show('已切换到 ${_registry.getSource(info.sourceId)?.displayName ?? info.sourceId}');
     } catch (e) {
+      if (gen != _playGeneration) return;
       log('Switch source failed: $e');
       AppToast.error('切换音乐源失败');
     }
+    if (gen != _playGeneration) return;
     isLoading.value = false;
   }
 
@@ -728,8 +829,8 @@ class PlayerController extends GetxController {
       await _playQueueItem(item);
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
+      _prefetchQueueIfNeeded();
     } else {
-      // Queue has no next song — auto-recommend (history-aware, won't ping-pong)
       _autoPlayNext();
     }
   }
@@ -749,6 +850,7 @@ class PlayerController extends GetxController {
       await _playQueueItem(item);
       _fetchLyrics(item.video);
       _loadRelatedMusic(item.video);
+      _prefetchQueueIfNeeded();
     } else {
       _autoPlayNext();
     }
@@ -878,6 +980,10 @@ class PlayerController extends GetxController {
         filtered.shuffle();
         relatedMusic.assignAll(filtered);
         relatedMusicLoading.value = false;
+
+        // Pre-resolve URLs for top related songs and refill queue
+        _preResolveRelatedMusic();
+        _prefetchQueueIfNeeded();
       }
     }).catchError((e) {
       log('Related music fetch error: $e');
@@ -885,6 +991,91 @@ class PlayerController extends GetxController {
         relatedMusicLoading.value = false;
       }
     });
+  }
+
+  // ── Pre-resolution & Queue Prefetch ──
+
+  /// Pre-resolve URLs for top related songs in background.
+  /// Results are stored in cache so playFromSearch can use them instantly.
+  void _preResolveRelatedMusic() {
+    final candidates = relatedMusic
+        .where((s) => !_resolveCache.containsKey(s.uniqueId))
+        .take(3)
+        .toList();
+
+    for (final song in candidates) {
+      _registry.resolvePlaybackWithFallback(song).then((resolved) {
+        if (resolved != null) {
+          _putCachedResolve(song.uniqueId, resolved.$1, resolved.$2);
+        }
+      }).catchError((_) {});
+    }
+  }
+
+  /// When queue is running low, proactively discover and add songs.
+  void _prefetchQueueIfNeeded() {
+    if (_isPrefetching || queue.length > 3 || _heartMode.isHeartMode.value) {
+      return;
+    }
+    _isPrefetching = true;
+    _prefetchNextSongs().whenComplete(() => _isPrefetching = false);
+  }
+
+  Future<void> _prefetchNextSongs() async {
+    final excludeIds = <String>{
+      ...queue.map((q) => q.video.uniqueId),
+      ...playHistory.map((q) => q.video.uniqueId),
+    };
+    final excludeTitles = <String>{
+      ...queue.map((q) => _normalizeTitle(q.video.title)),
+      ...playHistory.map((q) => _normalizeTitle(q.video.title)),
+    };
+
+    bool isExcluded(SearchVideoModel s) =>
+        excludeIds.contains(s.uniqueId) ||
+        excludeTitles.contains(_normalizeTitle(s.title));
+
+    // Pull from related music (URLs may already be pre-resolved)
+    final candidates =
+        relatedMusic.where((s) => !isExcluded(s)).take(4).toList();
+
+    for (final song in candidates) {
+      if (queue.length > 4) break;
+      try {
+        final item = await _resolveQueueItem(song);
+        if (item != null &&
+            !queue.any((q) => q.video.uniqueId == item.video.uniqueId)) {
+          queue.add(item);
+          excludeIds.add(item.video.uniqueId);
+        }
+      } catch (_) {}
+    }
+
+    // If still not enough, do a quick discovery search
+    if (queue.length <= 2 && currentVideo.value != null) {
+      try {
+        final video = currentVideo.value!;
+        final source = _registry.getSourceForTrack(video);
+        if (source != null) {
+          final keyword = video.author.isNotEmpty ? video.author : video.title;
+          final result =
+              await source.searchTracks(keyword: keyword, limit: 10);
+          final filtered =
+              result.tracks.where((s) => !isExcluded(s)).take(3).toList();
+          for (final song in filtered) {
+            if (queue.length > 4) break;
+            try {
+              final item = await _resolveQueueItem(song);
+              if (item != null &&
+                  !queue
+                      .any((q) => q.video.uniqueId == item.video.uniqueId)) {
+                queue.add(item);
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   /// Update the preserved Bilibili uploader mid from a video.
@@ -1011,6 +1202,7 @@ class PlayerController extends GetxController {
 
   /// Play from an AU audio song (Bilibili audio channel).
   Future<void> playFromAudioSong(AudioSongModel song) async {
+    final gen = ++_playGeneration;
     final video = song.toSearchVideoModel();
 
     _saveListenDuration();
@@ -1025,9 +1217,11 @@ class PlayerController extends GetxController {
 
     try {
       final audioUrl = await _musicRepo.getAudioUrl(song.id);
+      if (gen != _playGeneration) return;
 
       if (audioUrl != null && audioUrl.isNotEmpty) {
         await _playback.playBilibiliAudio(audioUrl);
+        if (gen != _playGeneration) return;
         audioQualityLabel.value = 'AU';
 
         _addToQueue(
@@ -1041,6 +1235,7 @@ class PlayerController extends GetxController {
           video,
           enableFallback: false,
         );
+        if (gen != _playGeneration) return;
         if (resolved != null) {
           await _playFromInfo(resolved.$1, resolved.$2);
         } else {
@@ -1049,11 +1244,14 @@ class PlayerController extends GetxController {
       } else {
         throw Exception('No playable URL');
       }
+      if (gen != _playGeneration) return;
       _storage.addPlayHistory(video);
     } catch (e) {
+      if (gen != _playGeneration) return;
       log('AU playback failed: $e');
       AppToast.error('播放失败: $e');
     }
+    if (gen != _playGeneration) return;
     isLoading.value = false;
     _fetchLyrics(video);
     _loadRelatedMusic(video);
@@ -1062,8 +1260,14 @@ class PlayerController extends GetxController {
   // ── Queue Resolution (shared by addToQueue and addToQueueSilent) ──
 
   Future<QueueItem?> _resolveQueueItem(SearchVideoModel video) async {
-    final resolved = await _registry.resolvePlaybackWithFallback(video);
-    if (resolved == null) return null;
+    // Check cache first
+    var resolved = _getCachedResolve(video.uniqueId);
+    if (resolved == null) {
+      final fresh = await _registry.resolvePlaybackWithFallback(video);
+      if (fresh == null) return null;
+      _putCachedResolve(video.uniqueId, fresh.$1, fresh.$2);
+      resolved = fresh;
+    }
 
     final (info, resolvedVideo) = resolved;
     final bestAudio = info.bestAudio;
@@ -1146,4 +1350,13 @@ class PlayerController extends GetxController {
       AppToast.error('添加失败: $e');
     }
   }
+}
+
+/// Cached URL resolution result with TTL.
+class _CachedResolve {
+  final PlaybackInfo info;
+  final SearchVideoModel resolvedVideo;
+  final DateTime cachedAt;
+
+  _CachedResolve(this.info, this.resolvedVideo) : cachedAt = DateTime.now();
 }
