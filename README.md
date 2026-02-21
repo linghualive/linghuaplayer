@@ -12,10 +12,11 @@
 
 <p>使用 Flutter 开发的多源音乐播放器，支持 Bilibili、网易云音乐、QQ 音乐</p>
 
-<img src="docs/preview/移动端首页.jpg" width="32%" alt="首页" />
-<img src="docs/preview/移动端收藏页.jpg" width="32%" alt="收藏" />
-<br/>
-<img src="docs/preview/桌面端首页.png" width="96%" alt="桌面端" />
+<img src="docs/preview/播放页面.png" width="19%" alt="播放" />
+<img src="docs/preview/发现页面.png" width="19%" alt="发现" />
+<img src="docs/preview/搜索页面.png" width="19%" alt="搜索" />
+<img src="docs/preview/收藏页面.png" width="19%" alt="收藏" />
+<img src="docs/preview/我的页面.png" width="19%" alt="我的" />
 <br/>
 </div>
 
@@ -40,6 +41,7 @@ QQ 频道：https://pd.qq.com/s/7jeytjyww?b=9
 - [x] 搜索相关
   - [x] 多源搜索：B 站、网易云、QQ 音乐切换
   - [x] 热搜词和搜索建议
+  - [x] 热门歌手快捷入口
   - [x] 搜索历史记录
   - [x] 网易云支持搜歌曲、歌手、专辑、歌单
 
@@ -51,6 +53,7 @@ QQ 频道：https://pd.qq.com/s/7jeytjyww?b=9
 - [x] 发现音乐
   - [x] 精选歌单推荐（网易云 + QQ 音乐）
   - [x] 风格分类歌单
+  - [x] 发现音乐主题分类（经典老歌、ACG、KTV 等）
   - [x] 多源排行榜
   - [x] 每日推荐（需网易云登录）
   - [x] 热门歌手推荐
