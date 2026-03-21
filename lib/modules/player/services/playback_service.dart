@@ -154,13 +154,19 @@ class PlaybackService {
   }
 
   void stop() {
-    _isSwitchingTrack = false;
+    _isSwitchingTrack = true; // 阻止 stop 后的 completed 事件
     if (_useMediaKit) {
       _mediaKitPlayer?.stop();
     } else {
       audioPlayer.stop();
       audioPlayer.seek(Duration.zero);
     }
+  }
+
+  /// Reset the switching track guard. Call this when playback is
+  /// intentionally stopped (not switching to a new track).
+  void resetSwitchingTrack() {
+    _isSwitchingTrack = false;
   }
 
   void play() {
@@ -265,7 +271,7 @@ class PlaybackService {
       await _mediaKitPlayer!.open(
         mk.Media(url, httpHeaders: effectiveHeaders),
       ).timeout(
-        const Duration(seconds: 15),
+        const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException('Media open timeout'),
       );
       await _mediaKitPlayer!.play();

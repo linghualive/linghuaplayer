@@ -366,7 +366,7 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       _manualStop = false;
       audioQualityLabel.value = item.qualityLabel;
-      await _playQueueItem(item);
+      await _playQueueItem(item, gen: gen);
       if (gen != _playGeneration) return;
       isLoading.value = false;
       _storage.addPlayHistory(item.video);
@@ -385,7 +385,7 @@ class PlayerController extends GetxController {
           currentVideo.value = resolvedVideo;
         }
         currentPlaybackSourceId.value = info.sourceId;
-        await _playFromInfo(info, resolvedVideo);
+        await _playFromInfo(info, resolvedVideo, gen: gen);
         if (gen != _playGeneration) return;
         _storage.addPlayHistory(resolvedVideo);
         isLoading.value = false;
@@ -422,7 +422,7 @@ class PlayerController extends GetxController {
       }
 
       currentPlaybackSourceId.value = info.sourceId;
-      await _playFromInfo(info, resolvedVideo);
+      await _playFromInfo(info, resolvedVideo, gen: gen);
 
       if (gen != _playGeneration) return;
 
@@ -471,7 +471,7 @@ class PlayerController extends GetxController {
         currentVideo.value = resolvedVideo;
       }
 
-      await _playFromInfo(info, resolvedVideo);
+      await _playFromInfo(info, resolvedVideo, gen: gen);
       if (gen != _playGeneration) return;
       _fetchLyrics(resolvedVideo);
       AppToast.show('已切换到 ${_registry.getSource(info.sourceId)?.displayName ?? info.sourceId}');
@@ -485,7 +485,7 @@ class PlayerController extends GetxController {
   }
 
   /// Unified playback from resolved PlaybackInfo.
-  Future<void> _playFromInfo(PlaybackInfo info, SearchVideoModel video) async {
+  Future<void> _playFromInfo(PlaybackInfo info, SearchVideoModel video, {int? gen}) async {
     final bestAudio = info.bestAudio;
     if (bestAudio == null) throw Exception('No audio stream available');
 
@@ -496,6 +496,8 @@ class PlayerController extends GetxController {
     String playedLabel = '';
     Map<String, String> playedHeaders = const {};
     for (final stream in info.audioStreams) {
+      // 检查是否已被取消
+      if (gen != null && gen != _playGeneration) return;
       try {
         await _playback.playAudioWithHeaders(stream.url, stream.headers);
         playedUrl = stream.url;
@@ -506,6 +508,7 @@ class PlayerController extends GetxController {
         log('Audio stream ${stream.qualityLabel} failed: $e');
         if (stream.backupUrl != null && stream.backupUrl!.isNotEmpty) {
           try {
+            if (gen != null && gen != _playGeneration) return;
             await _playback.playAudioWithHeaders(
                 stream.backupUrl!, stream.headers);
             playedUrl = stream.backupUrl!;
@@ -623,19 +626,20 @@ class PlayerController extends GetxController {
     currentIndex.value = 0;
   }
 
-  Future<void> _playQueueItem(QueueItem item) async {
+  Future<void> _playQueueItem(QueueItem item, {int? gen}) async {
     _manualStop = false;
     await _playback.ensureMediaKit();
     try {
       await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
     } catch (e) {
       log('Queue item playback failed, re-resolving: $e');
+      if (gen != null && gen != _playGeneration) return;
       // URL might be expired, try to re-resolve
       final resolved = await _registry.resolvePlaybackWithFallback(item.video);
       if (resolved != null) {
         final (info, resolvedVideo) = resolved;
         _putCachedResolve(item.video.uniqueId, info, resolvedVideo);
-        await _playFromInfo(info, resolvedVideo);
+        await _playFromInfo(info, resolvedVideo, gen: gen);
       } else {
         rethrow;
       }
@@ -710,6 +714,8 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _autoPlayNextImpl() async {
+    final gen = _playGeneration;
+
     if (_heartMode.isHeartMode.value) {
       await _heartMode.autoNext();
       return;
@@ -749,6 +755,7 @@ class PlayerController extends GetxController {
     final candidates = relatedMusic.where((s) => !isExcluded(s)).toList();
 
     if (candidates.isNotEmpty) {
+      if (gen != _playGeneration) return;
       final pick = candidates[rng.nextInt(candidates.length)];
       try {
         AppToast.show('已为你自动推荐');
@@ -761,6 +768,7 @@ class PlayerController extends GetxController {
     }
 
     // 2. Discover more songs via varied search strategies
+    if (gen != _playGeneration) return;
     try {
       final source = _registry.getSourceForTrack(video);
       if (source != null) {
@@ -778,6 +786,7 @@ class PlayerController extends GetxController {
     }
 
     // 3. Try cross-source discovery with varied keywords
+    if (gen != _playGeneration) return;
     try {
       final crossResult = await _crossSourceDiscover(video, isExcluded, rng);
       if (crossResult != null) {
@@ -790,6 +799,7 @@ class PlayerController extends GetxController {
     }
 
     // 4. 最终兜底：尝试 AI/随机推荐
+    if (gen != _playGeneration) return;
     await _triggerAutoPlay();
   }
 
@@ -862,7 +872,7 @@ class PlayerController extends GetxController {
     keywords.shuffle(rng);
 
     final sources = _registry.availableSources
-        .where((s) => s.sourceId != 'bilibili')
+        .where((s) => s.sourceId != 'bilibili' && s.sourceId != 'gdstudio')
         .toList()
       ..shuffle(rng);
 
@@ -917,6 +927,7 @@ class PlayerController extends GetxController {
   /// If queue is empty, just stop — don't auto-recommend.
   Future<void> skipNext() async {
     _saveListenDuration();
+    ++_playGeneration;
     await _advanceOrStop(allowAutoRecommend: false);
   }
 
@@ -984,6 +995,7 @@ class PlayerController extends GetxController {
 
   Future<void> skipPrevious() async {
     _saveListenDuration();
+    ++_playGeneration;
     // If played more than 3 seconds, restart current track
     if (currentVideo.value != null && position.value.inSeconds > 3) {
       seekTo(Duration.zero);
@@ -1026,6 +1038,7 @@ class PlayerController extends GetxController {
   Future<void> playAt(int index) async {
     if (index < 0 || index >= queue.length) return;
     _saveListenDuration();
+    ++_playGeneration;
     if (index == 0) {
       // Already playing this song, restart
       seekTo(Duration.zero);
@@ -1042,6 +1055,8 @@ class PlayerController extends GetxController {
   }
 
   void reorderQueue(int oldIndex, int newIndex) {
+    if (oldIndex < 0 || oldIndex >= queue.length) return;
+    if (newIndex < 0 || newIndex > queue.length) return;
     if (oldIndex < newIndex) newIndex--;
     final item = queue.removeAt(oldIndex);
     queue.insert(newIndex, item);
@@ -1053,10 +1068,12 @@ class PlayerController extends GetxController {
   }
 
   void clearQueue() {
+    ++_playGeneration;
     _saveListenDuration();
     _manualStop = true;
     _hasAutoPlayed = false;
     _playback.stop();
+    _playback.resetSwitchingTrack();
     queue.clear();
     playHistory.clear();
     currentIndex.value = -1;
@@ -1124,7 +1141,7 @@ class PlayerController extends GetxController {
     _cleanExpiredCache();
     final candidates = relatedMusic
         .where((s) => !_resolveCache.containsKey(s.uniqueId))
-        .take(3)
+        .take(1)
         .toList();
 
     for (final song in candidates) {
@@ -1138,11 +1155,14 @@ class PlayerController extends GetxController {
 
   /// When queue is running low, proactively discover and add songs.
   void _prefetchQueueIfNeeded() {
-    if (_isPrefetching || queue.length > 5 || _heartMode.isHeartMode.value) {
+    if (_isPrefetching || queue.length > 3 || _heartMode.isHeartMode.value) {
       return;
     }
     _isPrefetching = true;
-    _prefetchNextSongs().whenComplete(() => _isPrefetching = false);
+    _prefetchNextSongs()
+        .timeout(const Duration(seconds: 15))
+        .catchError((e) => log('Prefetch timeout or error: $e'))
+        .whenComplete(() => _isPrefetching = false);
   }
 
   Future<void> _prefetchNextSongs() async {
@@ -1166,10 +1186,10 @@ class PlayerController extends GetxController {
 
     // Pull from related music (URLs may already be pre-resolved)
     final candidates =
-        relatedMusic.where((s) => !isExcluded(s)).take(2).toList();
+        relatedMusic.where((s) => !isExcluded(s)).take(1).toList();
 
     for (final song in candidates) {
-      if (queue.length > 6) break;
+      if (queue.length > 3) break;
       try {
         final item = await _resolveQueueItem(song);
         if (item != null &&
@@ -1192,7 +1212,7 @@ class PlayerController extends GetxController {
           final filtered =
               result.tracks.where((s) => !isExcluded(s)).take(1).toList();
           for (final song in filtered) {
-            if (queue.length > 6) break;
+            if (queue.length > 3) break;
             try {
               final item = await _resolveQueueItem(song);
               if (item != null &&
@@ -1368,7 +1388,7 @@ class PlayerController extends GetxController {
         );
         if (gen != _playGeneration) return;
         if (resolved != null) {
-          await _playFromInfo(resolved.$1, resolved.$2);
+          await _playFromInfo(resolved.$1, resolved.$2, gen: gen);
         } else {
           throw Exception('No playable URL');
         }
