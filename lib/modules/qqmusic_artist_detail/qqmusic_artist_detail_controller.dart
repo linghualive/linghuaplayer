@@ -64,7 +64,7 @@ class QqMusicArtistDetailController extends GetxController {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(songs.first, preferredSourceId: null);
     for (int i = 1; i < songs.length; i++) {
-      playerCtrl.addToQueueSilent(songs[i]);
+      playerCtrl.addToQueueLazy(songs[i]);
     }
   }
 }

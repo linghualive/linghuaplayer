@@ -51,10 +51,8 @@ class FavoriteDetailController extends GetxController {
     if (videos.isEmpty) return;
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(videos.first.toSearchVideoModel(), preferredSourceId: null);
-    if (videos.length > 1) {
-      playerCtrl.addAllToQueue(
-        videos.sublist(1).map((v) => v.toSearchVideoModel()).toList(),
-      );
+    for (var i = 1; i < videos.length; i++) {
+      playerCtrl.addToQueueLazy(videos[i].toSearchVideoModel());
     }
   }
 

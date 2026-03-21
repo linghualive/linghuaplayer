@@ -71,9 +71,9 @@ class AudioPlaylistDetailController extends GetxController {
     final playerCtrl = Get.find<PlayerController>();
     // Play the first song
     playerCtrl.playFromAudioSong(songs.first);
-    // Add the rest to queue silently (no per-song snackbar)
+    // Add the rest to queue (lazy: URLs resolved when playing)
     for (int i = 1; i < songs.length; i++) {
-      playerCtrl.addToQueueSilent(songs[i].toSearchVideoModel());
+      playerCtrl.addToQueueLazy(songs[i].toSearchVideoModel());
     }
   }
 

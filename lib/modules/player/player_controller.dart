@@ -629,21 +629,29 @@ class PlayerController extends GetxController {
   Future<void> _playQueueItem(QueueItem item, {int? gen}) async {
     _manualStop = false;
     await _playback.ensureMediaKit();
+
+    // Lazy queue item: no URL pre-resolved, resolve now
+    if (item.audioUrl.isEmpty) {
+      await _resolveAndPlay(item, gen: gen);
+      return;
+    }
+
     try {
       await _playback.playAudioWithHeaders(item.audioUrl, item.headers);
     } catch (e) {
       log('Queue item playback failed, re-resolving: $e');
-      if (gen != null && gen != _playGeneration) return;
-      // URL might be expired, try to re-resolve
-      final resolved = await _registry.resolvePlaybackWithFallback(item.video);
-      if (resolved != null) {
-        final (info, resolvedVideo) = resolved;
-        _putCachedResolve(item.video.uniqueId, info, resolvedVideo);
-        await _playFromInfo(info, resolvedVideo, gen: gen);
-      } else {
-        rethrow;
-      }
+      await _resolveAndPlay(item, gen: gen);
     }
+  }
+
+  /// Resolve a queue item's playback URL and play it.
+  Future<void> _resolveAndPlay(QueueItem item, {int? gen}) async {
+    if (gen != null && gen != _playGeneration) return;
+    final resolved = await _registry.resolvePlaybackWithFallback(item.video);
+    if (resolved == null) throw Exception('无法获取播放链接');
+    final (info, resolvedVideo) = resolved;
+    _putCachedResolve(item.video.uniqueId, info, resolvedVideo);
+    await _playFromInfo(info, resolvedVideo, gen: gen);
   }
 
   void togglePlay() {
@@ -967,12 +975,21 @@ class PlayerController extends GetxController {
     _updateUploaderMid(item.video);
     audioQualityLabel.value = item.qualityLabel;
 
+    // Show loading indicator for lazy (unresolved) items
+    final needsResolve = item.audioUrl.isEmpty;
+    if (needsResolve) isLoading.value = true;
+
     try {
       await _playQueueItem(item);
-      _fetchLyrics(item.video);
-      _loadRelatedMusic(item.video);
+      if (needsResolve) isLoading.value = false;
+      // After lazy resolve, queue[0] may have updated video info
+      final played = queue.isNotEmpty ? queue[0] : item;
+      _storage.addPlayHistory(played.video);
+      _fetchLyrics(played.video);
+      _loadRelatedMusic(played.video);
       _prefetchQueueIfNeeded();
     } catch (e) {
+      if (needsResolve) isLoading.value = false;
       log('Play queue item failed: $e');
       if (queue.isNotEmpty) queue.removeAt(0);
       if (retries >= 3) {
@@ -1436,12 +1453,18 @@ class PlayerController extends GetxController {
   Future<void> _startPlaybackIfIdle() async {
     if (!hasCurrentTrack && queue.isNotEmpty) {
       currentIndex.value = 0;
-      final item = queue[0];
-      currentVideo.value = item.video;
-      _updateUploaderMid(item.video);
-      audioQualityLabel.value = item.qualityLabel;
-      await _playQueueItem(item);
+      await _playCurrentQueueItem();
     }
+  }
+
+  /// Add a video to the queue without resolving URL (lazy resolution).
+  /// URL will be resolved just-in-time when the song is about to play.
+  /// This is instant and ideal for "Play All" scenarios.
+  void addToQueueLazy(SearchVideoModel video) {
+    final existingIndex =
+        queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
+    if (existingIndex >= 0) return;
+    queue.add(QueueItem(video: video, audioUrl: ''));
   }
 
   /// Add a video to the queue silently (no snackbar).

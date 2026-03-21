@@ -63,7 +63,7 @@ class LocalPlaylistDetailController extends GetxController {
     playerCtrl.playFromSearch(tracks.first,
         preferredSourceId: _preferredSourceId);
     for (int i = 1; i < tracks.length; i++) {
-      playerCtrl.addToQueueSilent(tracks[i]);
+      playerCtrl.addToQueueLazy(tracks[i]);
     }
   }
 

@@ -66,7 +66,7 @@ class NeteasePlaylistDetailController extends GetxController {
     final playerCtrl = Get.find<PlayerController>();
     playerCtrl.playFromSearch(tracks.first, preferredSourceId: null);
     for (int i = 1; i < tracks.length; i++) {
-      playerCtrl.addToQueueSilent(tracks[i]);
+      playerCtrl.addToQueueLazy(tracks[i]);
     }
   }
 
