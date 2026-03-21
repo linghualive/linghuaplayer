@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
 
+import '../../core/http/circuit_breaker.dart';
+import '../../core/http/rate_limiter.dart';
+
 /// HTTP provider for the GD Studio Music API.
 ///
 /// API base: https://music-api.gdstudio.xyz/api.php
@@ -8,6 +11,8 @@ class GdStudioProvider {
   static const _baseUrl = 'https://music-api.gdstudio.xyz/api.php';
 
   final Dio _dio;
+  final RateLimiter _rateLimiter;
+  final CircuitBreaker _circuitBreaker;
 
   GdStudioProvider()
       : _dio = Dio(BaseOptions(
@@ -18,7 +23,30 @@ class GdStudioProvider {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
                 'AppleWebKit/537.36 (KHTML, like Gecko)',
           },
-        ));
+        )),
+        _rateLimiter = RateLimiter(
+          maxTokens: 10,
+          refillInterval: const Duration(milliseconds: 200),
+        ),
+        _circuitBreaker = CircuitBreaker(
+          failureThreshold: 5,
+          resetTimeout: const Duration(seconds: 30),
+        );
+
+  /// Wrap all API calls with rate limiting and circuit breaker protection.
+  Future<Response> _throttledRequest(
+      Future<Response> Function() request) async {
+    _circuitBreaker.checkState();
+    await _rateLimiter.acquire();
+    try {
+      final response = await request();
+      _circuitBreaker.recordSuccess();
+      return response;
+    } catch (e) {
+      _circuitBreaker.recordFailure();
+      rethrow;
+    }
+  }
 
   /// Search for tracks.
   ///
@@ -32,13 +60,13 @@ class GdStudioProvider {
     int count = 20,
     int pages = 1,
   }) {
-    return _dio.get('', queryParameters: {
-      'types': 'search',
-      'source': source,
-      'name': name,
-      'count': count,
-      'pages': pages,
-    });
+    return _throttledRequest(() => _dio.get('', queryParameters: {
+          'types': 'search',
+          'source': source,
+          'name': name,
+          'count': count,
+          'pages': pages,
+        }));
   }
 
   /// Get playable URL for a track.
@@ -49,12 +77,12 @@ class GdStudioProvider {
     required String id,
     int br = 999,
   }) {
-    return _dio.get('', queryParameters: {
-      'types': 'url',
-      'source': source,
-      'id': id,
-      'br': br,
-    });
+    return _throttledRequest(() => _dio.get('', queryParameters: {
+          'types': 'url',
+          'source': source,
+          'id': id,
+          'br': br,
+        }));
   }
 
   /// Get album cover image URL.
@@ -65,12 +93,12 @@ class GdStudioProvider {
     required String id,
     int size = 500,
   }) {
-    return _dio.get('', queryParameters: {
-      'types': 'pic',
-      'source': source,
-      'id': id,
-      'size': size,
-    });
+    return _throttledRequest(() => _dio.get('', queryParameters: {
+          'types': 'pic',
+          'source': source,
+          'id': id,
+          'size': size,
+        }));
   }
 
   /// Get lyrics for a track (LRC format).
@@ -78,10 +106,10 @@ class GdStudioProvider {
     required String source,
     required String id,
   }) {
-    return _dio.get('', queryParameters: {
-      'types': 'lyric',
-      'source': source,
-      'id': id,
-    });
+    return _throttledRequest(() => _dio.get('', queryParameters: {
+          'types': 'lyric',
+          'source': source,
+          'id': id,
+        }));
   }
 }

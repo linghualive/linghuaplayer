@@ -24,6 +24,7 @@ class HeartModeService {
   Future<void> Function(SearchVideoModel video)? onPlayFromSearch;
   Future<bool> Function(SearchVideoModel video)? onAddToQueueSilent;
   void Function()? onStopPlayback;
+  void Function()? onClearQueue;
   List<QueueItem> Function()? getCurrentQueue;
   SearchVideoModel? Function()? getCurrentVideo;
 
@@ -42,6 +43,9 @@ class HeartModeService {
     _savedQueue = List.from(getCurrentQueue?.call() ?? []);
 
     _savedCurrentVideo = getCurrentVideo?.call();
+
+    // Clear queue after saving — must happen before playing heart mode songs
+    onClearQueue?.call();
 
     isHeartMode.value = true;
     heartModeTags.assignAll(tags);

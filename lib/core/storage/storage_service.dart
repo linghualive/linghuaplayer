@@ -185,6 +185,10 @@ class StorageService extends GetxService {
   set skippedUpdateVersion(String? value) =>
       _box.write('skipped_update_version', value);
 
+  // Auto-recommend setting
+  bool get autoRecommend => _box.read<bool>('auto_recommend') ?? true;
+  set autoRecommend(bool value) => _box.write('auto_recommend', value);
+
   // DeepSeek API
   String? get deepseekApiKey => _box.read<String>('deepseek_api_key');
   set deepseekApiKey(String? value) {

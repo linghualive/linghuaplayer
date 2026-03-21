@@ -231,22 +231,37 @@ class PlaybackService {
   /// If [headers] contains Referer/UA, uses them (like Bilibili).
   Future<void> playAudioWithHeaders(
       String url, Map<String, String> headers) async {
-    if (headers.isEmpty) {
-      await playDirectAudio(url);
-    } else {
-      await playBilibiliAudio(url);
+    if (_useMediaKit) {
+      await _playAudioWithMediaKit(url, headers: headers);
+      return;
+    }
+
+    log('Playing audio URL: $url');
+    try {
+      final source = headers.isEmpty
+          ? AudioSource.uri(Uri.parse(url))
+          : AudioSource.uri(Uri.parse(url), headers: headers);
+      await audioPlayer.setAudioSource(source);
+      audioPlayer.play();
+    } catch (e) {
+      log('Audio source error: $e');
+      rethrow;
     }
   }
 
-  Future<void> _playAudioWithMediaKit(String url) async {
+  Future<void> _playAudioWithMediaKit(String url,
+      {Map<String, String>? headers}) async {
     log('Playing audio with media_kit: $url');
     _isSwitchingTrack = true;
     try {
       audioPlayer.stop();
       await _ensureMediaKitPlayer();
 
+      // Use provided headers, fallback to default Bilibili headers for backwards compat
+      final effectiveHeaders =
+          headers?.isNotEmpty == true ? headers! : _httpHeaders;
       await _mediaKitPlayer!.open(
-        mk.Media(url, httpHeaders: _httpHeaders),
+        mk.Media(url, httpHeaders: effectiveHeaders),
       );
       _isSwitchingTrack = false;
       await _mediaKitPlayer!.play();

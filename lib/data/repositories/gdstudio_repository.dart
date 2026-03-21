@@ -58,30 +58,15 @@ class GdStudioRepository {
         final lyricId = item['lyric_id']?.toString() ?? '';
         final source = item['source'] as String? ?? subSource;
 
-        // Get cover image URL
-        String picUrl = '';
-        if (picId.isNotEmpty) {
-          try {
-            final picRes = await _provider.getPic(
-              source: source,
-              id: picId,
-              size: 300,
-            );
-            picUrl = picRes.data?['url'] as String? ?? '';
-          } catch (e) {
-            log('GdStudioRepository: pic fetch failed for $picId: $e');
-          }
-        }
-
         tracks.add(SearchVideoModel(
           id: int.tryParse(id) ?? id.hashCode,
           author: artist,
           title: name,
           description: album,
-          pic: picUrl,
+          pic: '', // Lazy-loaded via getCoverUrl()
           duration: '0:00',
-          // Store extra info in bvid as "source:trackId:lyricId"
-          bvid: '$source:$id:$lyricId',
+          // Store extra info in bvid as "source:trackId:lyricId:picId"
+          bvid: '$source:$id:$lyricId:$picId',
           source: MusicSource.gdstudio,
         ));
       } catch (e) {
@@ -94,6 +79,27 @@ class GdStudioRepository {
       hasMore: tracks.length >= limit,
       totalCount: tracks.length,
     );
+  }
+
+  /// Fetch cover URL on demand (for lazy-loading by the UI layer).
+  ///
+  /// Extracts source and picId from the track's bvid field
+  /// (format: "source:trackId:lyricId:picId").
+  Future<String> getCoverUrl(SearchVideoModel track, {int size = 300}) async {
+    final parts = track.bvid.split(':');
+    if (parts.length < 4) return '';
+
+    final source = parts[0];
+    final picId = parts[3];
+    if (picId.isEmpty) return '';
+
+    try {
+      final res = await _provider.getPic(source: source, id: picId, size: size);
+      return res.data?['url'] as String? ?? '';
+    } catch (e) {
+      log('GdStudioRepository: pic fetch failed for $picId: $e');
+      return '';
+    }
   }
 
   /// Resolve a playable URL for the given track.

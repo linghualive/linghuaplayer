@@ -37,6 +37,13 @@ class RecommendationService {
     List<String> tags = const [],
     List<String>? recentPlayed,
   }) async {
+    // Trim session-level dedup set to avoid exhausting all candidates
+    if (_sessionRecommendedIds.length > 100) {
+      final excess = _sessionRecommendedIds.length - 50;
+      final toRemove = _sessionRecommendedIds.take(excess).toList();
+      _sessionRecommendedIds.removeAll(toRemove);
+    }
+
     // Get user profile summary for enhanced recommendations
     String? profileSummary;
     try {
@@ -88,31 +95,58 @@ class RecommendationService {
   }
 
   /// Resolve a recommended song to a playable SearchVideoModel.
-  /// Iterates through all registered sources until one returns results.
+  /// Prioritizes GD Studio, then tries at most one other source, then Bilibili.
   Future<SearchVideoModel?> _resolveRecommendedSong(
       RecommendedSong rec) async {
     final keyword = '${rec.title} ${rec.artist}';
 
-    for (final source in _registry.availableSources) {
+    // 1. Prioritize GD Studio source (music-specific, best results)
+    final gdSource = _registry.getSource('gdstudio');
+    if (gdSource != null) {
       try {
-        final result = await source.searchTracks(keyword: keyword, limit: 5);
-        if (result.tracks.isEmpty) continue;
-
-        // For sources that might return non-music content (e.g. Bilibili),
-        // apply quality filtering
-        if (source.sourceId == 'bilibili') {
-          final candidates =
-              result.tracks.take(5).where(_isQualityResult).toList();
-          if (candidates.isEmpty) continue;
-          candidates.sort((a, b) => b.play.compareTo(a.play));
-          log('Resolved "${rec.title}" via ${source.sourceId} (filtered)');
-          return candidates.first;
+        final result =
+            await gdSource.searchTracks(keyword: keyword, limit: 3);
+        if (result.tracks.isNotEmpty) {
+          log('Resolved "${rec.title}" via gdstudio (priority)');
+          return result.tracks.first;
         }
+      } catch (e) {
+        log('GD Studio failed for "${rec.title}": $e');
+      }
+    }
 
-        log('Resolved "${rec.title}" via ${source.sourceId}');
+    // 2. Fallback: try at most 1 other source (skip Bilibili for quality)
+    final fallbackSources = _registry.availableSources
+        .where((s) => s.sourceId != 'gdstudio' && s.sourceId != 'bilibili')
+        .take(1);
+
+    for (final source in fallbackSources) {
+      try {
+        final result = await source.searchTracks(keyword: keyword, limit: 3);
+        if (result.tracks.isEmpty) continue;
+        log('Resolved "${rec.title}" via ${source.sourceId} (fallback)');
         return result.tracks.first;
       } catch (e) {
         log('Source ${source.sourceId} failed for "${rec.title}": $e');
+      }
+    }
+
+    // 3. Last resort: try Bilibili with quality filtering
+    final biliSource = _registry.getSource('bilibili');
+    if (biliSource != null) {
+      try {
+        final result =
+            await biliSource.searchTracks(keyword: keyword, limit: 3);
+        if (result.tracks.isNotEmpty) {
+          final candidates = result.tracks.where(_isQualityResult).toList();
+          if (candidates.isNotEmpty) {
+            candidates.sort((a, b) => b.play.compareTo(a.play));
+            log('Resolved "${rec.title}" via bilibili (last resort)');
+            return candidates.first;
+          }
+        }
+      } catch (e) {
+        log('Bilibili failed for "${rec.title}": $e');
       }
     }
 

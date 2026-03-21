@@ -12,7 +12,8 @@ import 'music_source_adapter.dart';
 /// Uses the GD Studio Music API (music-api.gdstudio.xyz) which aggregates
 /// multiple backend sources (netease, kuwo, joox, bilibili, etc.).
 /// Defaults to the highest available audio quality (br=999).
-class GdStudioSourceAdapter extends MusicSourceAdapter with LyricsCapability {
+class GdStudioSourceAdapter extends MusicSourceAdapter
+    with LyricsCapability, CoverCapability {
   final GdStudioRepository _repo;
 
   GdStudioSourceAdapter({GdStudioRepository? repository})
@@ -71,6 +72,13 @@ class GdStudioSourceAdapter extends MusicSourceAdapter with LyricsCapability {
     final filtered = result.tracks.where((s) => s.id != track.id).toList();
     filtered.shuffle();
     return filtered;
+  }
+
+  // ── CoverCapability ──
+
+  @override
+  Future<String> getCoverUrl(SearchVideoModel track) async {
+    return _repo.getCoverUrl(track);
   }
 
   // ── LyricsCapability ──

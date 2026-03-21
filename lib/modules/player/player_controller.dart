@@ -86,6 +86,9 @@ class PlayerController extends GetxController {
   // Play mode
   final playMode = PlayMode.sequential.obs;
 
+  // Auto-recommend toggle
+  final autoRecommend = true.obs;
+
   // Audio quality
   final audioQualityLabel = ''.obs;
 
@@ -138,7 +141,10 @@ class PlayerController extends GetxController {
   // repeated network calls for recently resolved songs.
   final _resolveCache = <String, _CachedResolve>{};
   static const _resolveCacheTtl = Duration(minutes: 10);
-  static const _maxCacheSize = 30;
+  static const _maxCacheSize = 100;
+
+  // Auto-play guard: prevents concurrent _autoPlayNext executions
+  bool _isAutoPlayingNext = false;
 
   // Queue prefetch guard
   bool _isPrefetching = false;
@@ -148,11 +154,20 @@ class PlayerController extends GetxController {
     super.onInit();
     _playback.onTrackCompleted = _playNext;
     _playback.onPositionUpdate = _updateLyricsIndex;
+    try {
+      autoRecommend.value = _storage.autoRecommend;
+    } catch (_) {
+      // Fallback if storage not initialized (e.g. in tests)
+    }
 
     // Wire up HeartModeService callbacks
     _heartMode.onPlayFromSearch = playFromSearch;
     _heartMode.onAddToQueueSilent = addToQueueSilent;
     _heartMode.onStopPlayback = _playback.stop;
+    _heartMode.onClearQueue = () {
+      queue.clear();
+      currentIndex.value = -1;
+    };
     _heartMode.getCurrentQueue = () => List.from(queue);
     _heartMode.getCurrentVideo = () => currentVideo.value;
     _heartMode.onRestoreQueue = _restoreQueue;
@@ -311,17 +326,9 @@ class PlayerController extends GetxController {
       String uniqueId, PlaybackInfo info, SearchVideoModel video) {
     _cleanExpiredCache();
     _resolveCache[uniqueId] = _CachedResolve(info, video);
-    // Evict oldest if over capacity
-    if (_resolveCache.length > _maxCacheSize) {
-      String? oldestKey;
-      DateTime? oldestTime;
-      for (final e in _resolveCache.entries) {
-        if (oldestTime == null || e.value.cachedAt.isBefore(oldestTime)) {
-          oldestKey = e.key;
-          oldestTime = e.value.cachedAt;
-        }
-      }
-      if (oldestKey != null) _resolveCache.remove(oldestKey);
+    // Evict oldest if over capacity (Map preserves insertion order)
+    while (_resolveCache.length > _maxCacheSize) {
+      _resolveCache.remove(_resolveCache.keys.first);
     }
   }
 
@@ -353,8 +360,8 @@ class PlayerController extends GetxController {
     final queuedIndex =
         queue.indexWhere((q) => q.video.uniqueId == video.uniqueId);
     if (queuedIndex >= 0) {
-      final item = queue.removeAt(queuedIndex);
       _pushToHistory();
+      final item = queue.removeAt(queuedIndex);
       queue.insert(0, item);
       currentIndex.value = 0;
       _manualStop = false;
@@ -487,11 +494,13 @@ class PlayerController extends GetxController {
     // Try audio streams with fallback through backup URLs
     String? playedUrl;
     String playedLabel = '';
+    Map<String, String> playedHeaders = const {};
     for (final stream in info.audioStreams) {
       try {
         await _playback.playAudioWithHeaders(stream.url, stream.headers);
         playedUrl = stream.url;
         playedLabel = stream.qualityLabel;
+        playedHeaders = stream.headers;
         break;
       } catch (e) {
         log('Audio stream ${stream.qualityLabel} failed: $e');
@@ -501,6 +510,7 @@ class PlayerController extends GetxController {
                 stream.backupUrl!, stream.headers);
             playedUrl = stream.backupUrl!;
             playedLabel = stream.qualityLabel;
+            playedHeaders = stream.headers;
             break;
           } catch (e2) {
             log('Audio stream ${stream.qualityLabel} backup failed: $e2');
@@ -517,7 +527,7 @@ class PlayerController extends GetxController {
       video: video,
       audioUrl: playedUrl,
       qualityLabel: playedLabel,
-      headers: bestAudio.headers,
+      headers: playedHeaders,
     );
   }
 
@@ -648,9 +658,7 @@ class PlayerController extends GetxController {
     try {
       await playRandomIfNeeded();
     } finally {
-      if (!hasCurrentTrack) {
-        isLoading.value = false;
-      }
+      isLoading.value = false;
     }
   }
 
@@ -662,6 +670,7 @@ class PlayerController extends GetxController {
       _manualStop = false;
       return;
     }
+    _saveListenDuration();
     if (_heartMode.handleTrackCompleted()) return;
 
     switch (playMode.value) {
@@ -671,7 +680,11 @@ class PlayerController extends GetxController {
         break;
       case PlayMode.shuffle:
         if (queue.length <= 1) {
-          _autoPlayNext().catchError((e) => log('Auto-play error: $e'));
+          if (autoRecommend.value) {
+            _autoPlayNext().catchError((e) => log('Auto-play error: $e'));
+          } else {
+            _advanceNext().catchError((e) => log('Advance next error: $e'));
+          }
           return;
         }
         final rng = Random();
@@ -685,6 +698,16 @@ class PlayerController extends GetxController {
   }
 
   Future<void> _autoPlayNext() async {
+    if (_isAutoPlayingNext) return;
+    _isAutoPlayingNext = true;
+    try {
+      await _autoPlayNextImpl();
+    } finally {
+      _isAutoPlayingNext = false;
+    }
+  }
+
+  Future<void> _autoPlayNextImpl() async {
     if (_heartMode.isHeartMode.value) {
       await _heartMode.autoNext();
       return;
@@ -698,7 +721,7 @@ class PlayerController extends GetxController {
 
     final rng = Random();
 
-    // Exclude queue and recent history to avoid ping-ponging (limited scope)
+    // Exclude queue and recent history to avoid ping-ponging
     final recentHistory = playHistory.length > 20
         ? playHistory.sublist(playHistory.length - 20)
         : playHistory;
@@ -709,23 +732,19 @@ class PlayerController extends GetxController {
       video.uniqueId,
     };
 
-    // Also exclude by normalized title (limited to recent 10)
-    final recentForTitles = playHistory.length > 10
-        ? playHistory.sublist(playHistory.length - 10)
-        : playHistory;
-
+    // Also exclude by normalized title (same scope as ID for consistency)
     final excludeTitles = <String>{
       normalizeTitle(video.title),
       ...queue.map((q) => normalizeTitle(q.video.title)),
-      ...recentForTitles.map((q) => normalizeTitle(q.video.title)),
+      ...recentHistory.map((q) => normalizeTitle(q.video.title)),
     };
 
-    bool _isExcluded(SearchVideoModel s) =>
+    bool isExcluded(SearchVideoModel s) =>
         excludeIds.contains(s.uniqueId) ||
         excludeTitles.contains(normalizeTitle(s.title));
 
     // 1. Try related music not already played (random pick)
-    final candidates = relatedMusic.where((s) => !_isExcluded(s)).toList();
+    final candidates = relatedMusic.where((s) => !isExcluded(s)).toList();
 
     if (candidates.isNotEmpty) {
       final pick = candidates[rng.nextInt(candidates.length)];
@@ -739,7 +758,7 @@ class PlayerController extends GetxController {
       final source = _registry.getSourceForTrack(video);
       if (source != null) {
         final moreSongs = await _getVariedRelatedTracks(source, video, rng);
-        final filtered = moreSongs.where((s) => !_isExcluded(s)).toList();
+        final filtered = moreSongs.where((s) => !isExcluded(s)).toList();
         if (filtered.isNotEmpty) {
           final pick = filtered[rng.nextInt(filtered.length)];
           AppToast.show('已为你自动推荐');
@@ -753,7 +772,7 @@ class PlayerController extends GetxController {
 
     // 3. Try cross-source discovery with varied keywords
     try {
-      final crossResult = await _crossSourceDiscover(video, _isExcluded, rng);
+      final crossResult = await _crossSourceDiscover(video, isExcluded, rng);
       if (crossResult != null) {
         AppToast.show('已为你自动推荐');
         await playFromSearch(crossResult);
@@ -802,7 +821,7 @@ class PlayerController extends GetxController {
         final result = await source.searchTracks(
           keyword: keyword,
           limit: 20,
-          offset: rng.nextInt(3) * 20, // random page for variety
+          offset: 0, // fixed first page to reduce requests
         );
         if (result.tracks.isNotEmpty) return result.tracks;
       } catch (_) {}
@@ -840,8 +859,8 @@ class PlayerController extends GetxController {
         .toList()
       ..shuffle(rng);
 
-    for (final keyword in keywords.take(4)) {
-      for (final source in sources) {
+    for (final keyword in keywords.take(2)) {
+      for (final source in sources.take(2)) {
         try {
           final result = await source.searchTracks(
             keyword: keyword,
@@ -862,8 +881,6 @@ class PlayerController extends GetxController {
   // ── Heart Mode ──
 
   Future<void> activateHeartMode(List<String> tags) async {
-    queue.clear();
-    currentIndex.value = -1;
     await _heartMode.activate(tags);
   }
 
@@ -899,7 +916,12 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       await _playCurrentQueueItem();
     } else {
-      await _autoPlayNext();
+      // Queue exhausted — stop playback, don't auto-recommend
+      _pushToHistory();
+      if (queue.isNotEmpty) queue.removeAt(0);
+      currentIndex.value = -1;
+      currentVideo.value = null;
+      _playback.stop();
     }
   }
 
@@ -911,14 +933,24 @@ class PlayerController extends GetxController {
       queue.removeAt(0);
       currentIndex.value = 0;
       await _playCurrentQueueItem();
-    } else {
+    } else if (autoRecommend.value) {
       await _autoPlayNext();
+    } else {
+      // Auto-recommend disabled — stop playback
+      _pushToHistory();
+      if (queue.isNotEmpty) queue.removeAt(0);
+      currentIndex.value = -1;
+      currentVideo.value = null;
+      _playback.stop();
+      AppToast.show('播放队列已播完');
     }
   }
 
   /// Play the current queue[0] item with error handling.
   /// On failure, skips to next or triggers auto-play.
-  Future<void> _playCurrentQueueItem() async {
+  /// [retries] limits cascade failures (max 3 consecutive skips).
+  Future<void> _playCurrentQueueItem({int retries = 0}) async {
+    if (queue.isEmpty) return;
     final item = queue[0];
     currentVideo.value = item.video;
     _updateUploaderMid(item.video);
@@ -931,12 +963,19 @@ class PlayerController extends GetxController {
       _prefetchQueueIfNeeded();
     } catch (e) {
       log('Play queue item failed: $e');
-      AppToast.error('播放失败，跳到下一首');
-      // Remove failed item and try next
       if (queue.isNotEmpty) queue.removeAt(0);
+      if (retries >= 3) {
+        // Stop cascade: too many consecutive failures
+        AppToast.error('连续播放失败，已停止');
+        currentIndex.value = -1;
+        currentVideo.value = null;
+        _playback.stop();
+        return;
+      }
+      AppToast.error('播放失败，跳到下一首');
       if (queue.isNotEmpty) {
         currentIndex.value = 0;
-        await _playCurrentQueueItem();
+        await _playCurrentQueueItem(retries: retries + 1);
       } else {
         _autoPlayNext();
       }
@@ -964,6 +1003,11 @@ class PlayerController extends GetxController {
       // No track at all, find something to play
       _triggerAutoPlay();
     }
+  }
+
+  void toggleAutoRecommend() {
+    autoRecommend.value = !autoRecommend.value;
+    _storage.autoRecommend = autoRecommend.value;
   }
 
   void togglePlayMode() {
@@ -1012,6 +1056,7 @@ class PlayerController extends GetxController {
   void clearQueue() {
     _saveListenDuration();
     _manualStop = true;
+    _hasAutoPlayed = false;
     _playback.stop();
     queue.clear();
     playHistory.clear();
@@ -1060,9 +1105,9 @@ class PlayerController extends GetxController {
         relatedMusic.assignAll(filtered);
         relatedMusicLoading.value = false;
 
-        // Pre-resolve URLs for top related songs and refill queue
+        // Pre-resolve URLs for top related songs
         _preResolveRelatedMusic();
-        _prefetchQueueIfNeeded();
+        // _prefetchQueueIfNeeded 已在 playFromSearch 中调用，不重复触发
       }
     }).catchError((e) {
       log('Related music fetch error: $e');
@@ -1080,7 +1125,7 @@ class PlayerController extends GetxController {
     _cleanExpiredCache();
     final candidates = relatedMusic
         .where((s) => !_resolveCache.containsKey(s.uniqueId))
-        .take(2)
+        .take(1)
         .toList();
 
     for (final song in candidates) {
@@ -1094,7 +1139,7 @@ class PlayerController extends GetxController {
 
   /// When queue is running low, proactively discover and add songs.
   void _prefetchQueueIfNeeded() {
-    if (_isPrefetching || queue.length > 3 || _heartMode.isHeartMode.value) {
+    if (_isPrefetching || queue.length > 5 || _heartMode.isHeartMode.value) {
       return;
     }
     _isPrefetching = true;
@@ -1111,13 +1156,9 @@ class PlayerController extends GetxController {
       ...recentHistory.map((q) => q.video.uniqueId),
     };
 
-    final recentForTitles = playHistory.length > 10
-        ? playHistory.sublist(playHistory.length - 10)
-        : playHistory;
-
     final excludeTitles = <String>{
       ...queue.map((q) => normalizeTitle(q.video.title)),
-      ...recentForTitles.map((q) => normalizeTitle(q.video.title)),
+      ...recentHistory.map((q) => normalizeTitle(q.video.title)),
     };
 
     bool isExcluded(SearchVideoModel s) =>
@@ -1126,10 +1167,10 @@ class PlayerController extends GetxController {
 
     // Pull from related music (URLs may already be pre-resolved)
     final candidates =
-        relatedMusic.where((s) => !isExcluded(s)).take(4).toList();
+        relatedMusic.where((s) => !isExcluded(s)).take(2).toList();
 
     for (final song in candidates) {
-      if (queue.length > 4) break;
+      if (queue.length > 6) break;
       try {
         final item = await _resolveQueueItem(song);
         if (item != null &&
@@ -1150,9 +1191,9 @@ class PlayerController extends GetxController {
           final result =
               await source.searchTracks(keyword: keyword, limit: 10);
           final filtered =
-              result.tracks.where((s) => !isExcluded(s)).take(3).toList();
+              result.tracks.where((s) => !isExcluded(s)).take(1).toList();
           for (final song in filtered) {
-            if (queue.length > 4) break;
+            if (queue.length > 6) break;
             try {
               final item = await _resolveQueueItem(song);
               if (item != null &&
@@ -1439,6 +1480,30 @@ class PlayerController extends GetxController {
       await _startPlaybackIfIdle();
     } catch (e) {
       log('Add to queue failed: $e');
+      AppToast.error('添加失败: $e');
+    }
+  }
+
+  /// Add a video to play next (insert right after current track).
+  Future<void> addToQueueNext(SearchVideoModel video) async {
+    final existingIndex =
+        queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
+    if (existingIndex >= 0) {
+      // Move existing item to next position
+      final item = queue.removeAt(existingIndex);
+      queue.insert(queue.isEmpty ? 0 : 1, item);
+      AppToast.show('将下一首播放');
+      return;
+    }
+
+    try {
+      final item = await _resolveQueueItem(video);
+      if (item == null) return;
+      queue.insert(queue.isEmpty ? 0 : 1, item);
+      AppToast.show('将下一首播放');
+      await _startPlaybackIfIdle();
+    } catch (e) {
+      log('Add to queue next failed: $e');
       AppToast.error('添加失败: $e');
     }
   }

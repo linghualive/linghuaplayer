@@ -37,6 +37,11 @@ mixin LyricsCapability on MusicSourceAdapter {
   Future<LyricsData?> getLyrics(SearchVideoModel track);
 }
 
+/// Source can lazily resolve cover art URLs for tracks.
+mixin CoverCapability on MusicSourceAdapter {
+  Future<String> getCoverUrl(SearchVideoModel track);
+}
+
 /// Source can provide hot search keywords.
 mixin HotSearchCapability on MusicSourceAdapter {
   Future<List<HotKeyword>> getHotSearchKeywords();
