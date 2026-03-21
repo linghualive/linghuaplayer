@@ -37,7 +37,7 @@ class AudioSongModel {
 
   SearchVideoModel toSearchVideoModel() {
     return SearchVideoModel(
-      id: aid,
+      id: id,
       author: author,
       mid: uid,
       title: title,
@@ -47,7 +47,7 @@ class AudioSongModel {
       danmaku: 0,
       duration: DurationFormatter.format(duration),
       bvid: bvid,
-      arcurl: 'https://www.bilibili.com/video/$bvid',
+      arcurl: bvid.isNotEmpty ? 'https://www.bilibili.com/video/$bvid' : '',
     );
   }
 }

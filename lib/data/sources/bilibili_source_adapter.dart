@@ -66,7 +66,32 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
   @override
   Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track) async {
     final bvid = track.bvid;
-    if (bvid.isEmpty) return null;
+
+    // For 音频区 songs without video association, try audio API
+    if (bvid.isEmpty) {
+      if (track.id > 0) {
+        try {
+          final audioUrl = await _musicRepo.getAudioUrl(track.id);
+          if (audioUrl != null && audioUrl.isNotEmpty) {
+            return PlaybackInfo(
+              audioStreams: [
+                StreamOption(
+                  url: audioUrl,
+                  qualityLabel: 'AU',
+                  bandwidth: 0,
+                  codec: '',
+                  headers: _bilibiliHeaders,
+                ),
+              ],
+              sourceId: sourceId,
+            );
+          }
+        } catch (e) {
+          log('BilibiliSourceAdapter: audio API failed for id=${track.id}: $e');
+        }
+      }
+      return null;
+    }
 
     final streams = await _playerRepo.getAudioStreams(bvid);
     if (streams.isEmpty) return null;

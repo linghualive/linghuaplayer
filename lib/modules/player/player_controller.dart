@@ -369,9 +369,11 @@ class PlayerController extends GetxController {
       await _playQueueItem(item, gen: gen);
       if (gen != _playGeneration) return;
       isLoading.value = false;
-      _storage.addPlayHistory(item.video);
-      _fetchLyrics(item.video);
-      _loadRelatedMusic(item.video);
+      // Use queue[0].video: lazy resolve may have updated the video info.
+      final played = queue.isNotEmpty ? queue[0].video : item.video;
+      _storage.addPlayHistory(played);
+      _fetchLyrics(played);
+      _loadRelatedMusic(played);
       _prefetchQueueIfNeeded();
       return;
     }
@@ -614,11 +616,15 @@ class PlayerController extends GetxController {
       headers: headers,
     );
 
-    // Push current song to history before replacing
-    _pushToHistory();
-
     final existingIndex =
         queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
+
+    // Only push to history if we're replacing a different song.
+    // Skip when updating the current song in-place (e.g. lazy resolve).
+    if (existingIndex != 0) {
+      _pushToHistory();
+    }
+
     if (existingIndex >= 0) {
       queue.removeAt(existingIndex);
     }
@@ -647,10 +653,17 @@ class PlayerController extends GetxController {
   /// Resolve a queue item's playback URL and play it.
   Future<void> _resolveAndPlay(QueueItem item, {int? gen}) async {
     if (gen != null && gen != _playGeneration) return;
+    final originalUniqueId = item.video.uniqueId;
     final resolved = await _registry.resolvePlaybackWithFallback(item.video);
     if (resolved == null) throw Exception('无法获取播放链接');
     final (info, resolvedVideo) = resolved;
-    _putCachedResolve(item.video.uniqueId, info, resolvedVideo);
+    _putCachedResolve(originalUniqueId, info, resolvedVideo);
+    // If fallback changed the video identity, remove the stale lazy item
+    if (resolvedVideo.uniqueId != originalUniqueId) {
+      final staleIdx = queue.indexWhere(
+          (q) => q.video.uniqueId == originalUniqueId);
+      if (staleIdx >= 0) queue.removeAt(staleIdx);
+    }
     await _playFromInfo(info, resolvedVideo, gen: gen);
   }
 

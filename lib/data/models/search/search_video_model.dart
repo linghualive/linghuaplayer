@@ -47,7 +47,7 @@ class SearchVideoModel {
       case MusicSource.gdstudio:
         return 'gdstudio_$id';
       case MusicSource.bilibili:
-        return bvid;
+        return bvid.isNotEmpty ? bvid : 'bilibili_$id';
     }
   }
 
