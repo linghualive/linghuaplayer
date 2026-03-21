@@ -65,30 +65,37 @@ class RecommendationService {
       );
     }
 
+    // Resolve all recommendations in parallel for speed
+    final futures = recommendations.map((rec) async {
+      try {
+        return await _resolveRecommendedSong(rec);
+      } catch (e) {
+        log('Failed to resolve "${rec.title}" by ${rec.artist}: $e');
+        return null;
+      }
+    }).toList();
+
+    final resolved = await Future.wait(futures);
+
     final List<SearchVideoModel> results = [];
     final Set<String> seenIds = {};
     final Set<String> seenNormalizedTitles = {};
 
-    for (final rec in recommendations) {
-      try {
-        final song = await _resolveRecommendedSong(rec);
-        if (song == null) continue;
+    for (final song in resolved) {
+      if (song == null) continue;
 
-        // Skip if already recommended in this session
-        if (_sessionRecommendedIds.contains(song.uniqueId)) continue;
+      // Skip if already recommended in this session
+      if (_sessionRecommendedIds.contains(song.uniqueId)) continue;
 
-        // Skip if same uniqueId in current batch
-        if (!seenIds.add(song.uniqueId)) continue;
+      // Skip if same uniqueId in current batch
+      if (!seenIds.add(song.uniqueId)) continue;
 
-        // Skip if a song with a very similar title already exists
-        final normalized = _normalizeTitle(song.title);
-        if (!seenNormalizedTitles.add(normalized)) continue;
+      // Skip if a song with a very similar title already exists
+      final normalized = _normalizeTitle(song.title);
+      if (!seenNormalizedTitles.add(normalized)) continue;
 
-        results.add(song);
-        _sessionRecommendedIds.add(song.uniqueId);
-      } catch (e) {
-        log('Failed to resolve "${rec.title}" by ${rec.artist}: $e');
-      }
+      results.add(song);
+      _sessionRecommendedIds.add(song.uniqueId);
     }
 
     return results;

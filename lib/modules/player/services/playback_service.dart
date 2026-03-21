@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -153,6 +154,7 @@ class PlaybackService {
   }
 
   void stop() {
+    _isSwitchingTrack = false;
     if (_useMediaKit) {
       _mediaKitPlayer?.stop();
     } else {
@@ -262,9 +264,12 @@ class PlaybackService {
           headers?.isNotEmpty == true ? headers! : _httpHeaders;
       await _mediaKitPlayer!.open(
         mk.Media(url, httpHeaders: effectiveHeaders),
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () => throw TimeoutException('Media open timeout'),
       );
-      _isSwitchingTrack = false;
       await _mediaKitPlayer!.play();
+      _isSwitchingTrack = false;
     } catch (e) {
       _isSwitchingTrack = false;
       log('Media kit audio playback error: $e');

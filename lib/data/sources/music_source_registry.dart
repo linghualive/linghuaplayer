@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:get/get.dart';
@@ -69,6 +70,8 @@ class MusicSourceRegistry extends GetxService {
   /// 2. Try the track's own source
   /// 3. If [enableFallback] is true and both fail,
   ///    search other sources for the same song and try to resolve
+  static const _resolveTimeout = Duration(seconds: 8);
+
   Future<(PlaybackInfo, SearchVideoModel)?> resolvePlaybackWithFallback(
     SearchVideoModel track, {
     bool enableFallback = true,
@@ -83,7 +86,9 @@ class MusicSourceRegistry extends GetxService {
         // If the track already belongs to this source, resolve directly
         if (track.source.name == preferredSourceId) {
           try {
-            final info = await preferredSource.resolvePlayback(track);
+            final info = await preferredSource
+                .resolvePlayback(track)
+                .timeout(_resolveTimeout);
             if (info != null) return (info, track);
           } catch (e) {
             log('MusicSourceRegistry: preferred source $preferredSourceId '
@@ -93,13 +98,14 @@ class MusicSourceRegistry extends GetxService {
 
         // Otherwise search and resolve
         try {
-          final searchResult = await preferredSource.searchTracks(
-            keyword: keyword,
-            limit: 5,
-          );
+          final searchResult = await preferredSource
+              .searchTracks(keyword: keyword, limit: 5)
+              .timeout(_resolveTimeout);
           if (searchResult.tracks.isNotEmpty) {
             final preferredTrack = searchResult.tracks.first;
-            final info = await preferredSource.resolvePlayback(preferredTrack);
+            final info = await preferredSource
+                .resolvePlayback(preferredTrack)
+                .timeout(_resolveTimeout);
             if (info != null) {
               log('MusicSourceRegistry: resolved via preferred source '
                   '$preferredSourceId for "${track.title}"');
@@ -118,7 +124,9 @@ class MusicSourceRegistry extends GetxService {
     if (ownSource != null &&
         ownSource.sourceId != preferredSourceId) {
       try {
-        final info = await ownSource.resolvePlayback(track);
+        final info = await ownSource
+            .resolvePlayback(track)
+            .timeout(_resolveTimeout);
         if (info != null) return (info, track);
       } catch (e) {
         log('MusicSourceRegistry: ${ownSource.sourceId} resolvePlayback failed: $e');
@@ -127,31 +135,43 @@ class MusicSourceRegistry extends GetxService {
 
     if (!enableFallback) return null;
 
-    // 3. Try other sources as fallback
+    // 3. Try other sources as fallback (parallel for speed)
     final triedSources = <String>{
       if (preferredSourceId != null) preferredSourceId,
       if (ownSource != null) ownSource.sourceId,
     };
 
-    for (final source in _sources.values) {
-      if (triedSources.contains(source.sourceId)) continue;
+    final fallbackSources = _sources.values
+        .where((s) => !triedSources.contains(s.sourceId))
+        .toList();
 
-      try {
-        final searchResult = await source.searchTracks(
-          keyword: keyword,
-          limit: 5,
-        );
-        if (searchResult.tracks.isEmpty) continue;
+    // Try fallback sources in parallel, return first success
+    if (fallbackSources.isNotEmpty) {
+      final futures = fallbackSources.map((source) async {
+        try {
+          final searchResult = await source
+              .searchTracks(keyword: keyword, limit: 5)
+              .timeout(_resolveTimeout);
+          if (searchResult.tracks.isEmpty) return null;
 
-        final fallbackTrack = searchResult.tracks.first;
-        final info = await source.resolvePlayback(fallbackTrack);
-        if (info != null) {
-          log('MusicSourceRegistry: fallback to ${source.sourceId} '
-              'for "${track.title}"');
-          return (info, fallbackTrack);
+          final fallbackTrack = searchResult.tracks.first;
+          final info = await source
+              .resolvePlayback(fallbackTrack)
+              .timeout(_resolveTimeout);
+          if (info != null) {
+            log('MusicSourceRegistry: fallback to ${source.sourceId} '
+                'for "${track.title}"');
+            return (info, fallbackTrack);
+          }
+        } catch (e) {
+          log('MusicSourceRegistry: fallback ${source.sourceId} failed: $e');
         }
-      } catch (e) {
-        log('MusicSourceRegistry: fallback ${source.sourceId} failed: $e');
+        return null;
+      }).toList();
+
+      final results = await Future.wait(futures);
+      for (final result in results) {
+        if (result != null) return result;
       }
     }
 

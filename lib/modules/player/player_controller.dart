@@ -360,7 +360,7 @@ class PlayerController extends GetxController {
     final queuedIndex =
         queue.indexWhere((q) => q.video.uniqueId == video.uniqueId);
     if (queuedIndex >= 0) {
-      _pushToHistory();
+      if (queuedIndex > 0) _pushToHistory();
       final item = queue.removeAt(queuedIndex);
       queue.insert(0, item);
       currentIndex.value = 0;
@@ -700,10 +700,12 @@ class PlayerController extends GetxController {
   Future<void> _autoPlayNext() async {
     if (_isAutoPlayingNext) return;
     _isAutoPlayingNext = true;
+    isLoading.value = true;
     try {
       await _autoPlayNextImpl();
     } finally {
       _isAutoPlayingNext = false;
+      isLoading.value = false;
     }
   }
 
@@ -748,9 +750,14 @@ class PlayerController extends GetxController {
 
     if (candidates.isNotEmpty) {
       final pick = candidates[rng.nextInt(candidates.length)];
-      AppToast.show('已为你自动推荐');
-      await playFromSearch(pick);
-      return;
+      try {
+        AppToast.show('已为你自动推荐');
+        await playFromSearch(pick);
+        return;
+      } catch (e) {
+        log('Auto-play related failed: $e');
+        // Continue to next stage
+      }
     }
 
     // 2. Discover more songs via varied search strategies
@@ -910,39 +917,32 @@ class PlayerController extends GetxController {
   /// If queue is empty, just stop — don't auto-recommend.
   Future<void> skipNext() async {
     _saveListenDuration();
-    if (queue.length > 1) {
-      _pushToHistory();
-      queue.removeAt(0);
-      currentIndex.value = 0;
-      await _playCurrentQueueItem();
-    } else {
-      // Queue exhausted — stop playback, don't auto-recommend
-      _pushToHistory();
-      if (queue.isNotEmpty) queue.removeAt(0);
-      currentIndex.value = -1;
-      currentVideo.value = null;
-      _playback.stop();
-    }
+    await _advanceOrStop(allowAutoRecommend: false);
   }
 
   /// Auto-advance when track finishes: move current to history, play next.
   Future<void> _advanceNext() async {
-    _saveListenDuration();
+    // _saveListenDuration already called by _playNext
+    await _advanceOrStop(allowAutoRecommend: true);
+  }
+
+  /// Unified advance logic: play next in queue, auto-recommend, or stop.
+  Future<void> _advanceOrStop({required bool allowAutoRecommend}) async {
     if (queue.length > 1) {
       _pushToHistory();
       queue.removeAt(0);
       currentIndex.value = 0;
       await _playCurrentQueueItem();
-    } else if (autoRecommend.value) {
+    } else if (allowAutoRecommend && autoRecommend.value) {
       await _autoPlayNext();
     } else {
-      // Auto-recommend disabled — stop playback
+      _manualStop = true;
       _pushToHistory();
       if (queue.isNotEmpty) queue.removeAt(0);
       currentIndex.value = -1;
       currentVideo.value = null;
       _playback.stop();
-      AppToast.show('播放队列已播完');
+      if (allowAutoRecommend) AppToast.show('播放队列已播完');
     }
   }
 
@@ -977,7 +977,7 @@ class PlayerController extends GetxController {
         currentIndex.value = 0;
         await _playCurrentQueueItem(retries: retries + 1);
       } else {
-        _autoPlayNext();
+        _autoPlayNext().catchError((e) => log('Auto-play error: $e'));
       }
     }
   }
@@ -1000,8 +1000,7 @@ class PlayerController extends GetxController {
       // No history, just restart current track
       seekTo(Duration.zero);
     } else {
-      // No track at all, find something to play
-      _triggerAutoPlay();
+      // No track at all — do nothing instead of triggering random play
     }
   }
 
@@ -1125,7 +1124,7 @@ class PlayerController extends GetxController {
     _cleanExpiredCache();
     final candidates = relatedMusic
         .where((s) => !_resolveCache.containsKey(s.uniqueId))
-        .take(1)
+        .take(3)
         .toList();
 
     for (final song in candidates) {
