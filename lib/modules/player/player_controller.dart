@@ -487,7 +487,12 @@ class PlayerController extends GetxController {
   }
 
   /// Unified playback from resolved PlaybackInfo.
-  Future<void> _playFromInfo(PlaybackInfo info, SearchVideoModel video, {int? gen}) async {
+  ///
+  /// [replaceUniqueId] is the original uniqueId of a lazy queue item being
+  /// resolved. When cross-source fallback changes the video identity,
+  /// this lets [_addToQueue] find and replace the original item.
+  Future<void> _playFromInfo(PlaybackInfo info, SearchVideoModel video,
+      {int? gen, String? replaceUniqueId}) async {
     final bestAudio = info.bestAudio;
     if (bestAudio == null) throw Exception('No audio stream available');
 
@@ -533,6 +538,7 @@ class PlayerController extends GetxController {
       audioUrl: playedUrl,
       qualityLabel: playedLabel,
       headers: playedHeaders,
+      replaceUniqueId: replaceUniqueId,
     );
   }
 
@@ -608,6 +614,7 @@ class PlayerController extends GetxController {
     required String audioUrl,
     String qualityLabel = '',
     Map<String, String> headers = const {},
+    String? replaceUniqueId,
   }) {
     final queueItem = QueueItem(
       video: video,
@@ -616,8 +623,14 @@ class PlayerController extends GetxController {
       headers: headers,
     );
 
-    final existingIndex =
+    // Find existing item: first by resolved video uniqueId, then by original
+    // uniqueId (for cross-source fallback where the identity changed).
+    var existingIndex =
         queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
+    if (existingIndex < 0 && replaceUniqueId != null) {
+      existingIndex =
+          queue.indexWhere((item) => item.video.uniqueId == replaceUniqueId);
+    }
 
     // Only push to history if we're replacing a different song.
     // Skip when updating the current song in-place (e.g. lazy resolve).
@@ -658,13 +671,10 @@ class PlayerController extends GetxController {
     if (resolved == null) throw Exception('无法获取播放链接');
     final (info, resolvedVideo) = resolved;
     _putCachedResolve(originalUniqueId, info, resolvedVideo);
-    // If fallback changed the video identity, remove the stale lazy item
-    if (resolvedVideo.uniqueId != originalUniqueId) {
-      final staleIdx = queue.indexWhere(
-          (q) => q.video.uniqueId == originalUniqueId);
-      if (staleIdx >= 0) queue.removeAt(staleIdx);
-    }
-    await _playFromInfo(info, resolvedVideo, gen: gen);
+    // Pass originalUniqueId so _addToQueue can find the original lazy item
+    // even when cross-source fallback changed the video identity.
+    await _playFromInfo(info, resolvedVideo,
+        gen: gen, replaceUniqueId: originalUniqueId);
   }
 
   void togglePlay() {
@@ -960,6 +970,8 @@ class PlayerController extends GetxController {
 
   /// Unified advance logic: play next in queue, auto-recommend, or stop.
   Future<void> _advanceOrStop({required bool allowAutoRecommend}) async {
+    log('_advanceOrStop: queue.length=${queue.length}, '
+        'allowAutoRecommend=$allowAutoRecommend');
     if (queue.length > 1) {
       _pushToHistory();
       queue.removeAt(0);
@@ -1476,8 +1488,13 @@ class PlayerController extends GetxController {
   void addToQueueLazy(SearchVideoModel video) {
     final existingIndex =
         queue.indexWhere((item) => item.video.uniqueId == video.uniqueId);
-    if (existingIndex >= 0) return;
+    if (existingIndex >= 0) {
+      log('addToQueueLazy: skipped duplicate "${video.title}" '
+          '(uniqueId=${video.uniqueId})');
+      return;
+    }
     queue.add(QueueItem(video: video, audioUrl: ''));
+    log('addToQueueLazy: added "${video.title}" (queue.length=${queue.length})');
   }
 
   /// Add a video to the queue silently (no snackbar).
