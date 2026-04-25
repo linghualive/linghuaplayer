@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../data/models/search/search_video_model.dart';
+import '../../shared/widgets/animated_list_item.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/video_action_buttons.dart';
 import 'watch_history_controller.dart';
@@ -10,15 +11,11 @@ class WatchHistoryPage extends StatelessWidget {
   const WatchHistoryPage({super.key});
 
   String _sourceLabel(SearchVideoModel video) {
-    if (video.isNetease) return '网易云';
-    if (video.isQQMusic) return 'QQ音乐';
     if (video.isGdStudio) return 'GD音乐台';
     return 'B站';
   }
 
   Color _sourceColor(SearchVideoModel video) {
-    if (video.isNetease) return Colors.red;
-    if (video.isQQMusic) return Colors.green;
     if (video.isGdStudio) return Colors.orange;
     return Colors.blue;
   }
@@ -82,7 +79,9 @@ class WatchHistoryPage extends StatelessWidget {
             itemBuilder: (context, index) {
               final video = controller.videos[index];
               final playedAt = controller.playedAtList[index];
-              return Dismissible(
+              return AnimatedListItem(
+                index: index,
+                child: Dismissible(
                 key: ValueKey('${video.uniqueId}_$playedAt'),
                 direction: DismissDirection.endToStart,
                 background: Container(
@@ -187,6 +186,7 @@ class WatchHistoryPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
               );
             },
           ),

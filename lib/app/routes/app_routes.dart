@@ -1,5 +1,4 @@
 abstract class AppRoutes {
-  static const splash = '/splash';
   static const home = '/home';
   static const login = '/login';
   static const search = '/search';
@@ -16,12 +15,5 @@ abstract class AppRoutes {
   static const musicRanking = '/music-ranking';
   static const hotPlaylists = '/hot-playlists';
   static const webview = '/webview';
-  static const neteasePlaylistDetail = '/netease-playlist-detail';
-  static const neteaseArtistDetail = '/netease-artist-detail';
-  static const neteaseAlbumDetail = '/netease-album-detail';
-  static const neteaseToplist = '/netease-toplist';
-  static const neteaseHotPlaylists = '/netease-hot-playlists';
-  static const qqMusicPlaylistDetail = '/qqmusic-playlist-detail';
   static const localPlaylistDetail = '/local-playlist-detail';
-  static const qqMusicArtistDetail = '/qqmusic-artist-detail';
 }

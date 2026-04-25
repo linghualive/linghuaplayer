@@ -2,10 +2,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../app/routes/app_routes.dart';
 import '../../data/models/search/search_video_model.dart';
-import '../../data/repositories/netease_repository.dart';
+import '../../data/services/local_playlist_service.dart';
+import '../../shared/utils/app_toast.dart';
+import '../../shared/widgets/animated_list_item.dart';
+import '../../shared/widgets/create_fav_dialog.dart';
 import '../../shared/widgets/empty_widget.dart';
+import '../../shared/widgets/fav_panel.dart';
 import '../player/player_controller.dart';
 import 'search_controller.dart' as app;
 import 'widgets/hot_search_list.dart';
@@ -79,8 +82,6 @@ class SearchPage extends GetView<app.SearchController> {
             return Column(
               children: [
                 _buildSourceChips(),
-                if (controller.searchSource.value == 'netease')
-                  _buildNeteaseTypeChips(),
                 const Expanded(child: EmptyWidget(message: '未找到结果')),
               ],
             );
@@ -107,22 +108,6 @@ class SearchPage extends GetView<app.SearchController> {
               ),
               const SizedBox(width: 8),
               ChoiceChip(
-                label: const Text('网易云'),
-                selected:
-                    controller.searchSource.value == 'netease',
-                onSelected: (_) =>
-                    controller.switchSource(MusicSource.netease),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('QQ音乐'),
-                selected:
-                    controller.searchSource.value == 'qqmusic',
-                onSelected: (_) =>
-                    controller.switchSource(MusicSource.qqmusic),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
                 label: const Text('B站'),
                 selected:
                     controller.searchSource.value == 'bilibili',
@@ -135,60 +120,11 @@ class SearchPage extends GetView<app.SearchController> {
         ));
   }
 
-  Widget _buildNeteaseTypeChips() {
-    return Obx(() => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                ChoiceChip(
-                  label: const Text('歌曲'),
-                  selected: controller.neteaseSearchType.value ==
-                      app.NeteaseSearchType.song,
-                  onSelected: (_) => controller
-                      .switchNeteaseSearchType(app.NeteaseSearchType.song),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('歌手'),
-                  selected: controller.neteaseSearchType.value ==
-                      app.NeteaseSearchType.artist,
-                  onSelected: (_) => controller
-                      .switchNeteaseSearchType(app.NeteaseSearchType.artist),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('专辑'),
-                  selected: controller.neteaseSearchType.value ==
-                      app.NeteaseSearchType.album,
-                  onSelected: (_) => controller
-                      .switchNeteaseSearchType(app.NeteaseSearchType.album),
-                ),
-                const SizedBox(width: 8),
-                ChoiceChip(
-                  label: const Text('歌单'),
-                  selected: controller.neteaseSearchType.value ==
-                      app.NeteaseSearchType.playlist,
-                  onSelected: (_) => controller
-                      .switchNeteaseSearchType(app.NeteaseSearchType.playlist),
-                ),
-              ],
-            ),
-          ),
-        ));
-  }
-
   Widget _buildResults() {
     return Column(
       children: [
         _buildSourceChips(),
-        Obx(() {
-          if (controller.searchSource.value == 'netease') {
-            return _buildNeteaseTypeChips();
-          }
-          return const SizedBox.shrink();
-        }),
+        _buildBatchActions(),
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
@@ -214,7 +150,10 @@ class SearchPage extends GetView<app.SearchController> {
                       child: Center(child: CircularProgressIndicator()),
                     );
                   }
-                  return _buildResultItem(context, index);
+                  return AnimatedListItem(
+                    index: index,
+                    child: _buildResultItem(context, index),
+                  );
                 },
               );
             }),
@@ -224,28 +163,59 @@ class SearchPage extends GetView<app.SearchController> {
     );
   }
 
+  Widget _buildBatchActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Obx(() {
+            final count = controller.allResults
+                .whereType<SearchVideoModel>()
+                .length;
+            return ActionChip(
+              avatar: const Icon(Icons.playlist_add, size: 18),
+              label: Text('收藏已加载的 $count 首到歌单'),
+              onPressed: () {
+                final tracks = controller.allResults
+                    .whereType<SearchVideoModel>()
+                    .toList();
+                if (tracks.isEmpty) return;
+                _showBatchFavDialog(tracks);
+              },
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  void _showBatchFavDialog(List<SearchVideoModel> tracks) {
+    final context = Get.context;
+    if (context == null) return;
+    final service = Get.find<LocalPlaylistService>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => SafeArea(
+        child: _BatchFavPanel(tracks: tracks, service: service),
+      ),
+    );
+  }
+
   Widget _buildResultItem(BuildContext context, int index) {
     final item = controller.allResults[index];
 
     if (item is SearchVideoModel) {
-      if (item.isNetease || item.isQQMusic || item.isGdStudio) {
-        return _buildNeteaseSongCard(context, item);
+      if (item.isGdStudio) {
+        return _buildSongCard(context, item);
       }
       return SearchResultCard(video: item);
-    }
-    if (item is NeteaseArtistBrief) {
-      return _buildArtistCard(context, item);
-    }
-    if (item is NeteaseAlbumBrief) {
-      return _buildAlbumCard(context, item);
-    }
-    if (item is NeteasePlaylistBrief) {
-      return _buildPlaylistCard(context, item);
     }
     return const SizedBox.shrink();
   }
 
-  Widget _buildNeteaseSongCard(BuildContext context, SearchVideoModel song) {
+  Widget _buildSongCard(BuildContext context, SearchVideoModel song) {
     final theme = Theme.of(context);
     return ListTile(
       leading: ClipRRect(
@@ -279,18 +249,34 @@ class SearchPage extends GetView<app.SearchController> {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
-        song.author + (song.description.isNotEmpty ? ' · ${song.description}' : ''),
+        song.author +
+            (song.description.isNotEmpty ? ' · ${song.description}' : '') +
+            (song.duration.isNotEmpty ? ' · ${song.duration}' : ''),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.outline,
         ),
       ),
-      trailing: Text(
-        song.duration,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
-        ),
+      trailing: PopupMenuButton<String>(
+        icon: Icon(Icons.more_vert, size: 20, color: theme.colorScheme.outline),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+        onSelected: (value) {
+          final playerCtrl = Get.find<PlayerController>();
+          switch (value) {
+            case 'queue':
+              playerCtrl.addToQueue(song);
+              break;
+            case 'fav':
+              FavPanel.show(context, song);
+              break;
+          }
+        },
+        itemBuilder: (_) => [
+          const PopupMenuItem(value: 'queue', child: Text('添加到播放列表')),
+          const PopupMenuItem(value: 'fav', child: Text('收藏到歌单')),
+        ],
       ),
       onTap: () {
         final playerCtrl = Get.find<PlayerController>();
@@ -298,136 +284,128 @@ class SearchPage extends GetView<app.SearchController> {
       },
     );
   }
+}
 
-  Widget _buildArtistCard(BuildContext context, NeteaseArtistBrief artist) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundImage: artist.picUrl.isNotEmpty
-            ? CachedNetworkImageProvider(artist.picUrl)
-            : null,
-        child: artist.picUrl.isEmpty ? const Icon(Icons.person) : null,
-      ),
-      title: Text(
-        artist.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '${artist.musicSize} 首歌曲 · ${artist.albumSize} 张专辑',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
-        ),
-      ),
-      onTap: () => Get.toNamed(
-        AppRoutes.neteaseArtistDetail,
-        arguments: artist,
-      ),
-    );
+class _BatchFavPanel extends StatefulWidget {
+  final List<SearchVideoModel> tracks;
+  final LocalPlaylistService service;
+
+  const _BatchFavPanel({required this.tracks, required this.service});
+
+  @override
+  State<_BatchFavPanel> createState() => _BatchFavPanelState();
+}
+
+class _BatchFavPanelState extends State<_BatchFavPanel> {
+  late Map<String, bool> _checked;
+
+  @override
+  void initState() {
+    super.initState();
+    _checked = {for (final p in widget.service.playlists) p.id: false};
   }
 
-  Widget _buildAlbumCard(BuildContext context, NeteaseAlbumBrief album) {
-    final theme = Theme.of(context);
-    final date = album.publishTime > 0
-        ? DateTime.fromMillisecondsSinceEpoch(album.publishTime)
-        : null;
-    final dateStr = date != null ? '${date.year}-${date.month.toString().padLeft(2, '0')}' : '';
-
-    return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: album.picUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: album.picUrl,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
-                  width: 48,
-                  height: 48,
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Icon(Icons.album, size: 20),
-                ),
-              )
-            : Container(
-                width: 48,
-                height: 48,
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: const Icon(Icons.album, size: 20),
-              ),
-      ),
-      title: Text(
-        album.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        '${album.artistName}${dateStr.isNotEmpty ? ' · $dateStr' : ''}',
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      onTap: () => Get.toNamed(
-        AppRoutes.neteaseAlbumDetail,
-        arguments: album,
-      ),
-    );
-  }
-
-  Widget _buildPlaylistCard(
-      BuildContext context, NeteasePlaylistBrief playlist) {
-    final theme = Theme.of(context);
-    return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
-        child: playlist.coverUrl.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: playlist.coverUrl,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorWidget: (_, __, ___) => Container(
-                  width: 48,
-                  height: 48,
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Icon(Icons.queue_music, size: 20),
-                ),
-              )
-            : Container(
-                width: 48,
-                height: 48,
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: const Icon(Icons.queue_music, size: 20),
-              ),
-      ),
-      title: Text(
-        playlist.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        _formatPlayCount(playlist.playCount),
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
-        ),
-      ),
-      onTap: () => Get.toNamed(
-        AppRoutes.neteasePlaylistDetail,
-        arguments: playlist,
-      ),
-    );
-  }
-
-  String _formatPlayCount(int count) {
-    if (count >= 100000000) {
-      return '${(count / 100000000).toStringAsFixed(1)}亿 播放';
+  void _onConfirm() {
+    int added = 0;
+    for (final p in widget.service.playlists) {
+      if (_checked[p.id] != true) continue;
+      for (final track in widget.tracks) {
+        final alreadyIn =
+            p.tracks.any((t) => t.uniqueId == track.uniqueId);
+        if (!alreadyIn) {
+          widget.service.addTrack(p.id, track);
+          added++;
+        }
+      }
     }
-    if (count >= 10000) {
-      return '${(count / 10000).toStringAsFixed(1)}万 播放';
+    Navigator.pop(context);
+    if (added > 0) {
+      AppToast.success('已添加 $added 首歌曲');
+    } else {
+      AppToast.show('歌曲已在所选歌单中');
     }
-    return '$count 播放';
+  }
+
+  void _onCreated() {
+    setState(() {
+      for (final p in widget.service.playlists) {
+        _checked.putIfAbsent(p.id, () => false);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Obx(() {
+      final playlists = widget.service.playlists.toList();
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Text(
+                  '收藏全部 (${widget.tracks.length} 首)',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    CreateFavDialog.show(context, onCreated: _onCreated);
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('新建'),
+                ),
+              ],
+            ),
+          ),
+          if (playlists.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(32),
+              child: Text('暂无歌单，请先新建一个'),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: playlists.length,
+                itemBuilder: (context, index) {
+                  final playlist = playlists[index];
+                  return CheckboxListTile(
+                    title: Text(playlist.name),
+                    subtitle: Text('${playlist.trackCount} 首'),
+                    value: _checked[playlist.id] ?? false,
+                    onChanged: (val) {
+                      setState(() => _checked[playlist.id] = val ?? false);
+                    },
+                  );
+                },
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('取消'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: _onConfirm,
+                    child: const Text('确认'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    });
   }
 }

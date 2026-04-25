@@ -1,7 +1,5 @@
-/// Deprecated: Use string-based sourceId via MusicSourceRegistry instead.
-/// This enum is kept for backward compatibility during the migration period.
 @Deprecated('Use string-based sourceId via MusicSourceAdapter/MusicSourceRegistry')
-enum MusicSource { bilibili, netease, qqmusic, gdstudio }
+enum MusicSource { bilibili, gdstudio }
 
 /// Legacy unified search result model.
 ///
@@ -40,10 +38,6 @@ class SearchVideoModel {
 
   String get uniqueId {
     switch (source) {
-      case MusicSource.netease:
-        return 'netease_$id';
-      case MusicSource.qqmusic:
-        return 'qqmusic_$id';
       case MusicSource.gdstudio:
         return 'gdstudio_$id';
       case MusicSource.bilibili:
@@ -51,9 +45,7 @@ class SearchVideoModel {
     }
   }
 
-  bool get isNetease => source == MusicSource.netease;
   bool get isBilibili => source == MusicSource.bilibili;
-  bool get isQQMusic => source == MusicSource.qqmusic;
   bool get isGdStudio => source == MusicSource.gdstudio;
 
   Map<String, dynamic> toJson() {
@@ -93,10 +85,6 @@ class SearchVideoModel {
   static MusicSource _parseSource(dynamic value) {
     if (value is String) {
       switch (value) {
-        case 'netease':
-          return MusicSource.netease;
-        case 'qqmusic':
-          return MusicSource.qqmusic;
         case 'gdstudio':
           return MusicSource.gdstudio;
         default:

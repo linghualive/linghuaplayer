@@ -189,16 +189,6 @@ class StorageService extends GetxService {
   bool get autoRecommend => _box.read<bool>('auto_recommend') ?? true;
   set autoRecommend(bool value) => _box.write('auto_recommend', value);
 
-  // DeepSeek API
-  String? get deepseekApiKey => _box.read<String>('deepseek_api_key');
-  set deepseekApiKey(String? value) {
-    if (value == null) {
-      _box.remove('deepseek_api_key');
-    } else {
-      _box.write('deepseek_api_key', value);
-    }
-  }
-
   List<String> get preferenceTags {
     final list = _box.read<List>('preference_tags');
     if (list == null) return [];
@@ -217,56 +207,4 @@ class StorageService extends GetxService {
     _box.remove('access_key_mid');
   }
 
-  // NetEase Cloud Music auth
-  bool get isNeteaseLoggedIn =>
-      _box.read<bool>('netease_is_logged_in') ?? false;
-
-  set isNeteaseLoggedIn(bool value) =>
-      _box.write('netease_is_logged_in', value);
-
-  String? get neteaseUserId => _box.read<String>('netease_user_id');
-
-  set neteaseUserId(String? value) => _box.write('netease_user_id', value);
-
-  Map<String, dynamic>? getNeteaseUserInfo() =>
-      _box.read<Map<String, dynamic>>('netease_user_info');
-
-  void setNeteaseUserInfo(Map<String, dynamic> info) {
-    _box.write('netease_user_info', info);
-  }
-
-  void clearNeteaseAuth() {
-    _box.remove('netease_user_info');
-    _box.remove('netease_is_logged_in');
-    _box.remove('netease_user_id');
-  }
-
-  // QQ Music auth
-  bool get isQqMusicLoggedIn =>
-      _box.read<bool>('qqmusic_is_logged_in') ?? false;
-
-  set isQqMusicLoggedIn(bool value) =>
-      _box.write('qqmusic_is_logged_in', value);
-
-  String? get qqMusicUin => _box.read<String>('qqmusic_uin');
-
-  set qqMusicUin(String? value) => _box.write('qqmusic_uin', value);
-
-  String? get qqMusicPSkey => _box.read<String>('qqmusic_p_skey');
-
-  set qqMusicPSkey(String? value) => _box.write('qqmusic_p_skey', value);
-
-  Map<String, dynamic>? getQqMusicUserInfo() =>
-      _box.read<Map<String, dynamic>>('qqmusic_user_info');
-
-  void setQqMusicUserInfo(Map<String, dynamic> info) {
-    _box.write('qqmusic_user_info', info);
-  }
-
-  void clearQqMusicAuth() {
-    _box.remove('qqmusic_user_info');
-    _box.remove('qqmusic_is_logged_in');
-    _box.remove('qqmusic_uin');
-    _box.remove('qqmusic_p_skey');
-  }
 }

@@ -1,6 +1,6 @@
 import 'search/search_video_model.dart';
 
-/// Generic playlist summary, replacing NeteasePlaylistBrief / HotPlaylistModel.
+/// Generic playlist summary.
 class PlaylistBrief {
   final String id;
   final String sourceId;

@@ -7,7 +7,7 @@ import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
 import 'widgets/player_lyrics.dart';
-import 'widgets/related_music_sheet.dart';
+import 'widgets/swipeable_player_body.dart';
 
 class PlayerPage extends GetView<PlayerController> {
   const PlayerPage({super.key});
@@ -33,38 +33,39 @@ class PlayerPage extends GetView<PlayerController> {
               onPressed: () => FavPanel.show(context, video),
             );
           }),
-          IconButton(
-            icon: const Icon(Icons.explore),
-            tooltip: '相关推荐',
-            onPressed: RelatedMusicSheet.show,
-          ),
           const SizedBox(width: 4),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-              Theme.of(context).colorScheme.surface,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Obx(() {
-            if (controller.currentVideo.value == null) {
-              return const Center(child: Text('未选择曲目'));
-            }
+      body: Obx(() {
+        final dynamicColor = controller.coverColor.value;
+        final topColor = dynamicColor?.withValues(alpha: 0.35) ??
+            Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3);
+        final bottomColor = Theme.of(context).colorScheme.surface;
 
-            if (PlatformUtils.isDesktop) {
-              return _buildDesktopLayout();
-            }
-            return _buildMobileLayout();
-          }),
-        ),
-      ),
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [topColor, bottomColor],
+            ),
+          ),
+          child: SafeArea(
+            child: Obx(() {
+              if (controller.currentVideo.value == null) {
+                return const Center(child: Text('未选择曲目'));
+              }
+
+              if (PlatformUtils.isDesktop) {
+                return _buildDesktopLayout();
+              }
+              return _buildMobileLayout();
+            }),
+          ),
+        );
+      }),
     );
   }
 
@@ -80,17 +81,9 @@ class PlayerPage extends GetView<PlayerController> {
   }
 
   Widget _buildMobileLayout() {
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        Expanded(
-          flex: 5,
-          child: _buildArtworkArea(),
-        ),
-        const SizedBox(height: 24),
-        const Expanded(flex: 4, child: PlayerControls()),
-        const SizedBox(height: 16),
-      ],
+    return SwipeablePlayerBody(
+      buildArtworkArea: _buildArtworkArea,
+      controlsArea: const PlayerControls(),
     );
   }
 

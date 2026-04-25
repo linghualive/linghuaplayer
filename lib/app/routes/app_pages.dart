@@ -1,3 +1,4 @@
+import 'package:flutter/animation.dart';
 import 'package:get/get.dart';
 
 import '../../modules/home/home_page.dart';
@@ -7,8 +8,6 @@ import '../../modules/login/login_controller.dart';
 import '../../modules/player/player_page.dart';
 import '../../modules/search/search_page.dart';
 import '../../modules/search/search_controller.dart' as app;
-import '../../modules/splash/splash_page.dart';
-import '../../modules/splash/splash_controller.dart';
 import '../../modules/favorites/favorites_page.dart';
 import '../../modules/favorites/favorites_controller.dart';
 import '../../modules/favorites/favorite_detail_page.dart';
@@ -30,33 +29,12 @@ import '../../modules/music_ranking/music_ranking_controller.dart';
 import '../../modules/hot_playlists/hot_playlists_page.dart';
 import '../../modules/hot_playlists/hot_playlists_controller.dart';
 import '../../modules/webview/webview_page.dart';
-import '../../modules/netease_playlist_detail/netease_playlist_detail_page.dart';
-import '../../modules/netease_playlist_detail/netease_playlist_detail_controller.dart';
-import '../../modules/netease_artist_detail/netease_artist_detail_page.dart';
-import '../../modules/netease_artist_detail/netease_artist_detail_controller.dart';
-import '../../modules/netease_album_detail/netease_album_detail_page.dart';
-import '../../modules/netease_album_detail/netease_album_detail_controller.dart';
-import '../../modules/netease_toplist/netease_toplist_page.dart';
-import '../../modules/netease_toplist/netease_toplist_controller.dart';
-import '../../modules/netease_hot_playlists/netease_hot_playlists_page.dart';
-import '../../modules/netease_hot_playlists/netease_hot_playlists_controller.dart';
-import '../../modules/qqmusic_playlist_detail/qqmusic_playlist_detail_page.dart';
-import '../../modules/qqmusic_playlist_detail/qqmusic_playlist_detail_controller.dart';
 import '../../modules/local_playlist_detail/local_playlist_detail_page.dart';
 import '../../modules/local_playlist_detail/local_playlist_detail_controller.dart';
-import '../../modules/qqmusic_artist_detail/qqmusic_artist_detail_page.dart';
-import '../../modules/qqmusic_artist_detail/qqmusic_artist_detail_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
   static final pages = [
-    GetPage(
-      name: AppRoutes.splash,
-      page: () => const SplashPage(),
-      binding: BindingsBuilder(() {
-        Get.put(SplashController());
-      }),
-    ),
     GetPage(
       name: AppRoutes.home,
       page: () => const HomePage(),
@@ -83,6 +61,9 @@ class AppPages {
     GetPage(
       name: AppRoutes.player,
       page: () => const PlayerPage(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 350),
+      curve: Curves.easeOutCubic,
     ),
     GetPage(
       name: AppRoutes.favorites,
@@ -94,6 +75,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.favoriteDetail,
       page: () => const FavoriteDetailPage(),
+      transition: Transition.cupertino,
       binding: BindingsBuilder(() {
         Get.put(FavoriteDetailController());
       }),
@@ -108,6 +90,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.subscriptionDetail,
       page: () => const SubscriptionDetailPage(),
+      transition: Transition.cupertino,
       binding: BindingsBuilder(() {
         Get.put(SubscriptionDetailController());
       }),
@@ -136,6 +119,7 @@ class AppPages {
     GetPage(
       name: AppRoutes.audioPlaylistDetail,
       page: () => const AudioPlaylistDetailPage(),
+      transition: Transition.cupertino,
       binding: BindingsBuilder(() {
         Get.put(AudioPlaylistDetailController());
       }),
@@ -159,59 +143,11 @@ class AppPages {
       page: () => const WebviewPage(),
     ),
     GetPage(
-      name: AppRoutes.neteasePlaylistDetail,
-      page: () => const NeteasePlaylistDetailPage(),
-      binding: BindingsBuilder(() {
-        Get.put(NeteasePlaylistDetailController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.neteaseArtistDetail,
-      page: () => const NeteaseArtistDetailPage(),
-      binding: BindingsBuilder(() {
-        Get.put(NeteaseArtistDetailController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.neteaseAlbumDetail,
-      page: () => const NeteaseAlbumDetailPage(),
-      binding: BindingsBuilder(() {
-        Get.put(NeteaseAlbumDetailController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.neteaseToplist,
-      page: () => const NeteaseToplistPage(),
-      binding: BindingsBuilder(() {
-        Get.put(NeteaseToplistController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.neteaseHotPlaylists,
-      page: () => const NeteaseHotPlaylistsPage(),
-      binding: BindingsBuilder(() {
-        Get.put(NeteaseHotPlaylistsController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.qqMusicPlaylistDetail,
-      page: () => const QqMusicPlaylistDetailPage(),
-      binding: BindingsBuilder(() {
-        Get.put(QqMusicPlaylistDetailController());
-      }),
-    ),
-    GetPage(
       name: AppRoutes.localPlaylistDetail,
       page: () => const LocalPlaylistDetailPage(),
+      transition: Transition.cupertino,
       binding: BindingsBuilder(() {
         Get.put(LocalPlaylistDetailController());
-      }),
-    ),
-    GetPage(
-      name: AppRoutes.qqMusicArtistDetail,
-      page: () => const QqMusicArtistDetailPage(),
-      binding: BindingsBuilder(() {
-        Get.put(QqMusicArtistDetailController());
       }),
     ),
   ];

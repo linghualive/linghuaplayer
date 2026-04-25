@@ -62,9 +62,10 @@ class AppToast {
       borderRadius: 12,
       duration: const Duration(seconds: 3),
       snackStyle: SnackStyle.FLOATING,
-      backgroundColor: cs.errorContainer,
-      icon: Icon(Icons.error_outline, color: cs.onErrorContainer),
-      messageText: Text(message, style: TextStyle(color: cs.onErrorContainer)),
+      backgroundColor: cs.inverseSurface,
+      icon: Icon(Icons.error_outline, color: cs.onInverseSurface),
+      messageText:
+          Text(message, style: TextStyle(color: cs.onInverseSurface)),
       isDismissible: true,
       forwardAnimationCurve: Curves.easeOutCubic,
       reverseAnimationCurve: Curves.easeInCubic,

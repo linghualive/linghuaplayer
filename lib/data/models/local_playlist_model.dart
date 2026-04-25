@@ -8,7 +8,7 @@ class LocalPlaylist {
   final String coverUrl;
   final String description;
   final String creatorName;
-  final String sourceTag; // 'bilibili' | 'netease' | 'qqmusic' | 'local'
+  final String sourceTag; // 'bilibili' | 'gdstudio' | 'local'
   final String? remoteId;
   final List<Map<String, dynamic>> tracksJson;
   final int createdAt;

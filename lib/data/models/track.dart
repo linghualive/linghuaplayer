@@ -29,21 +29,6 @@ class Track {
 
   /// Bridge: create a Track from the legacy SearchVideoModel.
   factory Track.fromSearchVideoModel(SearchVideoModel video) {
-    if (video.isNetease) {
-      return Track(
-        sourceTrackId: video.id.toString(),
-        sourceId: 'netease',
-        title: video.title,
-        artist: video.author,
-        album: video.description,
-        coverUrl: video.pic,
-        durationText: video.duration,
-        uniqueId: video.uniqueId,
-        extra: {
-          'neteaseId': video.id,
-        },
-      );
-    }
     if (video.isGdStudio) {
       return Track(
         sourceTrackId: video.id.toString(),
@@ -81,17 +66,6 @@ class Track {
 
   /// Bridge: convert back to SearchVideoModel for gradual migration.
   SearchVideoModel toSearchVideoModel() {
-    if (sourceId == 'netease') {
-      return SearchVideoModel(
-        id: extra['neteaseId'] as int? ?? int.tryParse(sourceTrackId) ?? 0,
-        author: artist,
-        title: title,
-        description: album,
-        pic: coverUrl,
-        duration: durationText,
-        source: MusicSource.netease,
-      );
-    }
     if (sourceId == 'gdstudio') {
       return SearchVideoModel(
         id: int.tryParse(sourceTrackId) ?? 0,

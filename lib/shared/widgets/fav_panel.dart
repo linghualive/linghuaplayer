@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../data/models/local_playlist_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/services/local_playlist_service.dart';
 import '../utils/app_toast.dart';
@@ -168,10 +167,8 @@ class _FavPanelState extends State<FavPanel> {
     switch (sourceTag) {
       case 'bilibili':
         return 'B站';
-      case 'netease':
-        return '网易云';
-      case 'qqmusic':
-        return 'QQ音乐';
+      case 'gdstudio':
+        return 'GD音乐台';
       case 'local':
         return '本地';
       default:

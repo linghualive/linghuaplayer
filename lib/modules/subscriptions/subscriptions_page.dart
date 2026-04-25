@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../shared/widgets/animated_list_item.dart';
 import '../../shared/widgets/cached_image.dart';
 import 'subscriptions_controller.dart';
 
@@ -41,7 +42,9 @@ class SubscriptionsPage extends StatelessWidget {
                   );
                 }
                 final folder = controller.folders[index];
-                return ListTile(
+                return AnimatedListItem(
+                  index: index,
+                  child: ListTile(
                   leading: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: CachedImage(
@@ -92,6 +95,7 @@ class SubscriptionsPage extends StatelessWidget {
                     ],
                   ),
                   onTap: () => controller.openFolder(folder),
+                ),
                 );
               },
             ),

@@ -98,6 +98,13 @@ class HttpClient {
     // Keep env, app-key, x-bili-aurora-zone as they help prevent 412 risk control
   }
 
+  /// Get the Cookie header string for a given URL.
+  Future<String> getCookieHeader(Uri uri) async {
+    final cookies = await cookieJar.loadForRequest(uri);
+    if (cookies.isEmpty) return '';
+    return cookies.map((c) => '${c.name}=${c.value}').join('; ');
+  }
+
   /// Ensure cookies exist for api.vc.bilibili.com.
   /// Pilipala does this to maintain session across all Bilibili domains.
   Future<void> ensureVcDomainCookies() async {

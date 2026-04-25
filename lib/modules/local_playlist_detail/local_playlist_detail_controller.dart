@@ -2,8 +2,6 @@ import 'package:get/get.dart';
 
 import '../../data/models/local_playlist_model.dart';
 import '../../data/models/search/search_video_model.dart';
-import '../../data/repositories/netease_repository.dart';
-import '../../data/repositories/qqmusic_repository.dart';
 import '../../data/repositories/user_repository.dart';
 import '../../data/services/local_playlist_service.dart';
 import '../../shared/utils/app_toast.dart';
@@ -39,32 +37,36 @@ class LocalPlaylistDetailController extends GetxController {
     tracks.assignAll(p.tracks);
   }
 
-  String get _preferredSourceId {
+  String? get _preferredSourceId {
     switch (playlist.value?.sourceTag) {
       case 'bilibili':
         return 'bilibili';
-      case 'netease':
-        return 'netease';
-      case 'qqmusic':
-        return 'qqmusic';
-      default:
+      case 'gdstudio':
         return 'gdstudio';
+      default:
+        return null;
     }
   }
 
   void playSong(SearchVideoModel song) {
     final playerCtrl = Get.find<PlayerController>();
+    // If the song is already in the play queue, switch directly via playAt
+    final queueIndex = playerCtrl.queue
+        .indexWhere((q) => q.video.uniqueId == song.uniqueId);
+    if (queueIndex >= 0) {
+      playerCtrl.playAt(queueIndex);
+      return;
+    }
     playerCtrl.playFromSearch(song, preferredSourceId: _preferredSourceId);
   }
 
   void playAll() {
     if (tracks.isEmpty) return;
     final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playFromSearch(tracks.first,
-        preferredSourceId: _preferredSourceId);
-    for (int i = 1; i < tracks.length; i++) {
-      playerCtrl.addToQueueLazy(tracks[i]);
-    }
+    playerCtrl.playAllFromList(
+      tracks.toList(),
+      preferredSourceId: _preferredSourceId,
+    );
   }
 
   void addAllToQueue() {
@@ -104,19 +106,6 @@ class LocalPlaylistDetailController extends GetxController {
               page++;
             }
           }
-          break;
-        case 'netease':
-          final repo = Get.find<NeteaseRepository>();
-          final neteaseId = int.tryParse(p.remoteId!) ?? 0;
-          if (neteaseId > 0) {
-            final detail = await repo.getPlaylistDetail(neteaseId);
-            if (detail != null) newTracks = detail.tracks;
-          }
-          break;
-        case 'qqmusic':
-          final repo = Get.find<QqMusicRepository>();
-          final detail = await repo.getPlaylistDetail(p.remoteId!);
-          if (detail != null) newTracks = detail.tracks;
           break;
       }
 

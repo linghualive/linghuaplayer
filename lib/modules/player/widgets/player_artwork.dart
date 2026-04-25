@@ -99,7 +99,15 @@ class _PlayerArtworkState extends State<PlayerArtwork>
                               child: child,
                             );
                           },
-                          child: _VinylDisc(imageUrl: imageUrl),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 500),
+                            switchInCurve: Curves.easeIn,
+                            switchOutCurve: Curves.easeOut,
+                            child: _VinylDisc(
+                              key: ValueKey(imageUrl),
+                              imageUrl: imageUrl,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -389,7 +397,7 @@ class _TonearmPainter extends CustomPainter {
 class _VinylDisc extends StatelessWidget {
   final String imageUrl;
 
-  const _VinylDisc({required this.imageUrl});
+  const _VinylDisc({super.key, required this.imageUrl});
 
   @override
   Widget build(BuildContext context) {

@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:get/get.dart';
 
 import '../../app/constants/app_constants.dart';
+import '../../core/http/http_client.dart';
 import '../models/browse_models.dart';
 import '../models/playback_info.dart';
 import '../models/player/lyrics_model.dart';
@@ -34,10 +35,20 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
         _musicRepo = musicRepo ?? Get.find<MusicRepository>(),
         _lyricsRepo = lyricsRepo ?? Get.find<LyricsRepository>();
 
-  static const _bilibiliHeaders = {
-    'Referer': AppConstants.referer,
-    'User-Agent': AppConstants.pcUserAgent,
-  };
+  static Future<Map<String, String>> _getBilibiliHeaders() async {
+    final headers = {
+      'Referer': AppConstants.referer,
+      'User-Agent': AppConstants.pcUserAgent,
+    };
+    try {
+      final cookie = await HttpClient.instance
+          .getCookieHeader(Uri.parse('https://api.bilibili.com'));
+      if (cookie.isNotEmpty) {
+        headers['Cookie'] = cookie;
+      }
+    } catch (_) {}
+    return headers;
+  }
 
   @override
   String get sourceId => 'bilibili';
@@ -66,6 +77,7 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
   @override
   Future<PlaybackInfo?> resolvePlayback(SearchVideoModel track) async {
     final bvid = track.bvid;
+    final headers = await _getBilibiliHeaders();
 
     // For 音频区 songs without video association, try audio API
     if (bvid.isEmpty) {
@@ -80,7 +92,7 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
                   qualityLabel: 'AU',
                   bandwidth: 0,
                   codec: '',
-                  headers: _bilibiliHeaders,
+                  headers: headers,
                 ),
               ],
               sourceId: sourceId,
@@ -104,7 +116,7 @@ class BilibiliSourceAdapter extends MusicSourceAdapter
                 qualityLabel: s.qualityLabel,
                 bandwidth: s.bandwidth,
                 codec: s.codecs,
-                headers: _bilibiliHeaders,
+                headers: headers,
               ))
           .toList(),
       sourceId: sourceId,

@@ -13,9 +13,29 @@ class MiniPlayerBar extends GetView<PlayerController> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      if (!controller.hasCurrentTrack) {
-        return const SizedBox.shrink();
-      }
+      final hasTrack = controller.hasCurrentTrack;
+
+      return AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        switchInCurve: Curves.easeOutCubic,
+        transitionBuilder: (child, animation) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(animation),
+            child: FadeTransition(opacity: animation, child: child),
+          );
+        },
+        child: hasTrack
+            ? _buildBar(context)
+            : const SizedBox.shrink(key: ValueKey('empty')),
+      );
+    });
+  }
+
+  Widget _buildBar(BuildContext context) {
+    return Obx(() {
 
       final video = controller.currentVideo.value!;
       final progress = controller.duration.value.inMilliseconds > 0
@@ -24,6 +44,7 @@ class MiniPlayerBar extends GetView<PlayerController> {
           : 0.0;
 
       return GestureDetector(
+        key: const ValueKey('mini_player'),
         onTap: () => Get.toNamed(AppRoutes.player),
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -46,17 +67,6 @@ class MiniPlayerBar extends GetView<PlayerController> {
                     const EdgeInsets.fromLTRB(10, 8, 4, 6),
                 child: Row(
                   children: [
-                    // Heart mode indicator
-                    if (controller.isHeartMode.value)
-                      Container(
-                        width: 3,
-                        height: 44,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.pink,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
                     // Cover art
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),

@@ -87,6 +87,7 @@ class PlaybackService {
   }
 
   Future<void> _ensureMediaKitPlayer() async {
+    if (!_useMediaKit) return;
     if (_mediaKitPlayer != null) return;
 
     _mediaKitPlayer = mk.Player(
@@ -213,7 +214,7 @@ class PlaybackService {
     }
   }
 
-  /// Play a direct audio URL (no special headers, e.g. NetEase).
+  /// Play a direct audio URL (no special headers).
   /// Automatically uses media_kit on macOS/Linux.
   Future<void> playDirectAudio(String url) async {
     if (_useMediaKit) {
@@ -235,7 +236,7 @@ class PlaybackService {
 
   /// Play an audio URL with source-provided HTTP headers.
   ///
-  /// If [headers] is empty, plays without special headers (like NetEase).
+  /// If [headers] is empty, plays without special headers.
   /// If [headers] contains Referer/UA, uses them (like Bilibili).
   Future<void> playAudioWithHeaders(
       String url, Map<String, String> headers) async {

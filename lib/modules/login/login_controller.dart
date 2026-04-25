@@ -1,22 +1,14 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:gt3_flutter_plugin/gt3_flutter_plugin.dart';
 
 import '../../app/routes/app_routes.dart';
-import '../../core/http/qqmusic_http_client.dart';
-import '../../core/storage/storage_service.dart';
 import '../../data/models/login/captcha_model.dart';
-import '../../data/models/login/qqmusic_user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../../data/repositories/netease_repository.dart';
-import '../../data/repositories/qqmusic_repository.dart';
 import '../../modules/home/home_controller.dart';
-import '../../modules/music_discovery/music_discovery_controller.dart';
 import '../../shared/utils/app_toast.dart';
 
 class LoginController extends GetxController with GetTickerProviderStateMixin {
@@ -24,15 +16,9 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
 
   late final TabController bilibiliTabController;
   final _authRepo = Get.find<AuthRepository>();
-  final _neteaseRepo = Get.find<NeteaseRepository>();
-  final _qqMusicRepo = Get.find<QqMusicRepository>();
-  final _storage = Get.find<StorageService>();
 
   // GeeTest plugin instance (only available on mobile)
   Gt3FlutterPlugin? _captcha;
-
-  // Platform selection: 0 = Bilibili, 1 = NetEase, 2 = QQ Music
-  final selectedPlatform = 0.obs;
 
   // Bilibili QR Login
   final qrcodeUrl = ''.obs;
@@ -40,21 +26,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
   final qrStatus = ''.obs;
   Timer? _qrPollTimer;
   int _qrPollCount = 0;
-
-  // NetEase QR Login
-  final neteaseQrUrl = ''.obs;
-  final neteaseQrKey = ''.obs;
-  final neteaseQrStatus = ''.obs;
-  Timer? _neteaseQrPollTimer;
-  int _neteaseQrPollCount = 0;
-
-  // QQ Music QR Login
-  final qqMusicQrImage = Rxn<Uint8List>();
-  final qqMusicQrStatus = ''.obs;
-  Timer? _qqMusicQrPollTimer;
-  int _qqMusicQrPollCount = 0;
-  int _qqMusicPtqrtoken = 0;
-  String _qqMusicQrsig = '';
 
   // SMS Login
   final phoneController = TextEditingController();
@@ -78,23 +49,13 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     if (isMobile) _captcha = Gt3FlutterPlugin();
     bilibiliTabController = TabController(length: isMobile ? 3 : 1, vsync: this);
     bilibiliTabController.addListener(_onBilibiliTabChanged);
-
-    final args = Get.arguments;
-    if (args is Map && args['platform'] == 2) {
-      selectPlatform(2);
-    } else if (args is Map && args['platform'] == 1) {
-      selectPlatform(1);
-    } else {
-      _generateQrcode();
-    }
+    _generateQrcode();
   }
 
   @override
   void onClose() {
     bilibiliTabController.dispose();
     _qrPollTimer?.cancel();
-    _neteaseQrPollTimer?.cancel();
-    _qqMusicQrPollTimer?.cancel();
     _smsTimer?.cancel();
     phoneController.dispose();
     smsCodeController.dispose();
@@ -103,32 +64,8 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     super.onClose();
   }
 
-  void selectPlatform(int index) {
-    if (selectedPlatform.value == index) return;
-    selectedPlatform.value = index;
-
-    // Stop all polling when switching platforms
-    _qrPollTimer?.cancel();
-    _neteaseQrPollTimer?.cancel();
-    _qqMusicQrPollTimer?.cancel();
-
-    if (index == 0) {
-      // Bilibili selected - start QR if on QR tab
-      if (bilibiliTabController.index == 0) {
-        _generateQrcode();
-      }
-    } else if (index == 1) {
-      // NetEase selected
-      _generateNeteaseQrcode();
-    } else if (index == 2) {
-      // QQ Music selected
-      _generateQqMusicQrcode();
-    }
-  }
-
   void _onBilibiliTabChanged() {
     if (bilibiliTabController.indexIsChanging) return;
-    if (selectedPlatform.value != 0) return;
 
     if (bilibiliTabController.index == 0) {
       _generateQrcode();
@@ -182,185 +119,8 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
     _generateQrcode();
   }
 
-  // ── NetEase QR Login ─────────────────────────────────
-
-  Future<void> _generateNeteaseQrcode() async {
-    neteaseQrStatus.value = '正在加载二维码...';
-    log('NetEase QR: generating unikey...');
-    final unikey = await _neteaseRepo.getQrKey();
-    log('NetEase QR: unikey=${unikey != null ? '${unikey.substring(0, unikey.length > 20 ? 20 : unikey.length)}...' : 'null'}');
-    if (unikey != null) {
-      neteaseQrKey.value = unikey;
-      neteaseQrUrl.value = _neteaseRepo.buildQrUrl(unikey);
-      neteaseQrStatus.value = '请使用网易云音乐客户端扫码';
-      _startNeteaseQrPolling();
-    } else {
-      neteaseQrStatus.value = '二维码生成失败';
-    }
-  }
-
-  void _startNeteaseQrPolling() {
-    _neteaseQrPollCount = 0;
-    _neteaseQrPollTimer?.cancel();
-    _neteaseQrPollTimer =
-        Timer.periodic(const Duration(seconds: 2), (timer) async {
-      _neteaseQrPollCount++;
-      if (_neteaseQrPollCount > 150) {
-        timer.cancel();
-        neteaseQrStatus.value = '二维码已过期';
-        return;
-      }
-      if (neteaseQrKey.value.isEmpty) return;
-
-      final result = await _neteaseRepo.pollQrLogin(neteaseQrKey.value);
-      log('NetEase QR poll: code=${result.code}, msg=${result.message}');
-      if (result.isSuccess) {
-        timer.cancel();
-        neteaseQrStatus.value = '登录成功！';
-        await _onNeteaseLoginSuccess();
-      } else if (result.isScanned) {
-        neteaseQrStatus.value = '已扫码，请在手机上确认';
-      } else if (result.isExpired) {
-        timer.cancel();
-        neteaseQrStatus.value = '二维码已过期';
-      }
-    });
-  }
-
-  void refreshNeteaseQrcode() {
-    _generateNeteaseQrcode();
-  }
-
-  Future<void> _onNeteaseLoginSuccess() async {
-    try {
-      log('NetEase QR: login success, fetching account info...');
-      final userInfo = await _neteaseRepo.getAccountInfo();
-      log('NetEase QR: account info=${userInfo != null ? 'uid=${userInfo.userId}, name=${userInfo.nickname}' : 'null'}');
-      if (userInfo != null) {
-        _storage.isNeteaseLoggedIn = true;
-        _storage.neteaseUserId = userInfo.userId.toString();
-        _storage.setNeteaseUserInfo(userInfo.toJson());
-      } else {
-        _storage.isNeteaseLoggedIn = true;
-      }
-
-      if (Get.isRegistered<HomeController>()) {
-        Get.find<HomeController>().refreshLoginStatus();
-      }
-      if (Get.isRegistered<MusicDiscoveryController>()) {
-        Get.find<MusicDiscoveryController>().loadAll();
-      }
-      Get.back();
-      AppToast.success(userInfo != null ? '网易云登录成功' : '网易云登录成功，但获取用户信息失败');
-    } catch (e) {
-      log('NetEase QR: _onNeteaseLoginSuccess error: $e');
-      AppToast.error('登录后处理失败: $e');
-    }
-  }
-
-  // ── QQ Music QR Login ────────────────────────────────
-
-  Future<void> _generateQqMusicQrcode() async {
-    qqMusicQrStatus.value = '正在加载二维码...';
-    qqMusicQrImage.value = null;
-    final result = await _qqMusicRepo.getQrCode();
-    if (result != null) {
-      qqMusicQrImage.value = result.imageBytes;
-      _qqMusicPtqrtoken = result.ptqrtoken;
-      _qqMusicQrsig = result.qrsig;
-      qqMusicQrStatus.value = '请使用QQ客户端扫码';
-      _startQqMusicQrPolling();
-    } else {
-      qqMusicQrStatus.value = '二维码生成失败';
-    }
-  }
-
-  void _startQqMusicQrPolling() {
-    _qqMusicQrPollCount = 0;
-    _qqMusicQrPollTimer?.cancel();
-    _qqMusicQrPollTimer =
-        Timer.periodic(const Duration(seconds: 3), (timer) async {
-      _qqMusicQrPollCount++;
-      if (_qqMusicQrPollCount > 100) {
-        timer.cancel();
-        qqMusicQrStatus.value = '二维码已过期';
-        return;
-      }
-
-      final result = await _qqMusicRepo.pollQrStatus(
-        _qqMusicPtqrtoken,
-        _qqMusicQrsig,
-      );
-      switch (result.status) {
-        case QqMusicQrStatus.success:
-          timer.cancel();
-          qqMusicQrStatus.value = '登录成功！';
-          await _onQqMusicQrSuccess(
-            uin: result.uin ?? '',
-            sigx: result.sigx ?? '',
-          );
-        case QqMusicQrStatus.scanned:
-          qqMusicQrStatus.value = '已扫码，请在手机上确认';
-        case QqMusicQrStatus.expired:
-          timer.cancel();
-          qqMusicQrStatus.value = '二维码已过期';
-        case QqMusicQrStatus.waiting:
-          break;
-      }
-    });
-  }
-
-  void refreshQqMusicQrcode() {
-    _generateQqMusicQrcode();
-  }
-
-  Future<void> _onQqMusicQrSuccess({
-    required String uin,
-    required String sigx,
-  }) async {
-    try {
-      qqMusicQrStatus.value = '正在完成登录...';
-      final loginResult = await _qqMusicRepo.completeLogin(
-        uin: uin,
-        sigx: sigx,
-      );
-      if (loginResult == null) {
-        qqMusicQrStatus.value = '登录失败，请重试';
-        return;
-      }
-
-      // Save login state
-      final client = QqMusicHttpClient.instance;
-      client.updateLoginUin(loginResult.uin);
-      client.updateGtk(loginResult.pSkey);
-
-      _storage.isQqMusicLoggedIn = true;
-      _storage.qqMusicUin = loginResult.uin;
-      _storage.qqMusicPSkey = loginResult.pSkey;
-
-      final userInfo = QqMusicUserInfoModel(
-        uin: loginResult.uin,
-        nickname: 'QQ用户${loginResult.uin}',
-        avatarUrl: '',
-      );
-      _storage.setQqMusicUserInfo(userInfo.toJson());
-
-      if (Get.isRegistered<HomeController>()) {
-        Get.find<HomeController>().refreshLoginStatus();
-      }
-      Get.back();
-      AppToast.success('QQ音乐登录成功');
-    } catch (e) {
-      log('QQ Music QR: _onQqMusicQrSuccess error: $e');
-      qqMusicQrStatus.value = '登录失败，请重试';
-      AppToast.error('登录后处理失败: $e');
-    }
-  }
-
   // ── GeeTest Captcha ──────────────────────────────────
 
-  /// Request GeeTest captcha and show the native verification UI.
-  /// On success, [onComplete] is called with the validated [CaptchaModel].
   Future<void> _getCaptchaAndDo(
       Future<void> Function(CaptchaModel) onComplete) async {
     if (_captcha == null) {
@@ -393,7 +153,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       onResult: (Map<String, dynamic> message) async {
         final code = message['code'] as String?;
         if (code == '1') {
-          // Verification succeeded
           captchaData.validate =
               message['result']['geetest_validate'] as String?;
           captchaData.seccode =
@@ -406,7 +165,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       onError: (Map<String, dynamic> message) async {
         isLoading.value = false;
         final code = message['code']?.toString() ?? '';
-        log('GeeTest error: code=$code');
         _handleGeeTestError(code);
       },
     );
@@ -520,7 +278,6 @@ class LoginController extends GetxController with GetTickerProviderStateMixin {
       if (result.success) {
         await _onLoginSuccess();
       } else if (result.needsVerification && result.verifyUrl != null) {
-        // Open WebView for additional device verification
         Get.toNamed(AppRoutes.webview, arguments: {
           'url': result.verifyUrl!,
           'title': '登录验证',

@@ -245,22 +245,6 @@ class DesktopPlayerBar extends GetView<PlayerController> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        // Heart mode button
-        IconButton(
-          icon: Icon(
-            controller.isHeartMode.value
-                ? Icons.favorite
-                : Icons.favorite_border,
-          ),
-          onPressed: controller.isHeartMode.value
-              ? controller.deactivateHeartMode
-              : null,
-          color: controller.isHeartMode.value ? Colors.pink : null,
-          iconSize: 20,
-          padding: const EdgeInsets.all(8),
-          constraints: const BoxConstraints(),
-          tooltip: controller.isHeartMode.value ? '退出心动模式' : '心动模式',
-        ),
         // Play mode button
         IconButton(
           icon: Icon(

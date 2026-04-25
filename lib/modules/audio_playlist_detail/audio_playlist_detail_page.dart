@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../shared/utils/duration_formatter.dart';
+import '../../shared/widgets/animated_list_item.dart';
 import '../../shared/widgets/fav_panel.dart';
 import '../player/player_controller.dart';
 import 'audio_playlist_detail_controller.dart';
@@ -75,7 +76,9 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final song = controller.songs[index];
-                      return ListTile(
+                      return AnimatedListItem(
+                        index: index,
+                        child: ListTile(
                         leading: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: CachedNetworkImage(
@@ -139,6 +142,7 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                           ],
                         ),
                         onTap: () => controller.playSong(song),
+                      ),
                       );
                     },
                     childCount: controller.songs.length,

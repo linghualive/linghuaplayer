@@ -23,42 +23,10 @@ class PlaylistPage extends StatelessWidget {
             tooltip: '新建歌单',
             onPressed: () => CreateFavDialog.show(context),
           ),
-          PopupMenuButton<String>(
+          IconButton(
             icon: const Icon(Icons.download),
-            tooltip: '导入歌单',
-            onSelected: (tag) => ImportPlaylistSheet.show(context, tag),
-            itemBuilder: (_) => const [
-              PopupMenuItem(
-                value: 'bilibili',
-                child: Row(
-                  children: [
-                    Icon(Icons.smart_display, size: 20),
-                    SizedBox(width: 8),
-                    Text('哔哩哔哩'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'netease',
-                child: Row(
-                  children: [
-                    Icon(Icons.cloud, size: 20),
-                    SizedBox(width: 8),
-                    Text('网易云音乐'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'qqmusic',
-                child: Row(
-                  children: [
-                    Icon(Icons.queue_music, size: 20),
-                    SizedBox(width: 8),
-                    Text('QQ音乐'),
-                  ],
-                ),
-              ),
-            ],
+            tooltip: '导入B站歌单',
+            onPressed: () => ImportPlaylistSheet.show(context, 'bilibili'),
           ),
         ],
       ),
@@ -314,10 +282,8 @@ class _SourceBadge extends StatelessWidget {
     switch (sourceTag) {
       case 'bilibili':
         return 'B站';
-      case 'netease':
-        return '网易云';
-      case 'qqmusic':
-        return 'QQ';
+      case 'gdstudio':
+        return 'GD';
       default:
         return sourceTag;
     }
@@ -327,10 +293,8 @@ class _SourceBadge extends StatelessWidget {
     switch (sourceTag) {
       case 'bilibili':
         return const Color(0xFFFB7299);
-      case 'netease':
-        return const Color(0xFFE60026);
-      case 'qqmusic':
-        return const Color(0xFF31C27C);
+      case 'gdstudio':
+        return Colors.orange;
       default:
         return theme.colorScheme.outline;
     }

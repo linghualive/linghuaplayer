@@ -7,7 +7,7 @@ import 'player_controller.dart';
 import 'widgets/player_artwork.dart';
 import 'widgets/player_controls.dart';
 import 'widgets/player_lyrics.dart';
-import 'widgets/related_music_sheet.dart';
+import 'widgets/swipeable_player_body.dart';
 
 class PlayerHomeTab extends StatelessWidget {
   const PlayerHomeTab({super.key});
@@ -33,6 +33,7 @@ class PlayerHomeTab extends StatelessWidget {
             ),
       body: _buildBackground(
         context,
+        playerCtrl: playerCtrl,
         child: SafeArea(
           child: isDesktop
               ? Column(
@@ -60,23 +61,30 @@ class PlayerHomeTab extends StatelessWidget {
     );
   }
 
-  Widget _buildBackground(BuildContext context, {required Widget child}) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Theme.of(context)
-                .colorScheme
-                .primaryContainer
-                .withValues(alpha: 0.3),
-            Theme.of(context).colorScheme.surface,
-          ],
+  Widget _buildBackground(BuildContext context,
+      {required Widget child, required PlayerController playerCtrl}) {
+    return Obx(() {
+      final dynamicColor = playerCtrl.coverColor.value;
+      final topColor = dynamicColor?.withValues(alpha: 0.35) ??
+          Theme.of(context)
+              .colorScheme
+              .primaryContainer
+              .withValues(alpha: 0.3);
+      final bottomColor = Theme.of(context).colorScheme.surface;
+
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [topColor, bottomColor],
+          ),
         ),
-      ),
-      child: child,
-    );
+        child: child,
+      );
+    });
   }
 
   List<Widget> _buildActionWidgets(
@@ -91,23 +99,11 @@ class PlayerHomeTab extends StatelessWidget {
           onPressed: () => FavPanel.show(context, video),
         );
       }),
-      IconButton(
-        icon: const Icon(Icons.explore),
-        tooltip: '相关推荐',
-        onPressed: RelatedMusicSheet.show,
-      ),
     ];
   }
 
   Widget _buildContent(BuildContext context, PlayerController playerCtrl) {
-    return Obx(() {
-      if (playerCtrl.currentVideo.value == null) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          playerCtrl.playRandomIfNeeded();
-        });
-      }
-      return _buildPlayerUI(context, playerCtrl);
-    });
+    return _buildPlayerUI(context, playerCtrl);
   }
 
   Widget _buildPlayerUI(BuildContext context, PlayerController playerCtrl) {
@@ -119,17 +115,9 @@ class PlayerHomeTab extends StatelessWidget {
 
   Widget _buildMobilePlayerUI(
       BuildContext context, PlayerController playerCtrl) {
-    return Column(
-      children: [
-        const SizedBox(height: 16),
-        Expanded(
-          flex: 5,
-          child: _buildArtworkArea(playerCtrl),
-        ),
-        const SizedBox(height: 24),
-        const Expanded(flex: 4, child: PlayerControls()),
-        const SizedBox(height: 16),
-      ],
+    return SwipeablePlayerBody(
+      buildArtworkArea: () => _buildArtworkArea(playerCtrl),
+      controlsArea: const PlayerControls(),
     );
   }
 

@@ -52,10 +52,8 @@ class PlaylistConfigSheet extends StatelessWidget {
     switch (source) {
       case 'bilibili':
         return Icons.smart_display;
-      case 'netease':
-        return Icons.cloud;
-      case 'qqmusic':
-        return Icons.queue_music;
+      case 'gdstudio':
+        return Icons.music_note;
       default:
         return Icons.library_music;
     }
@@ -65,10 +63,8 @@ class PlaylistConfigSheet extends StatelessWidget {
     switch (source) {
       case 'bilibili':
         return '哔哩哔哩';
-      case 'netease':
-        return '网易云';
-      case 'qqmusic':
-        return 'QQ音乐';
+      case 'gdstudio':
+        return 'GD音乐台';
       case 'local':
         return '本地创建';
       default:

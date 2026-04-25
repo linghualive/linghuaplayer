@@ -51,11 +51,9 @@ class WatchLaterController extends GetxController {
   void playAll() {
     if (videos.isEmpty) return;
     final playerCtrl = Get.find<PlayerController>();
-    // Play the first video
-    playerCtrl.playFromSearch(videos.first.toSearchVideoModel(), preferredSourceId: null);
-    // Add the rest to queue (lazy: URLs resolved when playing)
-    for (var i = 1; i < videos.length; i++) {
-      playerCtrl.addToQueueLazy(videos[i].toSearchVideoModel());
-    }
+    playerCtrl.playAllFromList(
+      videos.map((v) => v.toSearchVideoModel()).toList(),
+      preferredSourceId: null,
+    );
   }
 }

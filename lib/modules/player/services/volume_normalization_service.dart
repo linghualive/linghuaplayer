@@ -13,10 +13,8 @@ class VolumeNormalizationService {
   /// Per-source gain adjustments.
   /// Values determined empirically based on typical loudness levels.
   static const _sourceGains = {
-    'bilibili': 0.85, // Bilibili tends to be louder
-    'netease': 1.0, // Netease as reference level
-    'qqmusic': 0.95, // QQ Music slightly louder
-    'gdstudio': 1.1, // GDStudio tends to be quieter
+    'bilibili': 0.85,
+    'gdstudio': 1.1,
   };
 
   bool _enabled = false;

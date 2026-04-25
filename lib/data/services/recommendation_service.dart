@@ -1,181 +1,113 @@
-import 'dart:developer';
+import 'dart:developer' as dev;
+import 'dart:math';
 
 import 'package:get/get.dart';
 
 import '../models/search/search_video_model.dart';
-import '../repositories/deepseek_repository.dart';
 import '../services/user_profile_service.dart';
 import '../sources/music_source_registry.dart';
 
 class RecommendationService {
-  final _deepseekRepo = Get.find<DeepSeekRepository>();
   final _registry = Get.find<MusicSourceRegistry>();
 
-  static const _excludeTitleKeywords = ['合集', '串烧', '盘点', '混剪'];
-  static const _minDurationSeconds = 90; // 1:30
-  static const _maxDurationSeconds = 600; // 10:00
+  static const _excludeTitleKeywords = [
+    '合集', '串烧', '盘点', '混剪',
+    '游戏', '解说', '教程', '直播', '实况', '攻略', '剪辑', 'reaction',
+  ];
+  static const _minDurationSeconds = 90;
+  static const _maxDurationSeconds = 600;
 
-  /// Session-level set of recommended song IDs to avoid cross-batch duplicates.
   final _sessionRecommendedIds = <String>{};
 
-  /// Normalize a song title for fuzzy deduplication.
-  static String _normalizeTitle(String title) {
-    return title
-        .replaceAll(RegExp(r'\(.*?\)'), '') // remove parentheses
-        .replaceAll(RegExp(r'（.*?）'), '') // remove full-width parentheses
-        .replaceAll(RegExp(r'【.*?】'), '') // remove brackets
-        .replaceAll(RegExp(r'\[.*?\]'), '') // remove square brackets
-        .replaceAll(RegExp(r'\s+'), '') // remove whitespace
-        .toLowerCase();
-  }
+  static const _genericKeywords = [
+    '热门歌曲', '流行音乐', '经典老歌', '华语金曲',
+    '日语歌曲', '英文歌曲', '抖音热歌', '网络热歌',
+    '粤语经典', '民谣', '摇滚', '电子音乐',
+  ];
 
-  /// Generate recommended songs using the new pipeline:
-  /// 1. DeepSeek generates specific song titles + artists
-  /// 2. Search all registered sources for matches
-  /// 3. Apply quality filtering for non-music sources
+  static const _suffixes = ['热门', '精选', '经典', ''];
+
   Future<List<SearchVideoModel>> getRecommendations({
-    List<String> tags = const [],
     List<String>? recentPlayed,
   }) async {
-    // Trim session-level dedup set to avoid exhausting all candidates
     if (_sessionRecommendedIds.length > 100) {
       final excess = _sessionRecommendedIds.length - 50;
-      final toRemove = _sessionRecommendedIds.take(excess).toList();
-      _sessionRecommendedIds.removeAll(toRemove);
+      _sessionRecommendedIds.removeAll(
+          _sessionRecommendedIds.take(excess).toList());
     }
 
-    // Get user profile summary for enhanced recommendations
-    String? profileSummary;
+    final rng = Random();
+    final keywords = <String>[];
+
+    // Build keywords from user profile (top artists)
     try {
       final profileService = Get.find<UserProfileService>();
-      profileSummary = profileService.getProfileSummaryForPrompt();
+      final profile = profileService.getUserProfile();
+      if (profile != null) {
+        final topArtists = profile['topArtists'] as List<dynamic>?;
+        if (topArtists != null && topArtists.isNotEmpty) {
+          final shuffled = topArtists.toList()..shuffle(rng);
+          for (final artist in shuffled.take(4)) {
+            final name = artist['name'] as String? ?? '';
+            if (name.isEmpty) continue;
+            final suffix = _suffixes[rng.nextInt(_suffixes.length)];
+            keywords.add('$name $suffix'.trim());
+          }
+        }
+      }
     } catch (_) {}
 
-    final List<RecommendedSong> recommendations;
-    if (tags.isNotEmpty) {
-      recommendations = await _deepseekRepo.generateSongRecommendations(
-        tags,
-        recentPlayed: recentPlayed,
-        userProfile: profileSummary,
-      );
-    } else {
-      recommendations = await _deepseekRepo.generateRandomSongRecommendations(
-        recentPlayed: recentPlayed,
-        userProfile: profileSummary,
-      );
-    }
+    // Add generic keywords for variety
+    final shuffledGeneric = _genericKeywords.toList()..shuffle(rng);
+    keywords.addAll(shuffledGeneric.take(3));
 
-    // Resolve all recommendations in parallel for speed
-    final futures = recommendations.map((rec) async {
-      try {
-        return await _resolveRecommendedSong(rec);
-      } catch (e) {
-        log('Failed to resolve "${rec.title}" by ${rec.artist}: $e');
-        return null;
+    // Search and collect results
+    final results = <SearchVideoModel>[];
+    final seenIds = <String>{};
+    final recentSet = recentPlayed?.toSet() ?? {};
+
+    final sources = _registry.availableSources.toList()..shuffle(rng);
+    if (sources.isEmpty) return results;
+
+    for (final keyword in keywords) {
+      if (results.length >= 8) break;
+
+      final prevCount = results.length;
+      for (final source in sources) {
+        try {
+          final searchResult =
+              await source.searchTracks(keyword: keyword, limit: 5);
+          for (final track in searchResult.tracks) {
+            if (results.length >= 8) break;
+            if (_sessionRecommendedIds.contains(track.uniqueId)) continue;
+            if (!seenIds.add(track.uniqueId)) continue;
+            if (recentSet.contains('${track.title} - ${track.author}')) continue;
+            if (!_isQualityResult(track)) continue;
+
+            results.add(track);
+            _sessionRecommendedIds.add(track.uniqueId);
+          }
+          if (results.length > prevCount) break;
+        } catch (e) {
+          dev.log('Recommendation search "$keyword" on ${source.sourceId} failed: $e');
+        }
       }
-    }).toList();
-
-    final resolved = await Future.wait(futures);
-
-    final List<SearchVideoModel> results = [];
-    final Set<String> seenIds = {};
-    final Set<String> seenNormalizedTitles = {};
-
-    for (final song in resolved) {
-      if (song == null) continue;
-
-      // Skip if already recommended in this session
-      if (_sessionRecommendedIds.contains(song.uniqueId)) continue;
-
-      // Skip if same uniqueId in current batch
-      if (!seenIds.add(song.uniqueId)) continue;
-
-      // Skip if a song with a very similar title already exists
-      final normalized = _normalizeTitle(song.title);
-      if (!seenNormalizedTitles.add(normalized)) continue;
-
-      results.add(song);
-      _sessionRecommendedIds.add(song.uniqueId);
     }
 
+    results.shuffle(rng);
     return results;
   }
 
-  /// Resolve a recommended song to a playable SearchVideoModel.
-  /// Prioritizes GD Studio, then tries at most one other source, then Bilibili.
-  Future<SearchVideoModel?> _resolveRecommendedSong(
-      RecommendedSong rec) async {
-    final keyword = '${rec.title} ${rec.artist}';
-
-    // 1. Prioritize GD Studio source (music-specific, best results)
-    final gdSource = _registry.getSource('gdstudio');
-    if (gdSource != null) {
-      try {
-        final result =
-            await gdSource.searchTracks(keyword: keyword, limit: 3);
-        if (result.tracks.isNotEmpty) {
-          log('Resolved "${rec.title}" via gdstudio (priority)');
-          return result.tracks.first;
-        }
-      } catch (e) {
-        log('GD Studio failed for "${rec.title}": $e');
-      }
-    }
-
-    // 2. Fallback: try at most 1 other source (skip Bilibili for quality)
-    final fallbackSources = _registry.availableSources
-        .where((s) => s.sourceId != 'gdstudio' && s.sourceId != 'bilibili')
-        .take(1);
-
-    for (final source in fallbackSources) {
-      try {
-        final result = await source.searchTracks(keyword: keyword, limit: 3);
-        if (result.tracks.isEmpty) continue;
-        log('Resolved "${rec.title}" via ${source.sourceId} (fallback)');
-        return result.tracks.first;
-      } catch (e) {
-        log('Source ${source.sourceId} failed for "${rec.title}": $e');
-      }
-    }
-
-    // 3. Last resort: try Bilibili with quality filtering
-    final biliSource = _registry.getSource('bilibili');
-    if (biliSource != null) {
-      try {
-        final result =
-            await biliSource.searchTracks(keyword: keyword, limit: 3);
-        if (result.tracks.isNotEmpty) {
-          final candidates = result.tracks.where(_isQualityResult).toList();
-          if (candidates.isNotEmpty) {
-            candidates.sort((a, b) => b.play.compareTo(a.play));
-            log('Resolved "${rec.title}" via bilibili (last resort)');
-            return candidates.first;
-          }
-        }
-      } catch (e) {
-        log('Bilibili failed for "${rec.title}": $e');
-      }
-    }
-
-    return null;
-  }
-
-  /// Quality filter for Bilibili search results.
   bool _isQualityResult(SearchVideoModel video) {
-    // Check duration (format: "m:ss" or "mm:ss")
     final seconds = _parseDurationToSeconds(video.duration);
     if (seconds != null) {
       if (seconds < _minDurationSeconds || seconds > _maxDurationSeconds) {
         return false;
       }
     }
-
-    // Exclude compilations, mashups, etc.
-    final title = video.title;
     for (final keyword in _excludeTitleKeywords) {
-      if (title.contains(keyword)) return false;
+      if (video.title.contains(keyword)) return false;
     }
-
     return true;
   }
 

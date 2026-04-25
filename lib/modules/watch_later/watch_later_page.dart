@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../shared/widgets/animated_list_item.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/video_action_buttons.dart';
 import 'watch_later_controller.dart';
@@ -79,7 +80,9 @@ class WatchLaterPage extends StatelessWidget {
             itemCount: controller.videos.length,
             itemBuilder: (context, index) {
               final video = controller.videos[index];
-              return Dismissible(
+              return AnimatedListItem(
+                index: index,
+                child: Dismissible(
                 key: ValueKey(video.aid),
                 direction: DismissDirection.endToStart,
                 background: Container(
@@ -177,6 +180,7 @@ class WatchLaterPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ),
               );
             },
           ),

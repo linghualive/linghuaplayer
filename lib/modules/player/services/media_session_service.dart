@@ -54,7 +54,9 @@ class MediaSessionService extends BaseAudioHandler with SeekHandler {
       id: '$title-$artist',
       title: title,
       artist: artist,
-      artUri: artUri != null && artUri.isNotEmpty ? Uri.tryParse(artUri) : null,
+      artUri: artUri != null && artUri.isNotEmpty
+          ? Uri.tryParse(artUri.startsWith('//') ? 'https:$artUri' : artUri)
+          : null,
       duration: duration,
     );
     mediaItem.add(item);

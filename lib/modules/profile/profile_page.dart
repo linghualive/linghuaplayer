@@ -62,9 +62,6 @@ class ProfilePage extends StatelessWidget {
       BuildContext context, HomeController controller) {
     final theme = Theme.of(context);
     final hasBili = controller.isLoggedIn.value;
-    final hasNetease = controller.isNeteaseLoggedIn.value;
-    final hasQq = controller.isQqMusicLoggedIn.value;
-    final hasAny = hasBili || hasNetease || hasQq;
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -80,7 +77,7 @@ class ProfilePage extends StatelessWidget {
               ),
             ),
           ),
-          if (!hasAny)
+          if (!hasBili)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
               child: Text(
@@ -101,34 +98,6 @@ class ProfilePage extends StatelessWidget {
               avatarUrl: controller.userInfo.value?.face,
               color: const Color(0xFFFB7299),
               onLogout: () => controller.logout(),
-            ),
-          ],
-
-          // Netease
-          if (hasNetease) ...[
-            if (hasBili) const Divider(height: 1, indent: 56),
-            _buildAccountTile(
-              context,
-              icon: Icons.cloud,
-              platform: '网易云',
-              name: controller.neteaseUserInfo.value?.nickname ?? '网易云用户',
-              avatarUrl: controller.neteaseUserInfo.value?.avatarUrl,
-              color: const Color(0xFFE60026),
-              onLogout: () => controller.logoutNetease(),
-            ),
-          ],
-
-          // QQ Music
-          if (hasQq) ...[
-            if (hasBili || hasNetease) const Divider(height: 1, indent: 56),
-            _buildAccountTile(
-              context,
-              icon: Icons.queue_music,
-              platform: 'QQ音乐',
-              name: controller.qqMusicUserInfo.value?.nickname ?? 'QQ音乐用户',
-              avatarUrl: controller.qqMusicUserInfo.value?.avatarUrl,
-              color: const Color(0xFF31C27C),
-              onLogout: () => controller.logoutQqMusic(),
             ),
           ],
         ],

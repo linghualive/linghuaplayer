@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
-import '../../../core/storage/storage_service.dart';
 import '../../../data/sources/music_source_registry.dart';
 import '../player_controller.dart';
 import '../services/audio_output_service.dart';
@@ -15,51 +14,34 @@ class PlayerControls extends GetView<PlayerController> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Obx(() {
       return Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Heart mode badge
-          if (controller.isHeartMode.value)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              margin: const EdgeInsets.only(bottom: 6),
-              decoration: BoxDecoration(
-                color: Colors.pink.shade50,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.favorite, size: 14, color: Colors.pink.shade400),
-                  const SizedBox(width: 4),
-                  Text(
-                    '心动模式',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.pink.shade400,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          // Track title + quality badge
+          // Title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              controller.currentVideo.value?.title ?? '',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 400),
+              child: Text(
+                controller.currentVideo.value?.title ?? '',
+                key: ValueKey(controller.currentVideo.value?.title),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.2,
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
+          // Artist + quality
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
@@ -79,17 +61,17 @@ class PlayerControls extends GetView<PlayerController> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Flexible(
-                          child: Text(
-                            controller.currentVideo.value?.author ?? '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color:
-                                      Theme.of(context).colorScheme.outline,
-                                ),
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 400),
+                            child: Text(
+                              controller.currentVideo.value?.author ?? '',
+                              key: ValueKey(controller.currentVideo.value?.author),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         ),
                         if (controller.currentVideo.value != null &&
@@ -100,7 +82,7 @@ class PlayerControls extends GetView<PlayerController> {
                             child: Icon(
                               Icons.chevron_right,
                               size: 14,
-                              color: Theme.of(context).colorScheme.outline,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                       ],
@@ -115,23 +97,21 @@ class PlayerControls extends GetView<PlayerController> {
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          // Seek slider
+          const SizedBox(height: 28),
+          // Slider
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 28),
             child: SliderTheme(
               data: SliderThemeData(
                 trackHeight: 3,
                 thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 7),
+                    const RoundSliderThumbShape(enabledThumbRadius: 6),
                 overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 16),
-                activeTrackColor: Theme.of(context).colorScheme.primary,
-                inactiveTrackColor: Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.12),
-                thumbColor: Theme.of(context).colorScheme.primary,
+                    const RoundSliderOverlayShape(overlayRadius: 14),
+                activeTrackColor: theme.colorScheme.primary,
+                inactiveTrackColor:
+                    theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                thumbColor: theme.colorScheme.primary,
               ),
               child: Slider(
                 value: controller.position.value.inMilliseconds
@@ -153,45 +133,48 @@ class PlayerControls extends GetView<PlayerController> {
           ),
           // Time labels
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 36),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   _formatDuration(controller.position.value),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
                 ),
                 Text(
                   _formatDuration(controller.duration.value),
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          // Control buttons
+          const SizedBox(height: 16),
+          // Main controls
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                iconSize: 24,
+                iconSize: 22,
                 icon: Icon(
                   _playModeIcon(controller.playMode.value),
                   color: controller.playMode.value == PlayMode.sequential
-                      ? Theme.of(context).colorScheme.outline
-                      : Theme.of(context).colorScheme.primary,
+                      ? theme.colorScheme.onSurfaceVariant
+                      : theme.colorScheme.primary,
                 ),
                 onPressed: () {
                   HapticFeedback.lightImpact();
                   controller.togglePlayMode();
                 },
               ),
+              const SizedBox(width: 8),
               IconButton(
-                iconSize: 32,
+                iconSize: 28,
                 icon: const Icon(Icons.skip_previous_rounded),
                 onPressed: controller.isLoading.value
                     ? null
@@ -239,7 +222,7 @@ class PlayerControls extends GetView<PlayerController> {
               ),
               const SizedBox(width: 12),
               IconButton(
-                iconSize: 32,
+                iconSize: 28,
                 icon: const Icon(Icons.skip_next_rounded),
                 onPressed: controller.isLoading.value
                     ? null
@@ -250,85 +233,83 @@ class PlayerControls extends GetView<PlayerController> {
               ),
               const SizedBox(width: 8),
               IconButton(
-                iconSize: 24,
+                iconSize: 22,
                 icon: const Icon(Icons.queue_music_rounded),
                 onPressed: PlayQueueSheet.show,
               ),
             ],
           ),
-          // Heart mode + MV toggle + Source switch
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _showSourcePicker(context),
-                  icon: Icon(Icons.library_music, size: 18),
-                  label: Text(
-                    _sourceDisplayName(
-                        controller.currentPlaybackSourceId.value),
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: controller.isHeartModeLoading.value
-                      ? null
-                      : controller.isHeartMode.value
-                          ? controller.deactivateHeartMode
-                          : () {
-                              final tags =
-                                  Get.find<StorageService>().preferenceTags;
-                              controller.activateHeartMode(tags);
-                            },
-                  icon: controller.isHeartModeLoading.value
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Icon(Icons.auto_awesome, size: 18),
-                  label: Text(
-                    controller.isHeartMode.value ? '心动中' : '心动模式',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: controller.isHeartMode.value
-                        ? Colors.pink
-                        : Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                TextButton.icon(
-                  onPressed: () async {
-                    await controller.audioOutput.showOutputPicker();
-                    if (!controller.audioOutput.usesSystemPicker &&
-                        controller.audioOutput.devices.isNotEmpty) {
-                      AudioOutputSheet.show();
-                    }
-                  },
-                  icon: Icon(
-                    _outputIcon(controller.audioOutput.activeType),
-                    size: 18,
-                  ),
-                  label: Text(
-                    '输出',
-                    style: Theme.of(context).textTheme.labelMedium,
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 8),
+          // Auxiliary row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildChipButton(
+                context,
+                icon: Icons.library_music_outlined,
+                label: _sourceDisplayName(
+                    controller.currentPlaybackSourceId.value),
+                isActive: true,
+                onTap: () => _showSourcePicker(context),
+              ),
+              const SizedBox(width: 12),
+              _buildChipButton(
+                context,
+                icon: _outputIcon(controller.audioOutput.activeType),
+                label: '输出',
+                isActive: false,
+                onTap: () async {
+                  await controller.audioOutput.showOutputPicker();
+                  if (!controller.audioOutput.usesSystemPicker &&
+                      controller.audioOutput.devices.isNotEmpty) {
+                    AudioOutputSheet.show();
+                  }
+                },
+              ),
+            ],
           ),
         ],
       );
     });
+  }
+
+  Widget _buildChipButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final color = isActive
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 15, color: color),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: color,
+                fontWeight: isActive ? FontWeight.w500 : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   IconData _playModeIcon(PlayMode mode) {
@@ -345,7 +326,7 @@ class PlayerControls extends GetView<PlayerController> {
   IconData _outputIcon(AudioOutputType type) {
     switch (type) {
       case AudioOutputType.speaker:
-        return Icons.volume_up;
+        return Icons.volume_up_outlined;
       case AudioOutputType.bluetooth:
         return Icons.bluetooth_audio;
       case AudioOutputType.wired:
@@ -357,36 +338,37 @@ class PlayerControls extends GetView<PlayerController> {
       case AudioOutputType.hdmi:
         return Icons.settings_input_hdmi;
       case AudioOutputType.unknown:
-        return Icons.volume_up;
+        return Icons.volume_up_outlined;
     }
   }
 
   Widget _buildQualityBadge(BuildContext context, String label) {
+    final theme = Theme.of(context);
     final bool isPremium = label == 'Hi-Res' || label == 'Dolby';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
         color: isPremium
-            ? Theme.of(context).colorScheme.primaryContainer
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(4),
         border: isPremium
             ? Border.all(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                color: theme.colorScheme.primary.withValues(alpha: 0.5),
                 width: 0.5,
               )
             : null,
       ),
       child: Text(
         label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: isPremium
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: isPremium ? FontWeight.w600 : FontWeight.normal,
-              fontSize: 10,
-            ),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: isPremium
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
+          fontWeight: isPremium ? FontWeight.w600 : FontWeight.normal,
+          fontSize: 10,
+        ),
       ),
     );
   }

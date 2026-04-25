@@ -59,45 +59,7 @@ class SearchResultCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
-                    video.isNetease
-                        ? Row(
-                            children: [
-                              Icon(
-                                Icons.album,
-                                size: 14,
-                                color: Theme.of(context).colorScheme.outline,
-                              ),
-                              const SizedBox(width: 2),
-                              Expanded(
-                                child: Text(
-                                  video.description,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outline,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                video.duration,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline,
-                                    ),
-                              ),
-                            ],
-                          )
-                        : Row(
+                    Row(
                             children: [
                               Icon(
                                 Icons.play_arrow,

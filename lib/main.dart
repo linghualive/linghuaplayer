@@ -15,10 +15,7 @@ import 'app/routes/app_routes.dart';
 import 'app/theme/app_theme.dart';
 import 'app/theme/desktop_theme.dart';
 import 'app/theme/theme_controller.dart';
-import 'core/http/deepseek_http_client.dart';
 import 'core/http/http_client.dart';
-import 'core/http/netease_http_client.dart';
-import 'core/http/qqmusic_http_client.dart';
 import 'core/storage/storage_service.dart';
 import 'data/services/user_profile_service.dart';
 import 'modules/player/services/media_session_service.dart';
@@ -63,26 +60,6 @@ void main() async {
 
   // Initialize HTTP clients
   await HttpClient.instance.init();
-  await NeteaseHttpClient.instance.init();
-  await QqMusicHttpClient.instance.init();
-
-  // Restore QQ Music login state from storage
-  final qqMusicUin = storageService.qqMusicUin;
-  final qqMusicPSkey = storageService.qqMusicPSkey;
-  if (qqMusicUin != null &&
-      qqMusicUin.isNotEmpty &&
-      storageService.isQqMusicLoggedIn) {
-    QqMusicHttpClient.instance.updateLoginUin(qqMusicUin);
-    if (qqMusicPSkey != null && qqMusicPSkey.isNotEmpty) {
-      QqMusicHttpClient.instance.updateGtk(qqMusicPSkey);
-    }
-  }
-
-  // Initialize DeepSeek HTTP client if API key exists
-  final deepseekKey = storageService.deepseekApiKey;
-  if (deepseekKey != null && deepseekKey.isNotEmpty) {
-    DeepSeekHttpClient.instance.init(deepseekKey);
-  }
 
   // Build user listening profile if play history exists
   if (storageService.getPlayHistory().isNotEmpty) {
@@ -173,7 +150,7 @@ class FlameKitApp extends StatelessWidget {
             theme: lightTheme,
             darkTheme: darkTheme,
             themeMode: themeCtrl.themeModeEnum,
-            initialRoute: AppRoutes.splash,
+            initialRoute: AppRoutes.home,
             getPages: AppPages.pages,
             initialBinding: InitialBinding(),
           );

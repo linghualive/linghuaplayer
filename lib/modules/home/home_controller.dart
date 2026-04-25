@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../../core/http/netease_http_client.dart';
-import '../../core/http/qqmusic_http_client.dart';
+import '../../core/crypto/aurora_eid.dart';
+import '../../core/crypto/buvid.dart';
+import '../../core/http/http_client.dart';
+import '../../core/services/update_service.dart';
 import '../../core/storage/storage_service.dart';
-import '../../data/models/login/netease_user_info_model.dart';
-import '../../data/models/login/qqmusic_user_info_model.dart';
 import '../../data/models/login/user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../discover/discover_controller.dart';
 import '../music_discovery/music_discovery_controller.dart';
 import '../music_discovery/music_discovery_page.dart';
-import '../player/player_controller.dart';
 import '../player/player_home_tab.dart';
 import '../playlist/playlist_controller.dart';
 import '../playlist/playlist_page.dart';
@@ -25,17 +23,12 @@ class HomeController extends GetxController {
   // For desktop navigation
   final selectedIndex = 0.obs;
 
+  // Bootstrap state
+  final isBootstrapped = false.obs;
+
   // Bilibili login state
   final isLoggedIn = false.obs;
   final userInfo = Rxn<UserInfoModel>();
-
-  // NetEase login state
-  final isNeteaseLoggedIn = false.obs;
-  final neteaseUserInfo = Rxn<NeteaseUserInfoModel>();
-
-  // QQ Music login state
-  final isQqMusicLoggedIn = false.obs;
-  final qqMusicUserInfo = Rxn<QqMusicUserInfoModel>();
 
   final _storage = Get.find<StorageService>();
 
@@ -48,10 +41,27 @@ class HomeController extends GetxController {
     refreshLoginStatus();
     _initializeControllers();
     _initializePages();
+    _bootstrapAndPlay();
+  }
 
-    // Auto-play: trigger after splash completes and home page is ready
-    final playerCtrl = Get.find<PlayerController>();
-    playerCtrl.playRandomIfNeeded();
+  Future<void> _bootstrapAndPlay() async {
+    try {
+      await BuvidUtil.getBuvid();
+      await BuvidUtil.activate();
+      await HttpClient.instance.ensureVcDomainCookies();
+
+      if (_storage.isLoggedIn && _storage.userMid != null) {
+        final mid = _storage.userMid!;
+        final auroraEid = AuroraEid.generate(int.tryParse(mid) ?? 0);
+        HttpClient.instance.setAuthHeaders(mid: mid, auroraEid: auroraEid);
+      }
+    } catch (_) {}
+
+    isBootstrapped.value = true;
+
+    Future.delayed(const Duration(seconds: 2), () {
+      UpdateService.checkAndNotify();
+    });
   }
 
   void _initializePages() {
@@ -65,7 +75,6 @@ class HomeController extends GetxController {
 
   void _initializeControllers() {
     Get.put(PlaylistController());
-    Get.put(DiscoverController());
     Get.put(MusicDiscoveryController());
     Get.put(ProfileController());
     if (!Get.isRegistered<app.SearchController>()) {
@@ -83,29 +92,10 @@ class HomeController extends GetxController {
   }
 
   void refreshLoginStatus() {
-    // Bilibili
     isLoggedIn.value = _storage.isLoggedIn;
     final cached = _storage.getUserInfo();
     if (cached != null) {
       userInfo.value = UserInfoModel.fromJson(cached);
-    }
-
-    // NetEase
-    isNeteaseLoggedIn.value = _storage.isNeteaseLoggedIn;
-    final neteaseCached = _storage.getNeteaseUserInfo();
-    if (neteaseCached != null) {
-      neteaseUserInfo.value = NeteaseUserInfoModel.fromJson(neteaseCached);
-    } else {
-      neteaseUserInfo.value = null;
-    }
-
-    // QQ Music
-    isQqMusicLoggedIn.value = _storage.isQqMusicLoggedIn;
-    final qqMusicCached = _storage.getQqMusicUserInfo();
-    if (qqMusicCached != null) {
-      qqMusicUserInfo.value = QqMusicUserInfoModel.fromJson(qqMusicCached);
-    } else {
-      qqMusicUserInfo.value = null;
     }
   }
 
@@ -114,19 +104,5 @@ class HomeController extends GetxController {
     await authRepo.logout();
     isLoggedIn.value = false;
     userInfo.value = null;
-  }
-
-  Future<void> logoutNetease() async {
-    _storage.clearNeteaseAuth();
-    await NeteaseHttpClient.instance.clearCookies();
-    isNeteaseLoggedIn.value = false;
-    neteaseUserInfo.value = null;
-  }
-
-  Future<void> logoutQqMusic() async {
-    _storage.clearQqMusicAuth();
-    await QqMusicHttpClient.instance.clearCookies();
-    isQqMusicLoggedIn.value = false;
-    qqMusicUserInfo.value = null;
   }
 }

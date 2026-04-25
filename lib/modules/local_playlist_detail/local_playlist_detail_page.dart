@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../shared/widgets/animated_list_item.dart';
 import 'local_playlist_detail_controller.dart';
 
 class LocalPlaylistDetailPage extends StatelessWidget {
@@ -81,7 +82,9 @@ class LocalPlaylistDetailPage extends StatelessWidget {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final song = controller.tracks[index];
-                    return Dismissible(
+                    return AnimatedListItem(
+                      index: index,
+                      child: Dismissible(
                       key: ValueKey(song.uniqueId),
                       direction: DismissDirection.endToStart,
                       background: Container(
@@ -145,6 +148,7 @@ class LocalPlaylistDetailPage extends StatelessWidget {
                         ),
                         onTap: () => controller.playSong(song),
                       ),
+                    ),
                     );
                   },
                   childCount: controller.tracks.length,
@@ -252,11 +256,9 @@ class LocalPlaylistDetailPage extends StatelessWidget {
   static String _sourceLabel(String sourceTag) {
     switch (sourceTag) {
       case 'bilibili':
-        return 'Bilibili';
-      case 'netease':
-        return '网易云';
-      case 'qqmusic':
-        return 'QQ音乐';
+        return 'B站';
+      case 'gdstudio':
+        return 'GD音乐台';
       case 'local':
         return '本地';
       default:
@@ -268,10 +270,8 @@ class LocalPlaylistDetailPage extends StatelessWidget {
     switch (sourceTag) {
       case 'bilibili':
         return const Color(0xFFFB7299);
-      case 'netease':
-        return const Color(0xFFE60026);
-      case 'qqmusic':
-        return const Color(0xFF31C27C);
+      case 'gdstudio':
+        return Colors.orange;
       case 'local':
         return theme.colorScheme.primary;
       default:

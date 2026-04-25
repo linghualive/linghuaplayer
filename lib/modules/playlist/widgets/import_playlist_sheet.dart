@@ -5,8 +5,6 @@ import '../../../app/routes/app_routes.dart';
 import '../../../core/storage/storage_service.dart';
 import '../../../data/models/search/search_video_model.dart';
 import '../../../data/models/user/fav_folder_model.dart';
-import '../../../data/repositories/netease_repository.dart';
-import '../../../data/repositories/qqmusic_repository.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/services/local_playlist_service.dart';
 import '../../../shared/utils/app_toast.dart';
@@ -52,8 +50,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
   final _importingIds = <String>{};
 
   List<FavFolderModel> _biliFolders = [];
-  List<NeteasePlaylistBrief> _neteasePlaylists = [];
-  List<QqMusicPlaylistBrief> _qqMusicPlaylists = [];
 
   ScrollController get _scrollController =>
       widget.scrollController ?? ScrollController();
@@ -72,37 +68,14 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
     switch (widget.sourceTag) {
       case 'bilibili':
         return _storage.isLoggedIn;
-      case 'netease':
-        return _storage.isNeteaseLoggedIn;
-      case 'qqmusic':
-        return _storage.isQqMusicLoggedIn;
       default:
         return false;
     }
   }
 
-  int get _loginPlatformIndex {
-    switch (widget.sourceTag) {
-      case 'bilibili':
-        return 0;
-      case 'netease':
-        return 1;
-      case 'qqmusic':
-        return 2;
-      default:
-        return 0;
-    }
-  }
-
   Future<void> _goToLogin() async {
-    // Close the sheet first, then navigate to login
     Navigator.pop(context);
-    await Get.toNamed(
-      AppRoutes.login,
-      arguments: {'platform': _loginPlatformIndex},
-    );
-    // After returning from login, if the user navigates back to import,
-    // the sheet will re-check login state in initState
+    await Get.toNamed(AppRoutes.login);
   }
 
   Future<void> _loadPlaylists() async {
@@ -114,20 +87,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
           if (mid > 0) {
             final repo = Get.find<UserRepository>();
             _biliFolders = await repo.getFavFolders(upMid: mid);
-          }
-          break;
-        case 'netease':
-          final uid = int.tryParse(_storage.neteaseUserId ?? '') ?? 0;
-          if (uid > 0) {
-            final repo = Get.find<NeteaseRepository>();
-            _neteasePlaylists = await repo.getUserPlaylists(uid);
-          }
-          break;
-        case 'qqmusic':
-          final uin = _storage.qqMusicUin ?? '';
-          if (uin.isNotEmpty) {
-            final repo = Get.find<QqMusicRepository>();
-            _qqMusicPlaylists = await repo.getUserPlaylists(uin);
           }
           break;
       }
@@ -178,86 +137,10 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
     if (mounted) setState(() => _importingIds.remove(remoteId));
   }
 
-  Future<void> _importNeteasePlaylist(NeteasePlaylistBrief playlist) async {
-    final remoteId = playlist.id.toString();
-    setState(() => _importingIds.add(remoteId));
-
-    try {
-      final repo = Get.find<NeteaseRepository>();
-      final detail = await repo.getPlaylistDetail(playlist.id);
-      if (detail == null) {
-        AppToast.error('获取歌单详情失败');
-        if (mounted) setState(() => _importingIds.remove(remoteId));
-        return;
-      }
-
-      final existing = _playlistService.findByRemoteId('netease', remoteId);
-      if (existing != null) {
-        _playlistService.refreshPlaylist(existing.id, detail.tracks);
-        AppToast.show('已更新「${playlist.name}」');
-      } else {
-        _playlistService.importPlaylist(
-          name: playlist.name,
-          coverUrl: playlist.coverUrl,
-          sourceTag: 'netease',
-          remoteId: remoteId,
-          tracks: detail.tracks,
-          creatorName: detail.creatorName,
-          description: detail.description,
-        );
-        AppToast.show('已导入「${playlist.name}」');
-      }
-    } catch (e) {
-      AppToast.error('导入失败');
-    }
-
-    if (mounted) setState(() => _importingIds.remove(remoteId));
-  }
-
-  Future<void> _importQqMusicPlaylist(QqMusicPlaylistBrief playlist) async {
-    final remoteId = playlist.id;
-    setState(() => _importingIds.add(remoteId));
-
-    try {
-      final repo = Get.find<QqMusicRepository>();
-      final detail = await repo.getPlaylistDetail(playlist.id);
-      if (detail == null) {
-        AppToast.error('获取歌单详情失败');
-        if (mounted) setState(() => _importingIds.remove(remoteId));
-        return;
-      }
-
-      final existing = _playlistService.findByRemoteId('qqmusic', remoteId);
-      if (existing != null) {
-        _playlistService.refreshPlaylist(existing.id, detail.tracks);
-        AppToast.show('已更新「${playlist.name}」');
-      } else {
-        _playlistService.importPlaylist(
-          name: playlist.name,
-          coverUrl: playlist.coverUrl,
-          sourceTag: 'qqmusic',
-          remoteId: remoteId,
-          tracks: detail.tracks,
-          creatorName: detail.creatorName,
-          description: detail.description,
-        );
-        AppToast.show('已导入「${playlist.name}」');
-      }
-    } catch (e) {
-      AppToast.error('导入失败');
-    }
-
-    if (mounted) setState(() => _importingIds.remove(remoteId));
-  }
-
   String get _platformTitle {
     switch (widget.sourceTag) {
       case 'bilibili':
         return '哔哩哔哩';
-      case 'netease':
-        return '网易云音乐';
-      case 'qqmusic':
-        return 'QQ音乐';
       default:
         return '';
     }
@@ -269,7 +152,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
 
     return Column(
       children: [
-        // Handle
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Container(
@@ -281,7 +163,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
             ),
           ),
         ),
-        // Title
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: Text(
@@ -291,7 +172,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
             ),
           ),
         ),
-        // Content
         Expanded(child: _buildContent(theme)),
       ],
     );
@@ -349,10 +229,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
     switch (widget.sourceTag) {
       case 'bilibili':
         return _biliFolders.map((f) => _buildBiliItem(f)).toList();
-      case 'netease':
-        return _neteasePlaylists.map((p) => _buildNeteaseItem(p)).toList();
-      case 'qqmusic':
-        return _qqMusicPlaylists.map((p) => _buildQqMusicItem(p)).toList();
       default:
         return [];
     }
@@ -374,48 +250,6 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
         imported: imported,
         importing: importing,
         onTap: () => _importBiliFolder(folder),
-      ),
-    );
-  }
-
-  Widget _buildNeteaseItem(NeteasePlaylistBrief playlist) {
-    final remoteId = playlist.id.toString();
-    final imported = _isImported(remoteId);
-    final importing = _importingIds.contains(remoteId);
-
-    return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child:
-            CachedImage(imageUrl: playlist.coverUrl, width: 48, height: 48),
-      ),
-      title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('${playlist.playCount} 次播放'),
-      trailing: _buildActionButton(
-        imported: imported,
-        importing: importing,
-        onTap: () => _importNeteasePlaylist(playlist),
-      ),
-    );
-  }
-
-  Widget _buildQqMusicItem(QqMusicPlaylistBrief playlist) {
-    final remoteId = playlist.id;
-    final imported = _isImported(remoteId);
-    final importing = _importingIds.contains(remoteId);
-
-    return ListTile(
-      leading: ClipRRect(
-        borderRadius: BorderRadius.circular(6),
-        child:
-            CachedImage(imageUrl: playlist.coverUrl, width: 48, height: 48),
-      ),
-      title: Text(playlist.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text('${playlist.songCount} 首'),
-      trailing: _buildActionButton(
-        imported: imported,
-        importing: importing,
-        onTap: () => _importQqMusicPlaylist(playlist),
       ),
     );
   }

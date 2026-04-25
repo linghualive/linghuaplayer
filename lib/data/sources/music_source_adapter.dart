@@ -5,10 +5,10 @@ import '../models/search/search_video_model.dart';
 
 /// Core abstraction for a music source. All sources must implement this.
 abstract class MusicSourceAdapter {
-  /// Unique identifier for this source, e.g. 'bilibili', 'netease'.
+  /// Unique identifier for this source, e.g. 'bilibili', 'gdstudio'.
   String get sourceId;
 
-  /// Human-readable display name, e.g. 'B站', '网易云音乐'.
+  /// Human-readable display name, e.g. 'B站', 'GD音乐台'.
   String get displayName;
 
   /// Whether this source is currently available (e.g. logged in, reachable).

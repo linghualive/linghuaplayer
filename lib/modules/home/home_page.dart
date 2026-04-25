@@ -46,9 +46,9 @@ class HomePage extends GetView<HomeController> {
                     child: InkWell(
                       onTap: () => controller.onTabChanged(index),
                       child: Center(
-                        child: Text(
-                          labels[index],
-                          style: theme.textTheme.labelLarge?.copyWith(
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 200),
+                          style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
                             color: isSelected
                                 ? theme.colorScheme.primary
                                 : theme.colorScheme.outline,
@@ -56,6 +56,7 @@ class HomePage extends GetView<HomeController> {
                                 ? FontWeight.bold
                                 : FontWeight.normal,
                           ),
+                          child: Text(labels[index]),
                         ),
                       ),
                     ),

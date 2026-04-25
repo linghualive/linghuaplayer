@@ -44,14 +44,9 @@ class PlayQueueSheet extends GetView<PlayerController> {
             child: Row(
               children: [
                 Obx(() => Text(
-                      controller.isHeartMode.value
-                          ? '心动队列 (${controller.queue.length})'
-                          : '播放队列 (${controller.queue.length})',
+                      '播放队列 (${controller.queue.length})',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: controller.isHeartMode.value
-                                ? Colors.pink
-                                : null,
                           ),
                     )),
                 const SizedBox(width: 8),
@@ -65,21 +60,6 @@ class PlayQueueSheet extends GetView<PlayerController> {
                       ),
                       onPressed: controller.togglePlayMode,
                       tooltip: _playModeLabel(controller.playMode.value),
-                    )),
-                Obx(() => IconButton(
-                      icon: Icon(
-                        controller.autoRecommend.value
-                            ? Icons.explore
-                            : Icons.explore_off,
-                        size: 20,
-                        color: controller.autoRecommend.value
-                            ? Theme.of(context).colorScheme.primary
-                            : Theme.of(context).colorScheme.outline,
-                      ),
-                      onPressed: controller.toggleAutoRecommend,
-                      tooltip: controller.autoRecommend.value
-                          ? '自动推荐: 开'
-                          : '自动推荐: 关',
                     )),
                 const Spacer(),
                 TextButton(

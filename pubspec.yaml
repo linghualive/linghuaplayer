@@ -1,7 +1,7 @@
 name: flamekit
 description: "Multi-source Music Player"
 publish_to: 'none'
-version: 2.10.5+31
+version: 3.0.0+32
 
 environment:
   sdk: ^3.9.2
@@ -29,6 +29,7 @@ dependencies:
   gt3_flutter_plugin: ^0.1.0
   shimmer: ^3.0.0
   dynamic_color: ^1.7.0
+  palette_generator: ^0.3.3+4
   media_kit: ^1.1.10
   media_kit_libs_audio: ^1.0.4
   package_info_plus: ^9.0.0
@@ -47,12 +48,13 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
+  remove_alpha_ios: true
   macos:
     generate: true
     image_path: "logo.png"
   image_path: "logo.png"
-  adaptive_icon_background: "#3949AB"
-  adaptive_icon_foreground: "logo.png"
+  adaptive_icon_background: "logo_adaptive_bg.png"
+  adaptive_icon_foreground: "logo_adaptive_fg.png"
 
 flutter:
   uses-material-design: true

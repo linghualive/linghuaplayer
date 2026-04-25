@@ -103,7 +103,7 @@ class UserProfileService {
         '${(totalMs / 60000).round()} min total');
   }
 
-  /// Convert user profile into a natural language summary for DeepSeek prompt.
+  /// Convert user profile into a natural language summary.
   String? getProfileSummaryForPrompt() {
     final profile = getUserProfile();
     if (profile == null) return null;

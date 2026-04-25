@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import '../../shared/widgets/animated_list_item.dart';
 import '../../shared/widgets/cached_image.dart';
 import '../../shared/widgets/video_action_buttons.dart';
 import 'favorite_detail_controller.dart';
@@ -75,7 +76,9 @@ class FavoriteDetailPage extends StatelessWidget {
                   );
                 }
                 final video = controller.videos[videoIndex];
-                return InkWell(
+                return AnimatedListItem(
+                  index: videoIndex,
+                  child: InkWell(
                   onTap: () => controller.playVideo(video),
                   child: Padding(
                     padding:
@@ -179,6 +182,7 @@ class FavoriteDetailPage extends StatelessWidget {
                       ],
                     ),
                   ),
+                ),
                 );
               },
             ),
