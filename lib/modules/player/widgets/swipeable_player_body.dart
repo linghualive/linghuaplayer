@@ -23,6 +23,7 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
   final _controller = Get.find<PlayerController>();
   late final PageController _pageController;
   bool _isUserSwiping = false;
+  bool _isProgrammaticAnimation = false;
   Worker? _trackChangeWorker;
 
   @override
@@ -31,9 +32,11 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
     _pageController = PageController(initialPage: 1);
 
     _trackChangeWorker = ever(_controller.currentVideo, (_) {
-      if (!_isUserSwiping && mounted && _pageController.hasClients) {
+      if (!_isUserSwiping && !_isProgrammaticAnimation &&
+          mounted && _pageController.hasClients) {
         final page = _pageController.page?.round() ?? 1;
         if (page == 1) {
+          _isProgrammaticAnimation = true;
           _pageController
               .animateToPage(2,
                   duration: const Duration(milliseconds: 300),
@@ -42,6 +45,7 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
             if (mounted && _pageController.hasClients) {
               _pageController.jumpToPage(1);
             }
+            _isProgrammaticAnimation = false;
           });
         }
       }
@@ -57,6 +61,7 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
 
   void _onPageChanged(int index) {
     if (index == 1) return;
+    if (_isProgrammaticAnimation) return;
 
     _isUserSwiping = true;
     HapticFeedback.mediumImpact();
@@ -78,10 +83,8 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
-      final showLyrics = _controller.showLyrics.value;
       final isLoading = _controller.isLoading.value;
-
-      final canSwipe = !showLyrics && !isLoading;
+      final canSwipe = !isLoading;
 
       return PageView.builder(
         controller: _pageController,

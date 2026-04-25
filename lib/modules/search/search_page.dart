@@ -8,7 +8,7 @@ import '../../shared/utils/app_toast.dart';
 import '../../shared/widgets/animated_list_item.dart';
 import '../../shared/widgets/create_fav_dialog.dart';
 import '../../shared/widgets/empty_widget.dart';
-import '../../shared/widgets/fav_panel.dart';
+import '../../shared/widgets/video_action_buttons.dart';
 import '../player/player_controller.dart';
 import 'search_controller.dart' as app;
 import 'widgets/hot_search_list.dart';
@@ -258,26 +258,7 @@ class SearchPage extends GetView<app.SearchController> {
           color: theme.colorScheme.outline,
         ),
       ),
-      trailing: PopupMenuButton<String>(
-        icon: Icon(Icons.more_vert, size: 20, color: theme.colorScheme.outline),
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-        onSelected: (value) {
-          final playerCtrl = Get.find<PlayerController>();
-          switch (value) {
-            case 'queue':
-              playerCtrl.addToQueue(song);
-              break;
-            case 'fav':
-              FavPanel.show(context, song);
-              break;
-          }
-        },
-        itemBuilder: (_) => [
-          const PopupMenuItem(value: 'queue', child: Text('添加到播放列表')),
-          const PopupMenuItem(value: 'fav', child: Text('收藏到歌单')),
-        ],
-      ),
+      trailing: VideoActionColumn(video: song),
       onTap: () {
         final playerCtrl = Get.find<PlayerController>();
         playerCtrl.playFromSearch(song);

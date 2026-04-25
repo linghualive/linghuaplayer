@@ -16,4 +16,5 @@ abstract class AppRoutes {
   static const hotPlaylists = '/hot-playlists';
   static const webview = '/webview';
   static const localPlaylistDetail = '/local-playlist-detail';
+  static const musicDiscovery = '/music-discovery';
 }

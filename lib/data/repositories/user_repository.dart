@@ -50,6 +50,36 @@ class UserRepository {
     return (items: <FavResourceModel>[], hasMore: false);
   }
 
+  Future<List<FavResourceModel>> getAllFavResources({
+    required int mediaId,
+  }) async {
+    final all = <FavResourceModel>[];
+    int page = 1;
+    int consecutiveErrors = 0;
+    const maxConsecutiveErrors = 3;
+    const maxPages = 50;
+
+    while (page <= maxPages && consecutiveErrors < maxConsecutiveErrors) {
+      try {
+        final result = await getFavResources(mediaId: mediaId, pn: page, ps: 20);
+        if (result.items.isNotEmpty) {
+          all.addAll(result.items);
+          consecutiveErrors = 0;
+        } else {
+          consecutiveErrors++;
+        }
+        if (!result.hasMore) break;
+      } catch (_) {
+        consecutiveErrors++;
+      }
+      page++;
+      if (page <= maxPages && consecutiveErrors < maxConsecutiveErrors) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+    }
+    return all;
+  }
+
   Future<List<FavFolderModel>> getFavFoldersAll({
     required int upMid,
     int? rid,

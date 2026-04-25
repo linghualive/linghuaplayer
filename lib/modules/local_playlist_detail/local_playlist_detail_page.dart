@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import '../../shared/widgets/animated_list_item.dart';
 import 'local_playlist_detail_controller.dart';
+import 'widgets/add_songs_sheet.dart';
 
 class LocalPlaylistDetailPage extends StatelessWidget {
   const LocalPlaylistDetailPage({super.key});
@@ -63,9 +64,11 @@ class LocalPlaylistDetailPage extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: controller.addAllToQueue,
-                      icon: const Icon(Icons.playlist_add),
-                      label: const Text('加入队列'),
+                      onPressed: () {
+                        AddSongsSheet.show(context, controller.playlistId);
+                      },
+                      icon: const Icon(Icons.search),
+                      label: const Text('添加歌曲'),
                     ),
                   ],
                 ),

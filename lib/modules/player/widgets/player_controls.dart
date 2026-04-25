@@ -154,13 +154,13 @@ class PlayerControls extends GetView<PlayerController> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          // Main controls
+          const SizedBox(height: 20),
+          // Main controls — play mode, play/pause, queue
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                iconSize: 22,
+                iconSize: 24,
                 icon: Icon(
                   _playModeIcon(controller.playMode.value),
                   color: controller.playMode.value == PlayMode.sequential
@@ -172,21 +172,10 @@ class PlayerControls extends GetView<PlayerController> {
                   controller.togglePlayMode();
                 },
               ),
-              const SizedBox(width: 8),
-              IconButton(
-                iconSize: 28,
-                icon: const Icon(Icons.skip_previous_rounded),
-                onPressed: controller.isLoading.value
-                    ? null
-                    : () {
-                        HapticFeedback.mediumImpact();
-                        controller.skipPrevious();
-                      },
-              ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 24),
               SizedBox(
-                width: 64,
-                height: 64,
+                width: 68,
+                height: 68,
                 child: controller.isLoading.value
                     ? FilledButton(
                         onPressed: null,
@@ -216,30 +205,19 @@ class PlayerControls extends GetView<PlayerController> {
                           controller.isPlaying.value
                               ? Icons.pause_rounded
                               : Icons.play_arrow_rounded,
-                          size: 36,
+                          size: 38,
                         ),
                       ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 24),
               IconButton(
-                iconSize: 28,
-                icon: const Icon(Icons.skip_next_rounded),
-                onPressed: controller.isLoading.value
-                    ? null
-                    : () {
-                        HapticFeedback.mediumImpact();
-                        controller.skipNext();
-                      },
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                iconSize: 22,
+                iconSize: 24,
                 icon: const Icon(Icons.queue_music_rounded),
                 onPressed: PlayQueueSheet.show,
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           // Auxiliary row
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

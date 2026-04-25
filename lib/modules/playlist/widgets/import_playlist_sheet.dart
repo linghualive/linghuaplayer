@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 
 import '../../../app/routes/app_routes.dart';
 import '../../../core/storage/storage_service.dart';
-import '../../../data/models/search/search_video_model.dart';
 import '../../../data/models/user/fav_folder_model.dart';
 import '../../../data/repositories/user_repository.dart';
 import '../../../data/services/local_playlist_service.dart';
@@ -104,21 +103,19 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
 
     try {
       final repo = Get.find<UserRepository>();
-      final allTracks = <SearchVideoModel>[];
-      int page = 1;
-      bool hasMore = true;
-      while (hasMore) {
-        final result =
-            await repo.getFavResources(mediaId: folder.id, pn: page, ps: 20);
-        allTracks.addAll(result.items.map((e) => e.toSearchVideoModel()));
-        hasMore = result.hasMore;
-        page++;
+      final resources = await repo.getAllFavResources(mediaId: folder.id);
+      final allTracks = resources.map((e) => e.toSearchVideoModel()).toList();
+
+      if (allTracks.isEmpty) {
+        AppToast.show('未获取到曲目');
+        if (mounted) setState(() => _importingIds.remove(remoteId));
+        return;
       }
 
       final existing = _playlistService.findByRemoteId('bilibili', remoteId);
       if (existing != null) {
         _playlistService.refreshPlaylist(existing.id, allTracks);
-        AppToast.show('已更新「${folder.title}」');
+        AppToast.show('已更新「${folder.title}」共 ${allTracks.length} 首');
       } else {
         _playlistService.importPlaylist(
           name: folder.title,
@@ -128,7 +125,7 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
           tracks: allTracks,
           creatorName: folder.name,
         );
-        AppToast.show('已导入「${folder.title}」');
+        AppToast.show('已导入「${folder.title}」共 ${allTracks.length} 首');
       }
     } catch (e) {
       AppToast.error('导入失败');

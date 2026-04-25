@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../shared/utils/platform_utils.dart';
 import '../desktop/widgets/desktop_navigation_rail.dart';
 import '../desktop/widgets/desktop_player_bar.dart';
+import '../player/player_home_tab.dart';
 import 'home_controller.dart';
 
 class HomePage extends GetView<HomeController> {
@@ -14,60 +15,7 @@ class HomePage extends GetView<HomeController> {
     if (PlatformUtils.isDesktop) {
       return _buildDesktopLayout(context);
     }
-    return _buildMobileLayout(context);
-  }
-
-  Widget _buildMobileLayout(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      extendBody: true,
-      body: Obx(() {
-        return IndexedStack(
-          index: controller.currentIndex.value,
-          children: controller.pages,
-        );
-      }),
-      bottomNavigationBar: Obx(() {
-        final currentIdx = controller.currentIndex.value;
-        final isPlayerTab = currentIdx == 0;
-        const labels = ['播放', '搜索', '歌单', '我的'];
-
-        return Container(
-          color: isPlayerTab ? Colors.transparent : theme.colorScheme.surface,
-          child: SafeArea(
-            top: false,
-            child: SizedBox(
-              height: 48,
-              child: Row(
-                children: List.generate(labels.length, (index) {
-                  final isSelected = currentIdx == index;
-                  return Expanded(
-                    child: InkWell(
-                      onTap: () => controller.onTabChanged(index),
-                      child: Center(
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 200),
-                          style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.outline,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                          child: Text(labels[index]),
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ),
-        );
-      }),
-    );
+    return const PlayerHomeTab();
   }
 
   Widget _buildDesktopLayout(BuildContext context) {
@@ -79,20 +27,17 @@ class HomePage extends GetView<HomeController> {
           Expanded(
             child: Row(
               children: [
-                // NavigationRail
                 Obx(() => DesktopNavigationRail(
                       selectedIndex: controller.selectedIndex.value,
                       onDestinationSelected:
                           controller.onNavigationChanged,
                       extended: extended,
                     )),
-                // Vertical divider
                 VerticalDivider(
                   width: 1,
                   thickness: 1,
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
-                // Content area
                 Expanded(
                   child: Obx(() {
                     return IndexedStack(
@@ -104,7 +49,6 @@ class HomePage extends GetView<HomeController> {
               ],
             ),
           ),
-          // Desktop player bar
           const DesktopPlayerBar(),
         ],
       ),

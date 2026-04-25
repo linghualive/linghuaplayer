@@ -9,7 +9,7 @@ class ColorType {
 
 const List<ColorType> colorThemeTypes = [
   ColorType('动态取色', Colors.transparent),
-  ColorType('默认', Color(0xFFFB7299)),
+  ColorType('默认', Color(0xFFF06292)),
   ColorType('红色', Color(0xFFF44336)),
   ColorType('粉色', Color(0xFFE91E63)),
   ColorType('紫色', Color(0xFF9C27B0)),

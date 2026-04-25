@@ -62,7 +62,7 @@ class PlaybackService {
         isPlaying.value = state.playing;
       }
       if (state.processingState == ProcessingState.completed) {
-        if (!_useMediaKit) {
+        if (!_useMediaKit && !_isSwitchingTrack) {
           onTrackCompleted?.call();
         }
       }
@@ -197,6 +197,7 @@ class PlaybackService {
     }
 
     log('Playing audio URL: $url');
+    _isSwitchingTrack = true;
     try {
       await audioPlayer.setAudioSource(
         AudioSource.uri(
@@ -208,7 +209,9 @@ class PlaybackService {
         ),
       );
       audioPlayer.play();
+      _isSwitchingTrack = false;
     } catch (e) {
+      _isSwitchingTrack = false;
       log('Audio source error: $e');
       rethrow;
     }
@@ -223,12 +226,15 @@ class PlaybackService {
     }
 
     log('Playing direct audio URL: $url');
+    _isSwitchingTrack = true;
     try {
       await audioPlayer.setAudioSource(
         AudioSource.uri(Uri.parse(url)),
       );
       audioPlayer.play();
+      _isSwitchingTrack = false;
     } catch (e) {
+      _isSwitchingTrack = false;
       log('Direct audio source error: $e');
       rethrow;
     }
@@ -246,13 +252,16 @@ class PlaybackService {
     }
 
     log('Playing audio URL: $url');
+    _isSwitchingTrack = true;
     try {
       final source = headers.isEmpty
           ? AudioSource.uri(Uri.parse(url))
           : AudioSource.uri(Uri.parse(url), headers: headers);
       await audioPlayer.setAudioSource(source);
       audioPlayer.play();
+      _isSwitchingTrack = false;
     } catch (e) {
+      _isSwitchingTrack = false;
       log('Audio source error: $e');
       rethrow;
     }

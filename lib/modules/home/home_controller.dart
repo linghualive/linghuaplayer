@@ -8,6 +8,9 @@ import '../../core/services/update_service.dart';
 import '../../core/storage/storage_service.dart';
 import '../../data/models/login/user_info_model.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/services/local_playlist_service.dart';
+import '../../shared/utils/platform_utils.dart';
+import '../player/player_controller.dart';
 import '../music_discovery/music_discovery_controller.dart';
 import '../music_discovery/music_discovery_page.dart';
 import '../player/player_home_tab.dart';
@@ -18,9 +21,7 @@ import '../profile/profile_page.dart';
 import '../search/search_controller.dart' as app;
 
 class HomeController extends GetxController {
-  final currentIndex = 0.obs;
-
-  // For desktop navigation
+  // For desktop navigation (mobile no longer uses tabs)
   final selectedIndex = 0.obs;
 
   // Bootstrap state
@@ -32,7 +33,7 @@ class HomeController extends GetxController {
 
   final _storage = Get.find<StorageService>();
 
-  // Pages list for navigation
+  // Pages list for desktop navigation
   late final List<Widget> pages;
 
   @override
@@ -40,7 +41,9 @@ class HomeController extends GetxController {
     super.onInit();
     refreshLoginStatus();
     _initializeControllers();
-    _initializePages();
+    if (PlatformUtils.isDesktop) {
+      _initializePages();
+    }
     _bootstrapAndPlay();
   }
 
@@ -59,9 +62,24 @@ class HomeController extends GetxController {
 
     isBootstrapped.value = true;
 
+    _autoPlayFromMode();
+
     Future.delayed(const Duration(seconds: 2), () {
       UpdateService.checkAndNotify();
     });
+  }
+
+  void _autoPlayFromMode() {
+    final playerCtrl = Get.find<PlayerController>();
+    if (playerCtrl.queue.isNotEmpty) return;
+
+    final playlistService = Get.find<LocalPlaylistService>();
+    if (playlistService.playlists.isEmpty) return;
+
+    final first = playlistService.playlists.first;
+    if (first.trackCount == 0) return;
+
+    playerCtrl.playAllFromList(first.tracks);
   }
 
   void _initializePages() {
@@ -75,15 +93,16 @@ class HomeController extends GetxController {
 
   void _initializeControllers() {
     Get.put(PlaylistController());
-    Get.put(MusicDiscoveryController());
-    Get.put(ProfileController());
     if (!Get.isRegistered<app.SearchController>()) {
       Get.put(app.SearchController());
     }
-  }
-
-  void onTabChanged(int index) {
-    currentIndex.value = index;
+    if (PlatformUtils.isDesktop) {
+      Get.put(MusicDiscoveryController());
+      Get.put(ProfileController());
+    } else {
+      Get.lazyPut(() => MusicDiscoveryController());
+      Get.lazyPut(() => ProfileController());
+    }
   }
 
   // For desktop navigation

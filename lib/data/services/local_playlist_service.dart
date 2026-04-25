@@ -1,6 +1,10 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 
+import '../../core/storage/storage_service.dart';
 import '../models/local_playlist_model.dart';
 import '../models/search/search_video_model.dart';
 
@@ -13,6 +17,37 @@ class LocalPlaylistService {
   void init() {
     _box = GetStorage();
     _loadFromStorage();
+    _initPresetsIfNeeded();
+  }
+
+  Future<void> _initPresetsIfNeeded() async {
+    final storage = Get.find<StorageService>();
+    if (storage.presetsInitialized) return;
+
+    try {
+      final jsonStr =
+          await rootBundle.loadString('assets/data/preset_modes.json');
+      final List<dynamic> modes = json.decode(jsonStr);
+
+      for (final mode in modes) {
+        final name = mode['name'] as String;
+        final tracksList = mode['tracks'] as List<dynamic>;
+        final tracksJson = tracksList
+            .map((t) => Map<String, dynamic>.from(t as Map))
+            .toList();
+
+        final playlist = LocalPlaylist.create(
+          name: name,
+          sourceTag: 'local',
+          tracksJson: tracksJson,
+        );
+        playlists.add(playlist);
+      }
+
+      _saveToStorage();
+    } catch (_) {}
+
+    storage.presetsInitialized = true;
   }
 
   void _loadFromStorage() {
@@ -93,25 +128,25 @@ class LocalPlaylistService {
     _saveToStorage();
   }
 
-  /// Add a track to a playlist.
-  void addTrack(String playlistId, SearchVideoModel track) {
+  /// Add a track to a playlist. Returns true if added, false if duplicate.
+  bool addTrack(String playlistId, SearchVideoModel track) {
     final index = playlists.indexWhere((p) => p.id == playlistId);
-    if (index < 0) return;
+    if (index < 0) return false;
     final existing = playlists[index].tracksJson.toList();
-    // Avoid duplicates
     final trackJson = track.toJson();
     final uniqueId = track.uniqueId;
     final alreadyExists = existing.any((t) {
       final model = SearchVideoModel.fromJson(t);
       return model.uniqueId == uniqueId;
     });
-    if (alreadyExists) return;
+    if (alreadyExists) return false;
     existing.add(trackJson);
     playlists[index] = playlists[index].copyWith(
       tracksJson: existing,
       updatedAt: DateTime.now().millisecondsSinceEpoch,
     );
     _saveToStorage();
+    return true;
   }
 
   /// Remove a track from a playlist by its uniqueId.

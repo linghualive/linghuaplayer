@@ -9,7 +9,6 @@ import 'package:just_audio/just_audio.dart';
 import '../../app/routes/app_routes.dart';
 import '../../core/http/http_client.dart';
 import '../../core/storage/storage_service.dart';
-import '../home/home_controller.dart';
 import '../../data/models/music/audio_song_model.dart';
 import '../../data/models/playback_info.dart';
 import '../../data/models/player/lyrics_model.dart';
@@ -247,14 +246,10 @@ class PlayerController extends GetxController {
     super.onClose();
   }
 
-  /// Navigate to player: switch to Tab 0 if on home page, otherwise push route.
+  /// Navigate to player: pop back to home (which is the player page).
   void _navigateToPlayer() {
-    if (Get.currentRoute == AppRoutes.home) {
-      final homeCtrl = Get.find<HomeController>();
-      homeCtrl.currentIndex.value = 0;
-      homeCtrl.selectedIndex.value = 0;
-    } else if (Get.currentRoute != AppRoutes.player) {
-      Get.toNamed(AppRoutes.player);
+    if (Get.currentRoute != AppRoutes.home) {
+      Get.until((route) => route.settings.name == AppRoutes.home);
     }
   }
 
@@ -348,7 +343,6 @@ class PlayerController extends GetxController {
       final item = queue.removeAt(queuedIndex);
       queue.insert(0, item);
       currentIndex.value = 0;
-      _manualStop = false;
       audioQualityLabel.value = item.qualityLabel;
       try {
         await _playQueueItem(item, gen: gen);
@@ -359,7 +353,6 @@ class PlayerController extends GetxController {
         _loadRelatedMusic(played);
       } catch (e) {
         if (gen != _playGeneration) return;
-        _manualStop = false;
         log('Playback failed (queued): $e');
         AppToast.error('播放失败: $e');
       }
@@ -484,14 +477,11 @@ class PlayerController extends GetxController {
     final bestAudio = info.bestAudio;
     if (bestAudio == null) throw Exception('No audio stream available');
 
-    _manualStop = false;
-
     // Try audio streams with fallback through backup URLs
     String? playedUrl;
     String playedLabel = '';
     Map<String, String> playedHeaders = const {};
     for (final stream in info.audioStreams) {
-      // 检查是否已被取消
       if (gen != null && gen != _playGeneration) return;
       try {
         await _playback.playAudioWithHeaders(stream.url, stream.headers);
@@ -519,6 +509,7 @@ class PlayerController extends GetxController {
 
     if (playedUrl == null) throw Exception('All audio streams failed');
 
+    _manualStop = false;
     audioQualityLabel.value = playedLabel;
 
     _addToQueue(
@@ -679,8 +670,10 @@ class PlayerController extends GetxController {
           return;
         }
         final rng = Random();
-        final next = 1 + rng.nextInt(queue.length - 1);
-        playAt(next);
+        final pick = 1 + rng.nextInt(queue.length - 1);
+        final item = queue.removeAt(pick);
+        queue.insert(1, item);
+        _advanceNext().catchError((e) => log('Advance next error: $e'));
         break;
       case PlayMode.sequential:
         _advanceNext().catchError((e) => log('Advance next error: $e'));

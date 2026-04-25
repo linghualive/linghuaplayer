@@ -82,7 +82,6 @@ class DesktopPlayerBar extends GetView<PlayerController> {
       onTap: () {
         final homeCtrl = Get.find<HomeController>();
         homeCtrl.selectedIndex.value = 0;
-        homeCtrl.currentIndex.value = 0;
       },
       borderRadius: BorderRadius.circular(8),
       child: Padding(
@@ -285,7 +284,6 @@ class DesktopPlayerBar extends GetView<PlayerController> {
           onPressed: () {
             final homeCtrl = Get.find<HomeController>();
             homeCtrl.selectedIndex.value = 0;
-            homeCtrl.currentIndex.value = 0;
           },
           tooltip: '全屏播放器',
           iconSize: 20,

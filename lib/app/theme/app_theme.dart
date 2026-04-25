@@ -12,9 +12,18 @@ class AppTheme {
   }
 
   static ThemeData darkTheme(Color seedColor) {
-    final colorScheme = ColorScheme.fromSeed(
+    final base = ColorScheme.fromSeed(
       seedColor: seedColor,
       brightness: Brightness.dark,
+    );
+    final colorScheme = base.copyWith(
+      surface: const Color(0xFF1C1018),
+      onSurface: const Color(0xFFF5E0EB),
+      surfaceContainerLowest: const Color(0xFF160D12),
+      surfaceContainerLow: const Color(0xFF1F141A),
+      surfaceContainer: const Color(0xFF24181F),
+      surfaceContainerHigh: const Color(0xFF2E2028),
+      surfaceContainerHighest: const Color(0xFF3A2A32),
     );
     return _buildTheme(colorScheme);
   }

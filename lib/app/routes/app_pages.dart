@@ -31,6 +31,8 @@ import '../../modules/hot_playlists/hot_playlists_controller.dart';
 import '../../modules/webview/webview_page.dart';
 import '../../modules/local_playlist_detail/local_playlist_detail_page.dart';
 import '../../modules/local_playlist_detail/local_playlist_detail_controller.dart';
+import '../../modules/music_discovery/music_discovery_page.dart';
+import '../../modules/music_discovery/music_discovery_controller.dart';
 import 'app_routes.dart';
 
 class AppPages {
@@ -148,6 +150,16 @@ class AppPages {
       transition: Transition.cupertino,
       binding: BindingsBuilder(() {
         Get.put(LocalPlaylistDetailController());
+      }),
+    ),
+    GetPage(
+      name: AppRoutes.musicDiscovery,
+      page: () => const MusicDiscoveryPage(),
+      transition: Transition.cupertino,
+      binding: BindingsBuilder(() {
+        if (!Get.isRegistered<MusicDiscoveryController>()) {
+          Get.put(MusicDiscoveryController());
+        }
       }),
     ),
   ];

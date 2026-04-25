@@ -37,6 +37,8 @@ class LocalPlaylistDetailController extends GetxController {
     tracks.assignAll(p.tracks);
   }
 
+  void reload() => _loadData();
+
   String? get _preferredSourceId {
     switch (playlist.value?.sourceTag) {
       case 'bilibili':
@@ -96,15 +98,8 @@ class LocalPlaylistDetailController extends GetxController {
           final repo = Get.find<UserRepository>();
           final mediaId = int.tryParse(p.remoteId!) ?? 0;
           if (mediaId > 0) {
-            int page = 1;
-            bool hasMore = true;
-            while (hasMore) {
-              final result =
-                  await repo.getFavResources(mediaId: mediaId, pn: page, ps: 20);
-              newTracks.addAll(result.items.map((e) => e.toSearchVideoModel()));
-              hasMore = result.hasMore;
-              page++;
-            }
+            final resources = await repo.getAllFavResources(mediaId: mediaId);
+            newTracks = resources.map((e) => e.toSearchVideoModel()).toList();
           }
           break;
       }
