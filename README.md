@@ -18,6 +18,8 @@
 <img src="docs/preview/search.png" width="19%" alt="搜索" />
 <img src="docs/preview/drawer.png" width="19%" alt="模式" />
 <img src="docs/preview/setting.png" width="19%" alt="设置" />
+<br/><br/>
+<img src="docs/preview/mac_version.png" width="80%" alt="桌面端" />
 <br/>
 </div>
 
