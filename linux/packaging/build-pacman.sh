@@ -48,4 +48,4 @@ chown -R builder:builder "$BUILD_DIR"
 cd "$BUILD_DIR"
 su builder -c 'makepkg -d'
 
-cp "$BUILD_DIR/flamekit-${VERSION}-1-x86_64.pkg.tar.zst" /workspace/flamekit-linux-x64.pkg.tar.zst
+cp "$BUILD_DIR/flamekit-${VERSION}-1-x86_64.pkg.tar.zst" /workspace/linghuaplayer-linux-x64.pkg.tar.zst

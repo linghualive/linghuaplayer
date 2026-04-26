@@ -34,7 +34,7 @@ jobs:
       - name: Package tar.gz
         run: |
           cd build/linux/x64/release/bundle
-          tar czf "$GITHUB_WORKSPACE/flamekit-linux-x64.tar.gz" .
+          tar czf "$GITHUB_WORKSPACE/linghuaplayer-linux-x64.tar.gz" .
 
       - name: Package deb
         run: |
@@ -64,7 +64,7 @@ jobs:
            使用 Flutter 开发的多源音乐播放器
           EOF
           dpkg-deb --build --root-owner-group "$PKG"
-          mv "${PKG}.deb" flamekit-linux-x64.deb
+          mv "${PKG}.deb" linghuaplayer-linux-x64.deb
 
       - name: Package pacman
         run: |
@@ -76,9 +76,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            flamekit-linux-x64.tar.gz
-            flamekit-linux-x64.deb
-            flamekit-linux-x64.pkg.tar.zst
+            linghuaplayer-linux-x64.tar.gz
+            linghuaplayer-linux-x64.deb
+            linghuaplayer-linux-x64.pkg.tar.zst
 
   build-windows:
     runs-on: windows-latest
@@ -94,12 +94,12 @@ jobs:
 
       - name: Package artifact
         run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath flamekit-windows-x64.zip
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath linghuaplayer-windows-x64.zip
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: flamekit-windows-x64.zip
+          files: linghuaplayer-windows-x64.zip
 
   build-macos:
     runs-on: macos-latest
@@ -116,9 +116,9 @@ jobs:
       - name: Package artifact
         run: |
           cd build/macos/Build/Products/Release
-          zip -r "$GITHUB_WORKSPACE/flamekit-macos.zip" flamekit.app
+          zip -r "$GITHUB_WORKSPACE/linghuaplayer-macos-arm64.zip" flamekit.app
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          files: flamekit-macos.zip
+          files: linghuaplayer-macos-arm64.zip
