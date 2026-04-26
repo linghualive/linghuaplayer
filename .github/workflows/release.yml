@@ -80,6 +80,27 @@ jobs:
             flamekit-linux-x64.deb
             flamekit-linux-x64.pkg.tar.zst
 
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build Windows app
+        run: flutter build windows --release
+
+      - name: Package artifact
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath flamekit-windows-x64.zip
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: flamekit-windows-x64.zip
+
   build-macos:
     runs-on: macos-latest
     steps:
