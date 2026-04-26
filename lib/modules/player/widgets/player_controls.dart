@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
+import '../../../shared/utils/platform_utils.dart';
 import '../player_controller.dart';
 import '../services/audio_output_service.dart';
 import 'audio_output_sheet.dart';
@@ -158,7 +159,9 @@ class PlayerControls extends GetView<PlayerController> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: PlatformUtils.isDesktop
+                  ? MainAxisAlignment.spaceBetween
+                  : MainAxisAlignment.center,
               children: [
                 IconButton(
                   iconSize: 22,
@@ -175,7 +178,13 @@ class PlayerControls extends GetView<PlayerController> {
                     }
                   },
                 ),
-                const SizedBox(width: 32),
+                if (PlatformUtils.isDesktop)
+                  IconButton(
+                    iconSize: 28,
+                    icon: const Icon(Icons.skip_previous_rounded),
+                    onPressed: () => controller.skipPrevious(),
+                  ),
+                if (!PlatformUtils.isDesktop) const SizedBox(width: 32),
                 SizedBox(
                   width: 68,
                   height: 68,
@@ -212,7 +221,13 @@ class PlayerControls extends GetView<PlayerController> {
                           ),
                         ),
                 ),
-                const SizedBox(width: 32),
+                if (PlatformUtils.isDesktop)
+                  IconButton(
+                    iconSize: 28,
+                    icon: const Icon(Icons.skip_next_rounded),
+                    onPressed: () => controller.skipNext(),
+                  ),
+                if (!PlatformUtils.isDesktop) const SizedBox(width: 32),
                 IconButton(
                   iconSize: 22,
                   icon: Icon(
