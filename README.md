@@ -13,11 +13,11 @@
 
 <p>聚合 B 站、网易云、QQ 音乐、GD 音乐台四大音源，一个 App 听遍全网音乐</p>
 
-<img src="docs/preview/player.png" width="19%" alt="播放" />
+<img src="docs/preview/play.png" width="19%" alt="播放" />
 <img src="docs/preview/discover.png" width="19%" alt="发现" />
 <img src="docs/preview/search.png" width="19%" alt="搜索" />
-<img src="docs/preview/playlist.png" width="19%" alt="收藏" />
-<img src="docs/preview/profile.png" width="19%" alt="我的" />
+<img src="docs/preview/drawer.png" width="19%" alt="模式" />
+<img src="docs/preview/setting.png" width="19%" alt="设置" />
 <br/>
 </div>
 
