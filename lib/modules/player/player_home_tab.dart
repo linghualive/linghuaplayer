@@ -205,10 +205,18 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
         context,
         playerCtrl: playerCtrl,
         child: SafeArea(
-          child: Column(
+          child: Row(
             children: [
-              _buildDesktopTopBar(context, playerCtrl),
-              Expanded(child: _buildDesktopPlayerUI(context, playerCtrl)),
+              _buildDesktopSidebar(context),
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildDesktopTopBar(context, playerCtrl),
+                    Expanded(
+                        child: _buildDesktopPlayerUI(context, playerCtrl)),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -216,13 +224,34 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
     );
   }
 
+  Widget _buildDesktopSidebar(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: 260,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface.withValues(alpha: 0.7),
+        border: Border(
+          right: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
+      ),
+      child: ModeDrawer(onClose: () {}),
+    );
+  }
+
   Widget _buildDesktopTopBar(
       BuildContext context, PlayerController playerCtrl) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
           const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: '搜索音乐',
+            onPressed: () => Get.toNamed(AppRoutes.search),
+          ),
           ..._buildActionWidgets(context, playerCtrl),
         ],
       ),
@@ -284,27 +313,34 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
 
   Widget _buildDesktopPlayerUI(
       BuildContext context, PlayerController playerCtrl) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-      child: Row(
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: AspectRatio(
-              aspectRatio: 1.0,
-              child: _buildArtworkArea(playerCtrl),
-            ),
-          ),
-          const SizedBox(width: 32),
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: const PlayerControls(),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+          child: Row(
+            children: [
+              Expanded(
+                flex: 5,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 440),
+                  child: AspectRatio(
+                    aspectRatio: 1.0,
+                    child: _buildArtworkArea(playerCtrl),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 48),
+              Expanded(
+                flex: 4,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: const PlayerControls(),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
