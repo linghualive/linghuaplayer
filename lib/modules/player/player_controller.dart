@@ -14,6 +14,7 @@ import '../../data/models/playback_info.dart';
 import '../../data/models/player/lyrics_model.dart';
 import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/music_repository.dart';
+import '../../data/services/local_playlist_service.dart';
 import '../../data/services/user_profile_service.dart';
 import '../../data/sources/music_source_adapter.dart' show LyricsCapability;
 import '../../data/sources/music_source_registry.dart';
@@ -84,6 +85,9 @@ class PlayerController extends GetxController {
 
   // Play mode
   final playMode = PlayMode.sequential.obs;
+
+  // Current mode tracking (for auto-advance to next mode)
+  final currentModeId = RxnString();
 
   // Audio quality
   final audioQualityLabel = ''.obs;
@@ -699,14 +703,34 @@ class PlayerController extends GetxController {
       currentIndex.value = 0;
       await _playCurrentQueueItem();
     } else {
-      _manualStop = true;
       _pushToHistory();
       if (queue.isNotEmpty) queue.removeAt(0);
+
+      if (await _tryAdvanceToNextMode()) return;
+
+      _manualStop = true;
       currentIndex.value = -1;
       currentVideo.value = null;
       _playback.stop();
       AppToast.show('播放队列已播完');
     }
+  }
+
+  Future<bool> _tryAdvanceToNextMode() async {
+    final modeId = currentModeId.value;
+    if (modeId == null) return false;
+
+    final service = Get.find<LocalPlaylistService>();
+    final list = service.playlists;
+    final currentIdx = list.indexWhere((p) => p.id == modeId);
+    if (currentIdx < 0 || currentIdx >= list.length - 1) return false;
+
+    final nextPlaylist = list[currentIdx + 1];
+    if (nextPlaylist.trackCount == 0) return false;
+
+    AppToast.show('自动切换到「${nextPlaylist.name}」');
+    playAllFromList(nextPlaylist.tracks, modeId: nextPlaylist.id);
+    return true;
   }
 
   /// Play the current queue[0] item with error handling.
@@ -1119,8 +1143,10 @@ class PlayerController extends GetxController {
   void playAllFromList(
     List<SearchVideoModel> tracks, {
     String? preferredSourceId,
+    String? modeId,
   }) {
     if (tracks.isEmpty) return;
+    currentModeId.value = modeId;
     _pushToHistory();
     queue.clear();
     currentIndex.value = -1;

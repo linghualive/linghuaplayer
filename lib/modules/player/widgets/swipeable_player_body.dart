@@ -110,7 +110,7 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
         const SizedBox(height: 8),
         Expanded(
           flex: 5,
-          child: widget.buildArtworkArea(),
+          child: Center(child: widget.buildArtworkArea()),
         ),
         const SizedBox(height: 16),
         Expanded(flex: 4, child: widget.controlsArea),

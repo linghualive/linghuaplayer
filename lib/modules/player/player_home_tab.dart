@@ -21,7 +21,6 @@ class PlayerHomeTab extends StatefulWidget {
 class _PlayerHomeTabState extends State<PlayerHomeTab>
     with SingleTickerProviderStateMixin {
   late final AnimationController _drawerCtrl;
-  late final Animation<double> _drawerSlide;
   bool _drawerOpen = false;
 
   static const _drawerWidthFraction = 0.75;
@@ -33,11 +32,6 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
       vsync: this,
       duration: const Duration(milliseconds: 320),
     );
-    _drawerSlide = CurvedAnimation(
-      parent: _drawerCtrl,
-      curve: Curves.easeOutExpo,
-      reverseCurve: Curves.easeInExpo,
-    );
   }
 
   @override
@@ -48,16 +42,16 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
 
   void _toggleDrawer() {
     if (_drawerOpen) {
-      _drawerCtrl.reverse();
+      _drawerCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
     } else {
-      _drawerCtrl.forward();
+      _drawerCtrl.animateTo(1, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
     }
     _drawerOpen = !_drawerOpen;
   }
 
   void _closeDrawer() {
     if (_drawerOpen) {
-      _drawerCtrl.reverse();
+      _drawerCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
       _drawerOpen = false;
     }
   }
@@ -88,14 +82,18 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
     );
 
     return AnimatedBuilder(
-      animation: _drawerSlide,
+      animation: _drawerCtrl,
       child: mainChild,
       builder: (context, cachedMain) {
-        final t = _drawerSlide.value;
+        final t = _drawerCtrl.value;
         final mainTx = t * drawerWidth;
         final drawerTx = -drawerWidth * 0.3 * (1 - t);
 
-        return Stack(
+        return GestureDetector(
+          onHorizontalDragUpdate: _handleDrag,
+          onHorizontalDragEnd: _handleDragEnd,
+          behavior: HitTestBehavior.translucent,
+          child: Stack(
           children: [
             Transform.translate(
               offset: Offset(drawerTx, 0),
@@ -105,8 +103,6 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
               offset: Offset(mainTx, 0),
               child: GestureDetector(
                 onTap: _drawerOpen ? _closeDrawer : null,
-                onHorizontalDragUpdate: _handleDrag,
-                onHorizontalDragEnd: _handleDragEnd,
                 child: AbsorbPointer(
                   absorbing: _drawerOpen && t > 0.5,
                   child: cachedMain!,
@@ -133,7 +129,7 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
                 ),
               ),
           ],
-        );
+        ));
       },
     );
   }
@@ -148,16 +144,29 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
   void _handleDragEnd(DragEndDetails details) {
     final drawerWidth =
         MediaQuery.of(context).size.width * _drawerWidthFraction;
-    final velocity = (details.primaryVelocity ?? 0) / drawerWidth;
+    final pixelVelocity = details.primaryVelocity ?? 0;
 
-    final target =
-        (velocity > 1.0 || (_drawerCtrl.value > 0.5 && velocity >= 0))
-            ? 1.0
-            : 0.0;
+    final double target;
+    if (pixelVelocity > 200) {
+      target = 1.0;
+    } else if (pixelVelocity < -200) {
+      target = 0.0;
+    } else {
+      target = _drawerCtrl.value > 0.5 ? 1.0 : 0.0;
+    }
     _drawerOpen = target == 1.0;
 
     final distance = (_drawerCtrl.value - target).abs();
-    final ms = (distance * 320).toInt().clamp(80, 320);
+    if (distance < 0.001) {
+      _drawerCtrl.value = target;
+      return;
+    }
+
+    final speed = pixelVelocity.abs() / drawerWidth;
+    final ms = speed > 2.0
+        ? (distance / speed * 1000).toInt().clamp(120, 280)
+        : (distance * 300).toInt().clamp(120, 300);
+
     _drawerCtrl.animateTo(
       target,
       duration: Duration(milliseconds: ms),

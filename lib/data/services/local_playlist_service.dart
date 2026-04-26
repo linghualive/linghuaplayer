@@ -111,6 +111,14 @@ class LocalPlaylistService {
     _saveToStorage();
   }
 
+  /// Reorder playlists via drag-and-drop.
+  void reorderPlaylist(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex--;
+    final item = playlists.removeAt(oldIndex);
+    playlists.insert(newIndex, item);
+    _saveToStorage();
+  }
+
   /// Delete a playlist by id.
   void deletePlaylist(String id) {
     playlists.removeWhere((p) => p.id == id);

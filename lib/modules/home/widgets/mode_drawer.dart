@@ -108,13 +108,25 @@ class ModeDrawer extends StatelessWidget {
                 ),
               );
             }
-            return ListView.separated(
+            return ReorderableListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               itemCount: playlists.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 2),
+              onReorder: (oldIndex, newIndex) {
+                playlistService.reorderPlaylist(oldIndex, newIndex);
+              },
+              proxyDecorator: (child, index, animation) {
+                return Material(
+                  elevation: 4,
+                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.transparent,
+                  child: child,
+                );
+              },
               itemBuilder: (context, index) => _ModeTile(
+                key: ValueKey(playlists[index].id),
                 playlist: playlists[index],
                 onClose: _close,
+                index: index,
               ),
             );
           }),
@@ -253,8 +265,9 @@ class _ActionCard extends StatelessWidget {
 class _ModeTile extends StatelessWidget {
   final LocalPlaylist playlist;
   final VoidCallback onClose;
+  final int index;
 
-  const _ModeTile({required this.playlist, required this.onClose});
+  const _ModeTile({super.key, required this.playlist, required this.onClose, required this.index});
 
   @override
   Widget build(BuildContext context) {
@@ -321,20 +334,16 @@ class _ModeTile extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.chevron_right_rounded, size: 20),
-                color: theme.colorScheme.outline,
-                tooltip: '详情',
-                onPressed: () {
-                  onClose();
-                  Get.toNamed(
-                    AppRoutes.localPlaylistDetail,
-                    arguments: {'playlistId': playlist.id},
-                  );
-                },
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
+              ReorderableDragStartListener(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Icon(
+                    Icons.drag_handle_rounded,
+                    size: 20,
+                    color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                  ),
+                ),
               ),
             ],
           ),
@@ -354,7 +363,7 @@ class _ModeTile extends StatelessWidget {
     }
     final playerCtrl = Get.find<PlayerController>();
     final tracks = playlist.tracks;
-    playerCtrl.playAllFromList(tracks);
+    playerCtrl.playAllFromList(tracks, modeId: playlist.id);
   }
 
   void _showContextMenu(BuildContext context) {

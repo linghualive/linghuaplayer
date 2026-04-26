@@ -86,7 +86,7 @@ class _PlayerArtworkState extends State<PlayerArtwork>
                   children: [
                     // Vinyl disc
                     Positioned(
-                      left: (availableWidth - discSize) / 2 - 10,
+                      left: (availableWidth - discSize) / 2,
                       top: 16,
                       child: SizedBox(
                         width: discSize,
