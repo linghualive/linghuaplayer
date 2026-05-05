@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:io';
 
@@ -117,11 +118,13 @@ class UpdateService {
     _showUpdateDialog(info);
   }
 
-  static String _mirrorUrl(String url) {
-    if (url.startsWith('https://github.com/')) {
-      return 'https://gh.llkk.cc/$url';
-    }
-    return url;
+  static List<String> _buildDownloadUrls(String url) {
+    if (!url.startsWith('https://github.com/')) return [url];
+    return [
+      'https://ghfast.top/$url',
+      'https://gh.llkk.cc/$url',
+      url,
+    ];
   }
 
   static bool get _isAndroid {
@@ -144,41 +147,45 @@ class UpdateService {
     });
 
     try {
-      final downloadDio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(minutes: 10),
-        followRedirects: true,
-        maxRedirects: 5,
-      ));
+      final urls = _buildDownloadUrls(info.downloadUrl);
+      final tokens = <CancelToken>[];
+      final completer = Completer<bool>();
 
-      // Try mirror first, fallback to direct URL
-      final mirrorUrl = _mirrorUrl(info.downloadUrl);
-      final urls = mirrorUrl != info.downloadUrl
-          ? [mirrorUrl, info.downloadUrl]
-          : [info.downloadUrl];
-
-      bool downloaded = false;
       for (final url in urls) {
-        try {
-          log('Downloading APK from: $url');
-          progress.value = 0;
-          await downloadDio.download(
-            url,
-            savePath,
-            onReceiveProgress: (received, total) {
-              if (total > 0) {
-                progress.value = received / total;
-              }
-            },
-          );
-          downloaded = true;
-          break;
-        } catch (e) {
+        final token = CancelToken();
+        tokens.add(token);
+        final dio = Dio(BaseOptions(
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(minutes: 10),
+          followRedirects: true,
+          maxRedirects: 5,
+        ));
+        dio.download(
+          url,
+          savePath,
+          cancelToken: token,
+          onReceiveProgress: (received, total) {
+            if (total > 0) progress.value = received / total;
+          },
+        ).then((_) {
+          if (!completer.isCompleted) {
+            log('Download succeeded from: $url');
+            completer.complete(true);
+            for (final t in tokens) {
+              if (t != token && !t.isCancelled) t.cancel();
+            }
+          }
+        }).catchError((e) {
+          if (e is DioException && e.type == DioExceptionType.cancel) return;
           log('Download failed from $url: $e');
-          // Try next URL
-        }
+          tokens.remove(token);
+          if (tokens.isEmpty && !completer.isCompleted) {
+            completer.complete(false);
+          }
+        });
       }
 
+      final downloaded = await completer.future;
       if (!downloaded) {
         status.value = _DownloadStatus.failed;
         return;
