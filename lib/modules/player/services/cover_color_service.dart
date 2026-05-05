@@ -23,7 +23,10 @@ class CoverColorService {
     }
 
     try {
-      final provider = CachedNetworkImageProvider(normalizedUrl);
+      final provider = CachedNetworkImageProvider(
+        normalizedUrl,
+        headers: const {'User-Agent': 'Mozilla/5.0'},
+      );
       final palette = await PaletteGenerator.fromImageProvider(
         provider,
         size: const ui.Size(100, 100),
