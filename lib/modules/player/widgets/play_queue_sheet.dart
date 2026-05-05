@@ -43,13 +43,13 @@ class PlayQueueSheet extends GetView<PlayerController> {
             padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
             child: Row(
               children: [
-                Obx(() => Text(
-                      '播放队列',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.2,
-                          ),
-                    )),
+                Text(
+                  '播放队列',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.2,
+                      ),
+                ),
                 const SizedBox(width: 6),
                 Obx(() => Text(
                       '${controller.queue.length}',

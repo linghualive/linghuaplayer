@@ -25,66 +25,118 @@ class ModeDrawer extends StatelessWidget {
 
     return Column(
       children: [
-        SizedBox(height: MediaQuery.of(context).padding.top + 8),
-        // Quick actions row
+        SizedBox(height: MediaQuery.of(context).padding.top + 12),
+        // App branding
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
           child: Row(
             children: [
-              Expanded(
-                child: _ActionCard(
-                  icon: Icons.explore_outlined,
-                  label: '发现',
-                  onTap: () {
-                    _close();
-                    Get.toNamed(AppRoutes.musicDiscovery);
-                  },
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.colorScheme.primary,
+                      theme.colorScheme.tertiary,
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(Icons.music_note_rounded, color: Colors.white, size: 20),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ActionCard(
-                  icon: Icons.add_rounded,
-                  label: '新建',
-                  onTap: () => CreateFavDialog.show(context),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ActionCard(
-                  icon: Icons.shuffle_rounded,
-                  label: '随机',
-                  onTap: () {
-                    _close();
-                    Get.find<PlayerController>().playRandomAll();
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _ActionCard(
-                  icon: Icons.download_rounded,
-                  label: '导入',
-                  onTap: () {
-                    _close();
-                    ImportPlaylistSheet.show(context, 'bilibili');
-                  },
-                ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '玲华',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  Text(
+                    '多源音乐播放器',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.7),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        // Quick actions — 2×2 grid
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.explore_outlined,
+                      label: '发现',
+                      onTap: () {
+                        _close();
+                        Get.toNamed(AppRoutes.musicDiscovery);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.add_rounded,
+                      label: '新建',
+                      onTap: () => CreateFavDialog.show(context),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.shuffle_rounded,
+                      label: '随机',
+                      onTap: () {
+                        _close();
+                        Get.find<PlayerController>().playRandomAll();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _ActionCard(
+                      icon: Icons.download_rounded,
+                      label: '导入',
+                      onTap: () {
+                        _close();
+                        ImportPlaylistSheet.show(context, 'bilibili');
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 18),
         // Section label
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
           child: Row(
             children: [
               Text(
                 '听歌模式',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.outline,
-                  letterSpacing: 0.5,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
@@ -101,11 +153,19 @@ class ModeDrawer extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.headphones_rounded,
-                          size: 40,
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.3)),
-                      const SizedBox(height: 12),
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.4),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.headphones_rounded,
+                            size: 28,
+                            color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                      ),
+                      const SizedBox(height: 16),
                       Text(
                         '搜索音乐并收藏到模式\n开始你的专属听歌体验',
                         textAlign: TextAlign.center,
@@ -120,7 +180,7 @@ class ModeDrawer extends StatelessWidget {
               );
             }
             return ReorderableListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               itemCount: playlists.length,
               onReorder: (oldIndex, newIndex) {
                 playlistService.reorderPlaylist(oldIndex, newIndex);
@@ -143,9 +203,21 @@ class ModeDrawer extends StatelessWidget {
           }),
         ),
         // Bottom section
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        _buildBottomSection(context, theme, homeCtrl),
-        SizedBox(height: MediaQuery.of(context).padding.bottom + 4),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            border: Border(
+              top: BorderSide(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+              ),
+            ),
+          ),
+          child: _buildBottomSection(context, theme, homeCtrl),
+        ),
+        Container(
+          color: theme.colorScheme.surfaceContainerLow,
+          height: MediaQuery.of(context).padding.bottom + 4,
+        ),
       ],
     );
   }
@@ -157,7 +229,7 @@ class ModeDrawer extends StatelessWidget {
       final userName = homeCtrl.userInfo.value?.uname;
 
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -167,11 +239,22 @@ class ModeDrawer extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
-                leading: const Icon(Icons.person_outline, size: 18),
+                leading: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.person_rounded,
+                      size: 16, color: theme.colorScheme.primary),
+                ),
                 title: Text(userName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    )),
                 trailing: TextButton(
                   onPressed: () => homeCtrl.logout(),
                   child: Text('退出',
@@ -185,9 +268,20 @@ class ModeDrawer extends StatelessWidget {
                 visualDensity: VisualDensity.compact,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
-                leading: const Icon(Icons.login, size: 18),
-                title:
-                    Text('登录哔哩哔哩', style: theme.textTheme.bodySmall),
+                leading: Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.login_rounded,
+                      size: 16, color: theme.colorScheme.primary),
+                ),
+                title: Text('登录哔哩哔哩',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    )),
                 onTap: () {
                   _close();
                   Get.toNamed(AppRoutes.login);
@@ -201,8 +295,12 @@ class ModeDrawer extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.history, size: 18),
-                    title: Text('历史', style: theme.textTheme.bodySmall),
+                    leading: Icon(Icons.history_rounded,
+                        size: 18, color: theme.colorScheme.onSurfaceVariant),
+                    title: Text('历史',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        )),
                     onTap: () {
                       _close();
                       Get.toNamed(AppRoutes.watchHistory);
@@ -215,8 +313,12 @@ class ModeDrawer extends StatelessWidget {
                     visualDensity: VisualDensity.compact,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
-                    leading: const Icon(Icons.settings_outlined, size: 18),
-                    title: Text('设置', style: theme.textTheme.bodySmall),
+                    leading: Icon(Icons.settings_rounded,
+                        size: 18, color: theme.colorScheme.onSurfaceVariant),
+                    title: Text('设置',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        )),
                     onTap: () {
                       _close();
                       Get.toNamed(AppRoutes.settings);
@@ -247,7 +349,7 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
@@ -255,20 +357,20 @@ class _ActionCard extends StatelessWidget {
         splashColor: theme.colorScheme.primary.withValues(alpha: 0.08),
         highlightColor: theme.colorScheme.primary.withValues(alpha: 0.04),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 38,
-                height: 38,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+                child: Icon(icon, size: 21, color: theme.colorScheme.primary),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 8),
               Text(
                 label,
                 style: theme.textTheme.labelSmall?.copyWith(
@@ -289,99 +391,154 @@ class _ModeTile extends StatelessWidget {
   final VoidCallback onClose;
   final int index;
 
-  const _ModeTile({super.key, required this.playlist, required this.onClose, required this.index});
+  const _ModeTile(
+      {super.key,
+      required this.playlist,
+      required this.onClose,
+      required this.index});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final playerCtrl = Get.find<PlayerController>();
 
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: () => _switchMode(context),
-        onLongPress: () => _showContextMenu(context),
-        borderRadius: BorderRadius.circular(12),
-        splashColor: theme.colorScheme.primary.withValues(alpha: 0.06),
-        highlightColor: theme.colorScheme.primary.withValues(alpha: 0.03),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: playlist.coverUrl.isNotEmpty
-                    ? CachedImage(
-                        imageUrl: playlist.coverUrl, width: 46, height: 46)
-                    : Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
-                              theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(10),
+    return Obx(() {
+      final isPlaying = playerCtrl.currentModeId.value == playlist.id;
+
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Material(
+          color: isPlaying
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.18)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: () => _switchMode(context),
+            onLongPress: () => _showContextMenu(context),
+            borderRadius: BorderRadius.circular(12),
+            splashColor: theme.colorScheme.primary.withValues(alpha: 0.06),
+            highlightColor: theme.colorScheme.primary.withValues(alpha: 0.03),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              child: Row(
+                children: [
+                  // Active indicator bar
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: 3,
+                    height: isPlaying ? 32 : 0,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: isPlaying ? theme.colorScheme.primary : Colors.transparent,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  // Cover art
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: isPlaying
+                          ? Border.all(
+                              color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                              width: 1.5,
+                            )
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
-                        child: Icon(Icons.music_note_rounded,
-                            size: 20, color: theme.colorScheme.primary),
-                      ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            playlist.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.1,
-                            ),
-                          ),
-                        ),
-                        if (playlist.sourceTag != 'local') ...[
-                          const SizedBox(width: 6),
-                          _SourceBadge(sourceTag: playlist.sourceTag),
-                        ],
                       ],
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${playlist.trackCount} 首',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.outline.withValues(alpha: 0.7),
-                        fontSize: 11,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(isPlaying ? 8.5 : 10),
+                      child: playlist.coverUrl.isNotEmpty
+                          ? CachedImage(
+                              imageUrl: playlist.coverUrl,
+                              width: 50,
+                              height: 50)
+                          : Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    theme.colorScheme.primaryContainer
+                                        .withValues(alpha: 0.6),
+                                    theme.colorScheme.primaryContainer
+                                        .withValues(alpha: 0.3),
+                                  ],
+                                ),
+                              ),
+                              child: Icon(Icons.music_note_rounded,
+                                  size: 22, color: theme.colorScheme.primary),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Info
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          playlist.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: isPlaying ? FontWeight.w600 : FontWeight.w500,
+                            color: isPlaying ? theme.colorScheme.primary : null,
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Row(
+                          children: [
+                            if (isPlaying) ...[
+                              Icon(Icons.equalizer_rounded,
+                                  size: 14, color: theme.colorScheme.primary),
+                              const SizedBox(width: 4),
+                            ],
+                            Text(
+                              '${playlist.trackCount} 首',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: isPlaying
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.7)
+                                    : theme.colorScheme.outline.withValues(alpha: 0.7),
+                                fontSize: 11,
+                              ),
+                            ),
+                            if (playlist.sourceTag != 'local') ...[
+                              const SizedBox(width: 6),
+                              _SourceBadge(sourceTag: playlist.sourceTag),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Drag handle
+                  ReorderableDragStartListener(
+                    index: index,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Icon(
+                        Icons.drag_handle_rounded,
+                        size: 20,
+                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              ReorderableDragStartListener(
-                index: index,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Icon(
-                    Icons.drag_handle_rounded,
-                    size: 20,
-                    color: theme.colorScheme.outline.withValues(alpha: 0.35),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    });
   }
 
   void _switchMode(BuildContext context) {
@@ -532,7 +689,7 @@ class _SourceBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         label,
