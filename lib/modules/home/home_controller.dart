@@ -64,7 +64,7 @@ class HomeController extends GetxController {
     final first = playlistService.playlists.first;
     if (first.trackCount == 0) return;
 
-    playerCtrl.playAllFromList(first.tracks);
+    playerCtrl.playAllFromList(first.tracks, modeId: first.id);
   }
 
   void _initializeControllers() {

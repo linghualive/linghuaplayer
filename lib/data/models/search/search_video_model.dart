@@ -48,6 +48,23 @@ class SearchVideoModel {
   bool get isBilibili => source == MusicSource.bilibili;
   bool get isGdStudio => source == MusicSource.gdstudio;
 
+  SearchVideoModel copyWith({String? pic}) {
+    return SearchVideoModel(
+      id: id,
+      author: author,
+      mid: mid,
+      title: title,
+      description: description,
+      pic: pic ?? this.pic,
+      play: play,
+      danmaku: danmaku,
+      duration: duration,
+      bvid: bvid,
+      arcurl: arcurl,
+      source: source,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

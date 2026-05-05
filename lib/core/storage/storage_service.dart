@@ -201,6 +201,13 @@ class StorageService extends GetxService {
   set preferenceTags(List<String> value) =>
       _box.write('preference_tags', value);
 
+  // Mode resume position
+  int getModeResumeIndex(String modeId) =>
+      _box.read<int>('mode_resume_$modeId') ?? 0;
+
+  void setModeResumeIndex(String modeId, int index) =>
+      _box.write('mode_resume_$modeId', index);
+
   // Clear all auth data (Bilibili only)
   void clearAuth() {
     _box.remove('user_info');

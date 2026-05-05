@@ -52,6 +52,17 @@ class ModeDrawer extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _ActionCard(
+                  icon: Icons.shuffle_rounded,
+                  label: '随机',
+                  onTap: () {
+                    _close();
+                    Get.find<PlayerController>().playRandomAll();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ActionCard(
                   icon: Icons.download_rounded,
                   label: '导入',
                   onTap: () {

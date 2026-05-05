@@ -24,6 +24,8 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
   late final PageController _pageController;
   bool _isUserSwiping = false;
   bool _isProgrammaticAnimation = false;
+  bool _isFirstChange = true;
+  String? _lastTrackId;
   Worker? _trackChangeWorker;
 
   @override
@@ -31,7 +33,15 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
     super.initState();
     _pageController = PageController(initialPage: 1);
 
-    _trackChangeWorker = ever(_controller.currentVideo, (_) {
+    _trackChangeWorker = ever(_controller.currentVideo, (video) {
+      final newId = video?.uniqueId;
+      final isSameTrack = newId != null && newId == _lastTrackId;
+      _lastTrackId = newId;
+      if (_isFirstChange) {
+        _isFirstChange = false;
+        return;
+      }
+      if (isSameTrack) return;
       if (!_isUserSwiping && !_isProgrammaticAnimation &&
           mounted && _pageController.hasClients) {
         final page = _pageController.page?.round() ?? 1;

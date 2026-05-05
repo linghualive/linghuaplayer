@@ -16,7 +16,7 @@ import '../../data/models/search/search_video_model.dart';
 import '../../data/repositories/music_repository.dart';
 import '../../data/services/local_playlist_service.dart';
 import '../../data/services/user_profile_service.dart';
-import '../../data/sources/music_source_adapter.dart' show LyricsCapability;
+import '../../data/sources/music_source_adapter.dart' show CoverCapability, LyricsCapability;
 import '../../data/sources/music_source_registry.dart';
 import '../../shared/utils/app_toast.dart';
 import 'services/audio_output_service.dart';
@@ -88,6 +88,8 @@ class PlayerController extends GetxController {
 
   // Current mode tracking (for auto-advance to next mode)
   final currentModeId = RxnString();
+  int _modeResumeIndex = 0;
+  int _modeTrackCount = 0;
 
   // Audio quality
   final audioQualityLabel = ''.obs;
@@ -162,6 +164,28 @@ class PlayerController extends GetxController {
 
     // MediaSession integration (mobile only)
     _initMediaSession();
+  }
+
+  void _resolveCoverIfNeeded(SearchVideoModel video, int gen) {
+    if (video.pic.isNotEmpty) return;
+    final source = _registry.getSourceForTrack(video);
+    if (source is! CoverCapability) return;
+    (source as CoverCapability).getCoverUrl(video).then((url) {
+      if (url.isEmpty || gen != _playGeneration) return;
+      final updated = video.copyWith(pic: url);
+      if (currentVideo.value?.uniqueId == video.uniqueId) {
+        currentVideo.value = updated;
+      }
+      final qi = queue.indexWhere((q) => q.video.uniqueId == video.uniqueId);
+      if (qi >= 0) {
+        queue[qi] = QueueItem(
+          video: updated,
+          audioUrl: queue[qi].audioUrl,
+          qualityLabel: queue[qi].qualityLabel,
+          headers: queue[qi].headers,
+        );
+      }
+    });
   }
 
   Future<void> _extractCoverColor(SearchVideoModel? video) async {
@@ -337,6 +361,7 @@ class PlayerController extends GetxController {
 
     currentVideo.value = video;
     _updateUploaderMid(video);
+    _resolveCoverIfNeeded(video, gen);
     if (navigate) _navigateToPlayer();
 
     // ── Fast path 1: song already in queue ──
@@ -701,6 +726,7 @@ class PlayerController extends GetxController {
       _pushToHistory();
       queue.removeAt(0);
       currentIndex.value = 0;
+      _updateModeResumeIndex();
       await _playCurrentQueueItem();
     } else {
       _pushToHistory();
@@ -733,6 +759,13 @@ class PlayerController extends GetxController {
     return true;
   }
 
+  void _updateModeResumeIndex() {
+    final modeId = currentModeId.value;
+    if (modeId == null || _modeTrackCount == 0) return;
+    _modeResumeIndex = (_modeResumeIndex + 1) % _modeTrackCount;
+    _storage.setModeResumeIndex(modeId, _modeResumeIndex);
+  }
+
   /// Play the current queue[0] item with error handling.
   ///
   /// When [userInitiated] is false (default, e.g. auto-advance), failed items
@@ -748,6 +781,8 @@ class PlayerController extends GetxController {
       currentVideo.value = item.video;
       _updateUploaderMid(item.video);
       audioQualityLabel.value = item.qualityLabel;
+
+      _resolveCoverIfNeeded(item.video, gen);
 
       final needsResolve = item.audioUrl.isEmpty;
       if (needsResolve) isLoading.value = true;
@@ -1139,7 +1174,8 @@ class PlayerController extends GetxController {
     }
   }
 
-  /// Replace the entire queue and start playing from the first track.
+  /// Replace the entire queue and start playing.
+  /// When [modeId] is provided, resumes from the last remembered position.
   void playAllFromList(
     List<SearchVideoModel> tracks, {
     String? preferredSourceId,
@@ -1147,12 +1183,50 @@ class PlayerController extends GetxController {
   }) {
     if (tracks.isEmpty) return;
     currentModeId.value = modeId;
+    _modeTrackCount = tracks.length;
+
+    int startIndex = 0;
+    if (modeId != null) {
+      startIndex = _storage.getModeResumeIndex(modeId) % tracks.length;
+    }
+    _modeResumeIndex = startIndex;
+
     _pushToHistory();
     queue.clear();
     currentIndex.value = -1;
-    playFromSearch(tracks.first, preferredSourceId: preferredSourceId);
-    for (int i = 1; i < tracks.length; i++) {
-      addToQueueLazy(tracks[i]);
+
+    final rotated = [
+      ...tracks.sublist(startIndex),
+      ...tracks.sublist(0, startIndex),
+    ];
+    playFromSearch(rotated.first, preferredSourceId: preferredSourceId);
+    for (int i = 1; i < rotated.length; i++) {
+      addToQueueLazy(rotated[i]);
+    }
+  }
+
+  /// Collect all tracks from every mode, shuffle, and play.
+  void playRandomAll() {
+    final service = Get.find<LocalPlaylistService>();
+    final allTracks = <SearchVideoModel>[];
+    final seen = <String>{};
+    for (final playlist in service.playlists) {
+      for (final track in playlist.tracks) {
+        if (seen.add(track.uniqueId)) {
+          allTracks.add(track);
+        }
+      }
+    }
+    if (allTracks.isEmpty) return;
+    allTracks.shuffle();
+    currentModeId.value = null;
+    _modeTrackCount = 0;
+    _pushToHistory();
+    queue.clear();
+    currentIndex.value = -1;
+    playFromSearch(allTracks.first);
+    for (int i = 1; i < allTracks.length; i++) {
+      addToQueueLazy(allTracks[i]);
     }
   }
 
