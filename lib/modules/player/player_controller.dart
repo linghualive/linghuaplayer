@@ -1219,7 +1219,7 @@ class PlayerController extends GetxController {
     }
     if (allTracks.isEmpty) return;
     allTracks.shuffle();
-    currentModeId.value = null;
+    currentModeId.value = '__random__';
     _modeTrackCount = 0;
     _pushToHistory();
     queue.clear();
