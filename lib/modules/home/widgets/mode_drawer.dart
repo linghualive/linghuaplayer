@@ -247,22 +247,33 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(14),
+        splashColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+        highlightColor: theme.colorScheme.primary.withValues(alpha: 0.04),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 22, color: theme.colorScheme.primary),
-              const SizedBox(height: 6),
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 20, color: theme.colorScheme.primary),
+              ),
+              const SizedBox(height: 7),
               Text(
                 label,
                 style: theme.textTheme.labelSmall?.copyWith(
                   fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
@@ -291,22 +302,30 @@ class _ModeTile extends StatelessWidget {
         onTap: () => _switchMode(context),
         onLongPress: () => _showContextMenu(context),
         borderRadius: BorderRadius.circular(12),
+        splashColor: theme.colorScheme.primary.withValues(alpha: 0.06),
+        highlightColor: theme.colorScheme.primary.withValues(alpha: 0.03),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
           child: Row(
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 child: playlist.coverUrl.isNotEmpty
                     ? CachedImage(
-                        imageUrl: playlist.coverUrl, width: 44, height: 44)
+                        imageUrl: playlist.coverUrl, width: 46, height: 46)
                     : Container(
-                        width: 44,
-                        height: 44,
+                        width: 46,
+                        height: 46,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer
-                              .withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                              theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(Icons.music_note_rounded,
                             size: 20, color: theme.colorScheme.primary),
@@ -326,6 +345,7 @@ class _ModeTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w500,
+                              letterSpacing: 0.1,
                             ),
                           ),
                         ),
@@ -335,11 +355,12 @@ class _ModeTile extends StatelessWidget {
                         ],
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       '${playlist.trackCount} 首',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.outline,
+                        color: theme.colorScheme.outline.withValues(alpha: 0.7),
+                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -352,7 +373,7 @@ class _ModeTile extends StatelessWidget {
                   child: Icon(
                     Icons.drag_handle_rounded,
                     size: 20,
-                    color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                    color: theme.colorScheme.outline.withValues(alpha: 0.35),
                   ),
                 ),
               ),

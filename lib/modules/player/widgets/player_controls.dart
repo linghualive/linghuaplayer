@@ -103,15 +103,20 @@ class PlayerControls extends GetView<PlayerController> {
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: SliderTheme(
               data: SliderThemeData(
-                trackHeight: 3,
+                trackHeight: 3.5,
                 thumbShape:
-                    const RoundSliderThumbShape(enabledThumbRadius: 6),
+                    const RoundSliderThumbShape(
+                      enabledThumbRadius: 7,
+                      elevation: 3,
+                      pressedElevation: 6,
+                    ),
                 overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 14),
+                    const RoundSliderOverlayShape(overlayRadius: 18),
                 activeTrackColor: theme.colorScheme.primary,
                 inactiveTrackColor:
-                    theme.colorScheme.onSurface.withValues(alpha: 0.1),
+                    theme.colorScheme.onSurface.withValues(alpha: 0.08),
                 thumbColor: theme.colorScheme.primary,
+                overlayColor: theme.colorScheme.primary.withValues(alpha: 0.12),
               ),
               child: Slider(
                 value: controller.position.value.inMilliseconds
@@ -309,18 +314,18 @@ class PlayerControls extends GetView<PlayerController> {
     final bool isPremium = label == 'Hi-Res' || label == 'Dolby';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
       decoration: BoxDecoration(
         color: isPremium
-            ? theme.colorScheme.primaryContainer
-            : theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4),
-        border: isPremium
-            ? Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.5),
-                width: 0.5,
-              )
-            : null,
+            ? theme.colorScheme.primaryContainer.withValues(alpha: 0.8)
+            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isPremium
+              ? theme.colorScheme.primary.withValues(alpha: 0.4)
+              : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
       ),
       child: Text(
         label,
@@ -328,8 +333,9 @@ class PlayerControls extends GetView<PlayerController> {
           color: isPremium
               ? theme.colorScheme.primary
               : theme.colorScheme.onSurfaceVariant,
-          fontWeight: isPremium ? FontWeight.w600 : FontWeight.normal,
+          fontWeight: isPremium ? FontWeight.w600 : FontWeight.w500,
           fontSize: 10,
+          letterSpacing: 0.3,
         ),
       ),
     );

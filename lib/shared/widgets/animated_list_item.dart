@@ -33,9 +33,9 @@ class _AnimatedListItemState extends State<AnimatedListItem>
 
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _slide = Tween<Offset>(
-      begin: const Offset(0, 0.08),
+      begin: const Offset(0, 0.05),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutQuart));
 
     final cappedIndex = min(widget.index, 15);
     final delay = widget.baseDelay * cappedIndex;

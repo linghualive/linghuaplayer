@@ -89,7 +89,8 @@ class SettingsPage extends GetView<SettingsController> {
                       onTap: () => controller.themeCtrl.setCustomColor(index),
                       child: Tooltip(
                         message: ct.label,
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
@@ -100,11 +101,23 @@ class SettingsPage extends GetView<SettingsController> {
                                     color: theme.colorScheme.onSurface,
                                     width: 2.5,
                                   )
+                                : Border.all(
+                                    color: ct.color.withValues(alpha: 0.3),
+                                    width: 1.5,
+                                  ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: ct.color.withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      spreadRadius: 1,
+                                    ),
+                                  ]
                                 : null,
                           ),
                           child: isSelected
                               ? const Icon(
-                                  Icons.check,
+                                  Icons.check_rounded,
                                   color: Colors.white,
                                   size: 18,
                                 )
@@ -166,11 +179,12 @@ class SettingsPage extends GetView<SettingsController> {
 
   Widget _buildSectionHeader(ThemeData theme, String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
       child: Text(
         title,
         style: theme.textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
         ),
       ),
     );

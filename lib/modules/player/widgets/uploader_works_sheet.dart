@@ -67,27 +67,25 @@ class _UploaderWorksSheetState extends State<UploaderWorksSheet> {
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 4),
+            padding: const EdgeInsets.only(top: 10, bottom: 6),
             child: Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
                 color: Theme.of(context)
                     .colorScheme
-                    .outline
-                    .withValues(alpha: 0.3),
+                    .outlineVariant
+                    .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          // Header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -98,22 +96,27 @@ class _UploaderWorksSheetState extends State<UploaderWorksSheet> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                   ),
                 ),
-                if (!_loading)
+                if (!_loading) ...[
+                  const SizedBox(width: 4),
                   Text(
-                    ' (${_seasons.length})',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                    '${_seasons.length}',
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.outline,
                         ),
                   ),
+                ],
                 const Spacer(),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(
+            height: 0.5,
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
           // Content
           Flexible(
             child: _loading
@@ -167,7 +170,7 @@ class _SeasonTileState extends State<_SeasonTile> {
         ListTile(
           leading: widget.season.cover.isNotEmpty
               ? ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(8),
                   child: Image.network(
                     widget.season.cover.startsWith('//')
                         ? 'https:${widget.season.cover}'
@@ -262,10 +265,11 @@ class _SeasonTileState extends State<_SeasonTile> {
       width: 48,
       height: 48,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(4),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: const Icon(Icons.video_library, size: 24),
+      child: Icon(Icons.video_library_rounded, size: 22,
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
     );
   }
 
@@ -464,7 +468,7 @@ class _VideoTile extends StatelessWidget {
       dense: true,
       leading: song.pic.isNotEmpty
           ? ClipRRect(
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(6),
               child: Image.network(
                 song.pic.startsWith('//') ? 'https:${song.pic}' : song.pic,
                 width: 40,
@@ -473,8 +477,12 @@ class _VideoTile extends StatelessWidget {
                 errorBuilder: (_, __, ___) => Container(
                   width: 40,
                   height: 40,
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  child: const Icon(Icons.music_note, size: 20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(Icons.music_note_rounded, size: 18,
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
                 ),
               ),
             )
@@ -482,24 +490,31 @@ class _VideoTile extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(4),
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(6),
               ),
-              child: const Icon(Icons.music_note, size: 20),
+              child: Icon(Icons.music_note_rounded, size: 18,
+                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
             ),
       title: Text(
         song.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: Theme.of(context).textTheme.bodySmall,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
       ),
       subtitle: Text(
         song.duration,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.7),
+        ),
       ),
       trailing: IconButton(
-        icon: const Icon(Icons.playlist_add, size: 20),
+        icon: Icon(Icons.playlist_add_rounded, size: 20,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
         tooltip: '添加到播放列表',
         onPressed: () async {
           final success = await controller.addToQueueSilent(song);

@@ -106,14 +106,13 @@ class _AddSongsSheetState extends State<AddSongsSheet> {
       height: MediaQuery.of(context).size.height * 0.85,
       child: Column(
         children: [
-          // Handle bar
           Center(
             child: Container(
-              margin: const EdgeInsets.only(top: 8, bottom: 4),
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -181,7 +180,7 @@ class _AddSongsSheetState extends State<AddSongsSheet> {
               onSubmitted: _search,
               elevation: WidgetStateProperty.all(0),
               backgroundColor: WidgetStateProperty.all(
-                theme.colorScheme.surfaceContainerHighest,
+                theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
               ),
               shape: WidgetStateProperty.all(RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -246,7 +245,7 @@ class _SongResultTile extends StatelessWidget {
     return ListTile(
       dense: true,
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         child: song.pic.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: song.pic,
@@ -256,23 +255,33 @@ class _SongResultTile extends StatelessWidget {
                 errorWidget: (_, __, ___) => Container(
                   width: 44,
                   height: 44,
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Icon(Icons.music_note, size: 18),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.music_note_rounded, size: 18,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.4)),
                 ),
               )
             : Container(
                 width: 44,
                 height: 44,
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: const Icon(Icons.music_note, size: 18),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.music_note_rounded, size: 18,
+                    color: theme.colorScheme.outline.withValues(alpha: 0.4)),
               ),
       ),
       title: Text(song.title,
-          maxLines: 1, overflow: TextOverflow.ellipsis),
+          maxLines: 1, overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
       subtitle: Text(song.author,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: theme.colorScheme.outline, fontSize: 12)),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.outline.withValues(alpha: 0.8), fontSize: 12)),
       trailing: alreadyAdded
           ? Icon(Icons.check_circle,
               size: 22, color: theme.colorScheme.primary)

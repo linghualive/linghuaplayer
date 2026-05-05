@@ -87,8 +87,11 @@ class WatchHistoryPage extends StatelessWidget {
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
-                  color: Colors.red,
-                  child: const Icon(Icons.delete, color: Colors.white),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  child: Icon(Icons.delete_rounded,
+                      color: Theme.of(context).colorScheme.onError),
                 ),
                 onDismissed: (_) => controller.deleteItem(index),
                 child: InkWell(
@@ -99,17 +102,29 @@ class WatchHistoryPage extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CachedImage(
-                          imageUrl: video.pic,
-                          width: 160,
-                          height: 100,
-                          borderRadius: BorderRadius.circular(8),
+                        Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: CachedImage(
+                            imageUrl: video.pic,
+                            width: 150,
+                            height: 94,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ConstrainedBox(
                             constraints:
-                                const BoxConstraints(minHeight: 100),
+                                const BoxConstraints(minHeight: 94),
                             child: Column(
                               crossAxisAlignment:
                                   CrossAxisAlignment.start,
@@ -122,7 +137,10 @@ class WatchHistoryPage extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis,
                                   style: Theme.of(context)
                                       .textTheme
-                                      .bodyMedium,
+                                      .bodyMedium?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                        height: 1.3,
+                                      ),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(

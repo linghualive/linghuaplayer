@@ -150,12 +150,12 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.only(top: 10, bottom: 6),
           child: Container(
-            width: 40,
+            width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: theme.colorScheme.outline.withValues(alpha: 0.3),
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -165,7 +165,7 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
           child: Text(
             '导入$_platformTitle歌单',
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
@@ -180,8 +180,17 @@ class _ImportPlaylistSheetState extends State<ImportPlaylistSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.login, size: 48, color: theme.colorScheme.outline),
-            const SizedBox(height: 12),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.login, size: 32,
+                  color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+            ),
+            const SizedBox(height: 14),
             Text(
               '需要先登录$_platformTitle才能导入歌单',
               style: theme.textTheme.bodyLarge?.copyWith(

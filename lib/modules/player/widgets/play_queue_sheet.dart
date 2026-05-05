@@ -21,35 +21,43 @@ class PlayQueueSheet extends GetView<PlayerController> {
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Handle bar
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 8),
+            padding: const EdgeInsets.only(top: 10, bottom: 6),
             child: Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 8),
             child: Row(
               children: [
                 Obx(() => Text(
-                      '播放队列 (${controller.queue.length})',
+                      '播放队列',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.2,
                           ),
                     )),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6),
+                Obx(() => Text(
+                      '${controller.queue.length}',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                    )),
+                const SizedBox(width: 4),
                 Obx(() => IconButton(
                       icon: Icon(
                         _playModeIcon(controller.playMode.value),
@@ -60,6 +68,7 @@ class PlayQueueSheet extends GetView<PlayerController> {
                       ),
                       onPressed: controller.togglePlayMode,
                       tooltip: _playModeLabel(controller.playMode.value),
+                      visualDensity: VisualDensity.compact,
                     )),
                 const Spacer(),
                 TextButton(
@@ -67,12 +76,18 @@ class PlayQueueSheet extends GetView<PlayerController> {
                     controller.clearQueue();
                     Get.back();
                   },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(context).colorScheme.outline,
+                  ),
                   child: const Text('清空'),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(
+            height: 0.5,
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
           // Queue list
           Flexible(
             child: Obx(() {
@@ -84,22 +99,41 @@ class PlayQueueSheet extends GetView<PlayerController> {
               }
               return ReorderableListView.builder(
                 shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 4),
                 itemCount: controller.queue.length,
                 onReorder: controller.reorderQueue,
+                proxyDecorator: (child, index, animation) {
+                  return Material(
+                    elevation: 4,
+                    shadowColor: Colors.black26,
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.transparent,
+                    child: child,
+                  );
+                },
                 itemBuilder: (context, index) {
                   final item = controller.queue[index];
                   final isCurrent = index == controller.currentIndex.value;
                   return ListTile(
                     key: ValueKey(item.video.uniqueId),
-                    leading: isCurrent
-                        ? Icon(
-                            Icons.music_note,
-                            color: Theme.of(context).colorScheme.primary,
-                          )
-                        : Text(
-                            '${index + 1}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
+                    contentPadding: const EdgeInsets.only(left: 16, right: 4),
+                    leading: SizedBox(
+                      width: 28,
+                      child: Center(
+                        child: isCurrent
+                            ? Icon(
+                                Icons.equalizer_rounded,
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 22,
+                              )
+                            : Text(
+                                '${index + 1}',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                ),
+                              ),
+                      ),
+                    ),
                     title: Text(
                       item.video.title,
                       maxLines: 1,
@@ -107,7 +141,7 @@ class PlayQueueSheet extends GetView<PlayerController> {
                       style: isCurrent
                           ? TextStyle(
                               color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             )
                           : null,
                     ),
@@ -115,19 +149,35 @@ class PlayQueueSheet extends GetView<PlayerController> {
                       item.video.author,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.outline,
+                        fontSize: 12,
+                      ),
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (!isCurrent)
                           IconButton(
-                            icon: const Icon(Icons.close, size: 18),
+                            icon: Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6),
+                            ),
                             onPressed: () =>
                                 controller.removeFromQueue(index),
+                            visualDensity: VisualDensity.compact,
                           ),
                         ReorderableDragStartListener(
                           index: index,
-                          child: const Icon(Icons.drag_handle),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.drag_handle_rounded,
+                              size: 20,
+                              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+                            ),
+                          ),
                         ),
                       ],
                     ),

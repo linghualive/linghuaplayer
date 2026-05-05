@@ -59,11 +59,17 @@ class SearchPage extends GetView<app.SearchController> {
             onSubmitted: controller.search,
             elevation: WidgetStateProperty.all(0),
             backgroundColor: WidgetStateProperty.all(
-              Theme.of(context).colorScheme.surfaceContainerHighest,
+              Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+            ),
+            side: WidgetStateProperty.all(
+              BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
             ),
             shape: WidgetStateProperty.all(
               RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(23),
+                borderRadius: BorderRadius.circular(14),
               ),
             ),
             padding: WidgetStateProperty.all(
@@ -94,28 +100,28 @@ class SearchPage extends GetView<app.SearchController> {
 
   Widget _buildSourceChips() {
     return Obx(() => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-            children: [
-              ChoiceChip(
-                label: const Text('GD音乐台'),
-                selected:
-                    controller.searchSource.value == 'gdstudio',
-                onSelected: (_) =>
-                    controller.switchSource(MusicSource.gdstudio),
-              ),
-              const SizedBox(width: 8),
-              ChoiceChip(
-                label: const Text('B站'),
-                selected:
-                    controller.searchSource.value == 'bilibili',
-                onSelected: (_) =>
-                    controller.switchSource(MusicSource.bilibili),
-              ),
-            ],
-          ),
+              children: [
+                ChoiceChip(
+                  label: const Text('GD音乐台'),
+                  selected: controller.searchSource.value == 'gdstudio',
+                  onSelected: (_) =>
+                      controller.switchSource(MusicSource.gdstudio),
+                  visualDensity: VisualDensity.compact,
+                ),
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: const Text('B站'),
+                  selected: controller.searchSource.value == 'bilibili',
+                  onSelected: (_) =>
+                      controller.switchSource(MusicSource.bilibili),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
           ),
         ));
   }
@@ -165,7 +171,7 @@ class SearchPage extends GetView<app.SearchController> {
 
   Widget _buildBatchActions() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Row(
         children: [
           Obx(() {
@@ -173,8 +179,9 @@ class SearchPage extends GetView<app.SearchController> {
                 .whereType<SearchVideoModel>()
                 .length;
             return ActionChip(
-              avatar: const Icon(Icons.playlist_add, size: 18),
+              avatar: const Icon(Icons.playlist_add_rounded, size: 18),
               label: Text('收藏已加载的 $count 首到歌单'),
+              visualDensity: VisualDensity.compact,
               onPressed: () {
                 final tracks = controller.allResults
                     .whereType<SearchVideoModel>()
@@ -219,7 +226,7 @@ class SearchPage extends GetView<app.SearchController> {
     final theme = Theme.of(context);
     return ListTile(
       leading: ClipRRect(
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(8),
         child: song.pic.isNotEmpty
             ? CachedNetworkImage(
                 imageUrl: song.pic,
@@ -229,24 +236,32 @@ class SearchPage extends GetView<app.SearchController> {
                 errorWidget: (_, __, ___) => Container(
                   width: 48,
                   height: 48,
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: Icon(Icons.music_note, size: 20, color: theme.colorScheme.outline),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.music_note_rounded, size: 20,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.5)),
                 ),
               )
             : Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(4),
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(Icons.music_note, size: 20, color: theme.colorScheme.outline),
+                child: Icon(Icons.music_note_rounded, size: 20,
+                    color: theme.colorScheme.outline.withValues(alpha: 0.5)),
               ),
       ),
       title: Text(
         song.title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
       ),
       subtitle: Text(
         song.author +
@@ -255,7 +270,7 @@ class SearchPage extends GetView<app.SearchController> {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.outline,
+          color: theme.colorScheme.outline.withValues(alpha: 0.8),
         ),
       ),
       trailing: VideoActionColumn(video: song),
@@ -324,12 +339,25 @@ class _BatchFavPanelState extends State<_BatchFavPanel> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               children: [
                 Text(
                   '收藏全部 (${widget.tracks.length} 首)',
-                  style: theme.textTheme.titleMedium,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const Spacer(),
                 TextButton.icon(

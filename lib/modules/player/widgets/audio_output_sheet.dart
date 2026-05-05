@@ -22,27 +22,25 @@ class AudioOutputSheet extends GetView<PlayerController> {
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle bar
           Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 8),
+            padding: const EdgeInsets.only(top: 10, bottom: 6),
             child: Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
                 color: Theme.of(context)
                     .colorScheme
-                    .outline
-                    .withValues(alpha: 0.3),
+                    .outlineVariant
+                    .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          // Header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -50,7 +48,7 @@ class AudioOutputSheet extends GetView<PlayerController> {
                 Text(
                   '音频输出',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                 ),
                 const Spacer(),
@@ -62,7 +60,10 @@ class AudioOutputSheet extends GetView<PlayerController> {
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(
+            height: 0.5,
+            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
+          ),
           // Device list
           Flexible(
             child: Obx(() {

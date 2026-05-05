@@ -38,18 +38,20 @@ class PlayerPage extends GetView<PlayerController> {
       ),
       body: Obx(() {
         final dynamicColor = controller.coverColor.value;
-        final topColor = dynamicColor?.withValues(alpha: 0.35) ??
-            Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3);
+        final topColor = dynamicColor?.withValues(alpha: 0.3) ??
+            Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.25);
+        final midColor = Color.lerp(topColor, Theme.of(context).colorScheme.surface, 0.6)!;
         final bottomColor = Theme.of(context).colorScheme.surface;
 
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 800),
+          duration: const Duration(milliseconds: 900),
           curve: Curves.easeInOut,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [topColor, bottomColor],
+              colors: [topColor, midColor, bottomColor],
+              stops: const [0.0, 0.45, 1.0],
             ),
           ),
           child: SafeArea(

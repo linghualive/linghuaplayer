@@ -16,7 +16,9 @@ class SmsLoginTab extends GetView<LoginController> {
           const SizedBox(height: 32),
           Text(
             '短信登录',
-            style: Theme.of(context).textTheme.headlineSmall,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 32),
           TextField(

@@ -14,8 +14,11 @@ class SearchSuggestionList extends GetView<app.SearchController> {
         itemBuilder: (context, index) {
           final item = controller.suggestions[index];
           return ListTile(
-            leading: const Icon(Icons.search),
+            leading: Icon(Icons.search,
+                size: 20,
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.6)),
             title: Text(item.value),
+            dense: true,
             onTap: () => controller.onSuggestionTap(item.value),
           );
         },

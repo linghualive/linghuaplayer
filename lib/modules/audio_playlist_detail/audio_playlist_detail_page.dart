@@ -80,7 +80,7 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                         index: index,
                         child: ListTile(
                         leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(8),
                           child: CachedNetworkImage(
                             imageUrl: song.cover,
                             width: 48,
@@ -89,15 +89,14 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                             placeholder: (_, __) => Container(
                               width: 48,
                               height: 48,
-                              color:
-                                  theme.colorScheme.surfaceContainerHighest,
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                             ),
                             errorWidget: (_, __, ___) => Container(
                               width: 48,
                               height: 48,
-                              color:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              child: const Icon(Icons.music_note, size: 20),
+                              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                              child: Icon(Icons.music_note_rounded, size: 20,
+                                  color: theme.colorScheme.outline.withValues(alpha: 0.4)),
                             ),
                           ),
                         ),
@@ -105,19 +104,26 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                           song.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         subtitle: Text(
                           song.author,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: theme.colorScheme.outline),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.playlist_add, size: 20),
+                              icon: Icon(Icons.playlist_add_rounded, size: 20,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
                               visualDensity: VisualDensity.compact,
+                              splashRadius: 18,
                               onPressed: () {
                                 final playerCtrl =
                                     Get.find<PlayerController>();
@@ -126,17 +132,19 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.favorite_border,
-                                  size: 20),
+                              icon: Icon(Icons.favorite_border_rounded,
+                                  size: 20,
+                                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7)),
                               visualDensity: VisualDensity.compact,
+                              splashRadius: 18,
                               tooltip: '收藏到歌单',
                               onPressed: () => FavPanel.show(
                                   context, song.toSearchVideoModel()),
                             ),
                             Text(
                               DurationFormatter.format(song.duration),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.outline,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.outline.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -163,23 +171,36 @@ class AudioPlaylistDetailPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: CachedNetworkImage(
-              imageUrl: detail.cover,
-              width: 120,
-              height: 120,
-              fit: BoxFit.cover,
-              placeholder: (_, __) => Container(
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: detail.cover,
                 width: 120,
                 height: 120,
-                color: theme.colorScheme.surfaceContainerHighest,
-              ),
-              errorWidget: (_, __, ___) => Container(
-                width: 120,
-                height: 120,
-                color: theme.colorScheme.surfaceContainerHighest,
-                child: const Icon(Icons.queue_music, size: 40),
+                fit: BoxFit.cover,
+                placeholder: (_, __) => Container(
+                  width: 120,
+                  height: 120,
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  width: 120,
+                  height: 120,
+                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  child: Icon(Icons.queue_music_rounded, size: 36,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                ),
               ),
             ),
           ),
@@ -191,7 +212,8 @@ class AudioPlaylistDetailPage extends StatelessWidget {
                 Text(
                   detail.title,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,

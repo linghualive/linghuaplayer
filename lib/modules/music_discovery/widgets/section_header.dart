@@ -21,7 +21,8 @@ class SectionHeader extends StatelessWidget {
           Text(
             title,
             style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
           if (onViewAll != null)

@@ -21,24 +21,28 @@ class MusicDiscoveryPage extends StatelessWidget {
         title: GestureDetector(
           onTap: () => Get.toNamed(AppRoutes.search),
           child: Container(
-            height: 38,
+            height: 40,
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(19),
+              color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             child: Row(
               children: [
                 Icon(
                   Icons.search,
                   size: 20,
-                  color: theme.colorScheme.outline,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   '搜索音乐',
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.outline,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -74,23 +78,30 @@ class MusicDiscoveryPage extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.library_music_outlined,
-                            size: 56,
-                            color:
-                                theme.colorScheme.outline.withValues(alpha: 0.3)),
-                        const SizedBox(height: 12),
+                        Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.library_music_outlined,
+                              size: 32,
+                              color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                        ),
+                        const SizedBox(height: 14),
                         Text(
                           '暂无推荐内容',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.outline,
+                            color: theme.colorScheme.outline.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '下拉刷新试试',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color:
-                                theme.colorScheme.outline.withValues(alpha: 0.6),
+                            color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                            letterSpacing: 0.2,
                           ),
                         ),
                       ],
@@ -107,8 +118,8 @@ class MusicDiscoveryPage extends StatelessWidget {
 
   Widget _buildSkeleton(ThemeData theme) {
     return Shimmer.fromColors(
-      baseColor: theme.colorScheme.surfaceContainerHighest,
-      highlightColor: theme.colorScheme.surface,
+      baseColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      highlightColor: theme.colorScheme.surfaceContainerHigh,
       child: ListView(
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
@@ -262,9 +273,14 @@ class _BannerCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.12),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: theme.shadowColor.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: theme.shadowColor.withValues(alpha: 0.06),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
             ),
           ],
         ),
@@ -278,7 +294,6 @@ class _BannerCard extends StatelessWidget {
               height: 180,
               fit: BoxFit.cover,
             ),
-            // Gradient overlay
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -286,13 +301,13 @@ class _BannerCard extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withValues(alpha: 0.65),
+                    Colors.black.withValues(alpha: 0.15),
+                    Colors.black.withValues(alpha: 0.7),
                   ],
-                  stops: const [0.35, 1.0],
+                  stops: const [0.25, 0.55, 1.0],
                 ),
               ),
             ),
-            // Play count badge
             if (playlist.playCount > 0)
               Positioned(
                 top: 10,
@@ -301,32 +316,32 @@ class _BannerCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.5),
+                    color: Colors.black.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.play_arrow_rounded,
-                          size: 14, color: Colors.white),
+                          size: 14, color: Colors.white70),
                       const SizedBox(width: 2),
                       Text(
                         _formatPlayCount(playlist.playCount),
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: Colors.white70,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            // Title at bottom
             Positioned(
-              left: 14,
-              right: 14,
-              bottom: 14,
+              left: 16,
+              right: 16,
+              bottom: 16,
               child: Text(
                 playlist.name,
                 maxLines: 2,
@@ -334,9 +349,10 @@ class _BannerCard extends StatelessWidget {
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  letterSpacing: 0.2,
                   shadows: [
                     Shadow(
-                      blurRadius: 4,
+                      blurRadius: 6,
                       color: Colors.black.withValues(alpha: 0.5),
                     ),
                   ],
@@ -381,9 +397,14 @@ class _GridPlaylistCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.shadowColor.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: theme.shadowColor.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                  BoxShadow(
+                    color: theme.shadowColor.withValues(alpha: 0.04),
+                    blurRadius: 3,
+                    offset: const Offset(0, 1),
                   ),
                 ],
               ),
@@ -405,19 +426,19 @@ class _GridPlaylistCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.5),
+                          color: Colors.black.withValues(alpha: 0.45),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.play_arrow_rounded,
-                                size: 12, color: Colors.white),
+                                size: 12, color: Colors.white70),
                             const SizedBox(width: 1),
                             Text(
                               _formatPlayCount(playlist.playCount),
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: Colors.white70,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -438,6 +459,7 @@ class _GridPlaylistCard extends StatelessWidget {
             style: theme.textTheme.bodySmall?.copyWith(
               height: 1.3,
               fontWeight: FontWeight.w500,
+              letterSpacing: 0.1,
             ),
           ),
         ],

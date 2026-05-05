@@ -35,12 +35,15 @@ class CachedImage extends StatelessWidget {
       height: height,
       fit: fit,
       placeholder: (context, url) => Shimmer.fromColors(
-        baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        highlightColor: Theme.of(context).colorScheme.surface,
+        baseColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        highlightColor: Theme.of(context).colorScheme.surfaceContainerHigh,
         child: Container(
           width: width,
           height: height,
-          color: Colors.white,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: borderRadius,
+          ),
         ),
       ),
       errorWidget: (context, url, error) => _placeholder(context),
@@ -53,13 +56,18 @@ class CachedImage extends StatelessWidget {
   }
 
   Widget _placeholder(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       width: width,
       height: height,
-      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: borderRadius,
+      ),
       child: Icon(
-        Icons.image_outlined,
-        color: Theme.of(context).colorScheme.outline,
+        Icons.music_note_rounded,
+        size: 20,
+        color: theme.colorScheme.outline.withValues(alpha: 0.4),
       ),
     );
   }

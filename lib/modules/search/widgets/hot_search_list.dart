@@ -17,7 +17,6 @@ class HotSearchList extends GetView<app.SearchController> {
       return ListView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          // Search history
           if (controller.searchHistory.isNotEmpty) ...[
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -25,7 +24,9 @@ class HotSearchList extends GetView<app.SearchController> {
                 Text(
                   '搜索历史',
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        letterSpacing: 0.3,
                       ),
                 ),
                 TextButton(
@@ -63,11 +64,12 @@ class HotSearchList extends GetView<app.SearchController> {
             const SizedBox(height: 24),
           ],
 
-          // Hot search
           Text(
             '热门搜索',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.3,
                 ),
           ),
           const SizedBox(height: 8),
@@ -84,12 +86,13 @@ class HotSearchList extends GetView<app.SearchController> {
             }).toList(),
           ),
 
-          // 热门歌手
           const SizedBox(height: 24),
           Text(
             '热门歌手',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.3,
                 ),
           ),
           const SizedBox(height: 8),

@@ -10,8 +10,8 @@ class SearchResultSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      highlightColor: Theme.of(context).colorScheme.surface,
+      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      highlightColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: ListView.builder(
         physics: const NeverScrollableScrollPhysics(),
         itemCount: itemCount,
@@ -30,13 +30,12 @@ class _SongSkeletonItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
-          // Album art placeholder
           Container(
             width: 48,
             height: 48,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
           const SizedBox(width: 12),
@@ -88,8 +87,8 @@ class HotSearchSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-      highlightColor: Theme.of(context).colorScheme.surface,
+      baseColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      highlightColor: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Column(

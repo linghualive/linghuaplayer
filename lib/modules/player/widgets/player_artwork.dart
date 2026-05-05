@@ -414,10 +414,15 @@ class _VinylDisc extends StatelessWidget {
             color: const Color(0xFF1A1A1A),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 24,
+                color: Colors.black.withValues(alpha: 0.35),
+                blurRadius: 28,
                 spreadRadius: 2,
-                offset: const Offset(0, 8),
+                offset: const Offset(0, 10),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.15),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),

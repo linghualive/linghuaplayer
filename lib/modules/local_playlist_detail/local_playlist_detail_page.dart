@@ -94,13 +94,13 @@ class LocalPlaylistDetailPage extends StatelessWidget {
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 20),
                         color: theme.colorScheme.error,
-                        child: Icon(Icons.delete,
+                        child: Icon(Icons.delete_rounded,
                             color: theme.colorScheme.onError),
                       ),
                       onDismissed: (_) => controller.removeTrack(index),
                       child: ListTile(
                         leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(8),
                           child: song.pic.isNotEmpty
                               ? CachedNetworkImage(
                                   imageUrl: song.pic,
@@ -110,43 +110,47 @@ class LocalPlaylistDetailPage extends StatelessWidget {
                                   placeholder: (_, __) => Container(
                                     width: 48,
                                     height: 48,
-                                    color: theme
-                                        .colorScheme.surfaceContainerHighest,
+                                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                                   ),
                                   errorWidget: (_, __, ___) => Container(
                                     width: 48,
                                     height: 48,
-                                    color: theme
-                                        .colorScheme.surfaceContainerHighest,
-                                    child: const Icon(Icons.music_note,
-                                        size: 20),
+                                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                    child: Icon(Icons.music_note_rounded,
+                                        size: 20, color: theme.colorScheme.outline.withValues(alpha: 0.4)),
                                   ),
                                 )
                               : Container(
                                   width: 48,
                                   height: 48,
-                                  color:
-                                      theme.colorScheme.surfaceContainerHighest,
-                                  child:
-                                      const Icon(Icons.music_note, size: 20),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.music_note_rounded,
+                                      size: 20, color: theme.colorScheme.outline.withValues(alpha: 0.4)),
                                 ),
                         ),
                         title: Text(
                           song.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         subtitle: Text(
                           song.author,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(color: theme.colorScheme.outline),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+                          ),
                         ),
                         trailing: Text(
                           song.duration,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.outline,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.outline.withValues(alpha: 0.7),
                           ),
                         ),
                         onTap: () => controller.playSong(song),
@@ -174,32 +178,55 @@ class LocalPlaylistDetailPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: p.coverUrl.isNotEmpty
-                ? CachedNetworkImage(
-                    imageUrl: p.coverUrl,
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.shadowColor.withValues(alpha: 0.1),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: p.coverUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: p.coverUrl,
                       width: 120,
                       height: 120,
-                      color: theme.colorScheme.surfaceContainerHighest,
-                    ),
-                    errorWidget: (_, __, ___) => Container(
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(
+                        width: 120,
+                        height: 120,
+                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      ),
+                      errorWidget: (_, __, ___) => Container(
+                        width: 120,
+                        height: 120,
+                        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                        child: Icon(Icons.queue_music_rounded, size: 36,
+                            color: theme.colorScheme.outline.withValues(alpha: 0.4)),
+                      ),
+                    )
+                  : Container(
                       width: 120,
                       height: 120,
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      child: const Icon(Icons.queue_music, size: 40),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            theme.colorScheme.primaryContainer.withValues(alpha: 0.6),
+                            theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                          ],
+                        ),
+                      ),
+                      child: Icon(Icons.queue_music_rounded, size: 36,
+                          color: theme.colorScheme.primary.withValues(alpha: 0.6)),
                     ),
-                  )
-                : Container(
-                    width: 120,
-                    height: 120,
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    child: const Icon(Icons.queue_music, size: 40),
-                  ),
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -209,19 +236,19 @@ class LocalPlaylistDetailPage extends StatelessWidget {
                 Text(
                   p.name,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 8),
-                // Source badge
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _sourceColor(p.sourceTag, theme).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(4),
+                    color: _sourceColor(p.sourceTag, theme).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     _sourceLabel(p.sourceTag),
