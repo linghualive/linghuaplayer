@@ -34,6 +34,7 @@ class CachedImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      httpHeaders: const {'User-Agent': 'Mozilla/5.0'},
       placeholder: (context, url) => Shimmer.fromColors(
         baseColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
         highlightColor: Theme.of(context).colorScheme.surfaceContainerHigh,

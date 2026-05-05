@@ -19,18 +19,47 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
   bool _isUserScrolling = false;
   int _centerLineIndex = 0;
   Timer? _resumeTimer;
+  Worker? _autoScrollWorker;
 
   static const double _itemExtent = 56.0;
 
   @override
+  void initState() {
+    super.initState();
+    _autoScrollWorker = ever(
+      _controller.currentLyricsIndex,
+      _autoScrollToIndex,
+    );
+  }
+
+  @override
   void dispose() {
+    _autoScrollWorker?.dispose();
     _scrollController.dispose();
     _resumeTimer?.cancel();
     super.dispose();
   }
 
+  void _autoScrollToIndex(int index) {
+    if (_isUserScrolling || index < 0) return;
+    if (!_scrollController.hasClients) return;
+    final targetOffset = index * _itemExtent;
+    _scrollController.animateTo(
+      targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   void _onScrollStart(ScrollStartNotification notification) {
     if (notification.dragDetails != null) {
+      if (_scrollController.hasClients) {
+        final lines = _controller.lyrics.value?.lines;
+        if (lines != null && lines.isNotEmpty) {
+          final index = (_scrollController.offset / _itemExtent).round();
+          _centerLineIndex = index.clamp(0, lines.length - 1);
+        }
+      }
       setState(() => _isUserScrolling = true);
       _resumeTimer?.cancel();
     }
@@ -39,8 +68,6 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
   void _onScrollUpdate(ScrollUpdateNotification notification) {
     if (!_isUserScrolling) return;
     final offset = _scrollController.offset;
-    // With centered padding, item i is at offset i * _itemExtent
-    // Center of viewport maps to index = offset / _itemExtent (rounded)
     final index = (offset / _itemExtent).round();
     final lines = _controller.lyrics.value?.lines;
     if (lines == null) return;
@@ -55,17 +82,25 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
     _resumeTimer?.cancel();
     _resumeTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        setState(() => _isUserScrolling = false);
+        _isUserScrolling = false;
+        _autoScrollToIndex(_controller.currentLyricsIndex.value);
+        setState(() {});
       }
     });
   }
 
   void _seekToCenterLine() {
     final lines = _controller.lyrics.value?.lines;
-    if (lines == null || _centerLineIndex < 0 || _centerLineIndex >= lines.length) return;
+    if (lines == null ||
+        _centerLineIndex < 0 ||
+        _centerLineIndex >= lines.length) {
+      return;
+    }
     _controller.seekTo(lines[_centerLineIndex].timestamp);
     _resumeTimer?.cancel();
-    setState(() => _isUserScrolling = false);
+    _isUserScrolling = false;
+    _controller.currentLyricsIndex.value = _centerLineIndex;
+    setState(() {});
   }
 
   String _formatDuration(Duration d) {
@@ -82,140 +117,206 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
       final lyrics = _controller.lyrics.value;
       final isLoading = _controller.lyricsLoading.value;
 
-      // Still loading
       if (isLoading && lyrics == null) {
-        return const Center(
-          child: Text(
-            '歌词加载中...',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '歌词加载中',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ),
+            ],
           ),
         );
       }
 
-      // Finished loading, no lyrics found
       if (lyrics == null) {
-        return const Center(
-          child: Text(
-            '暂无歌词',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.music_note_outlined,
+                size: 32,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '暂无歌词',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+                ),
+              ),
+            ],
           ),
         );
       }
 
-      // Plain lyrics only (no sync)
       if (!lyrics.hasSyncedLyrics) {
         if (lyrics.plainLyrics != null) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            child: Text(
-              lyrics.plainLyrics!,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                height: 2.0,
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          return ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.white,
+                Colors.white,
+                Colors.transparent,
+              ],
+              stops: const [0.0, 0.06, 0.94, 1.0],
+            ).createShader(bounds),
+            blendMode: BlendMode.dstIn,
+            child: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: Text(
+                lyrics.plainLyrics!,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  height: 2.0,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                ),
               ),
             ),
           );
         }
-        return const Center(
-          child: Text(
-            '暂无歌词',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+        return Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.music_note_outlined,
+                size: 32,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.15),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '暂无歌词',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.35),
+                ),
+              ),
+            ],
           ),
         );
       }
 
-      // Synced lyrics
       final currentIndex = _controller.currentLyricsIndex.value;
       final lines = lyrics.lines;
 
       return LayoutBuilder(
         builder: (context, constraints) {
           final viewportHeight = constraints.maxHeight;
-          // Padding so that any line (including first/last) can be centered
           final verticalPadding = viewportHeight / 2 - _itemExtent / 2;
 
-          // Auto-scroll to current line (skip if user is scrolling)
-          if (!_isUserScrolling) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (currentIndex >= 0 && _scrollController.hasClients) {
-                final targetOffset = currentIndex * _itemExtent;
-                _scrollController.animateTo(
-                  targetOffset.clamp(
-                    0.0,
-                    _scrollController.position.maxScrollExtent,
-                  ),
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOutCubic,
-                );
-              }
-            });
-          }
+          final listView = ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.transparent,
+                Colors.white,
+                Colors.white,
+                Colors.transparent,
+              ],
+              stops: const [0.0, 0.12, 0.88, 1.0],
+            ).createShader(bounds),
+            blendMode: BlendMode.dstIn,
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is ScrollStartNotification) {
+                  _onScrollStart(notification);
+                } else if (notification is ScrollUpdateNotification) {
+                  _onScrollUpdate(notification);
+                } else if (notification is ScrollEndNotification) {
+                  _onScrollEnd(notification);
+                }
+                return false;
+              },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: EdgeInsets.symmetric(
+                  horizontal: 28,
+                  vertical: verticalPadding,
+                ),
+                itemCount: lines.length,
+                itemExtent: _itemExtent,
+                itemBuilder: (context, index) {
+                  final line = lines[index];
+                  final isCurrent = index == currentIndex;
+                  final isPast = index < currentIndex;
+                  final distance = (index - currentIndex).abs();
 
-          final listView = NotificationListener<ScrollNotification>(
-            onNotification: (notification) {
-              if (notification is ScrollStartNotification) {
-                _onScrollStart(notification);
-              } else if (notification is ScrollUpdateNotification) {
-                _onScrollUpdate(notification);
-              } else if (notification is ScrollEndNotification) {
-                _onScrollEnd(notification);
-              }
-              return false;
-            },
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: verticalPadding,
-              ),
-              itemCount: lines.length,
-              itemExtent: _itemExtent,
-              itemBuilder: (context, index) {
-                final line = lines[index];
-                final isCurrent = index == currentIndex;
-                final isPast = index < currentIndex;
+                  final opacity = isCurrent
+                      ? 1.0
+                      : isPast
+                          ? (0.3 - distance * 0.03).clamp(0.12, 0.3)
+                          : (0.65 - distance * 0.06).clamp(0.15, 0.65);
 
-                return GestureDetector(
-                  onTap: () => _controller.seekTo(line.timestamp),
-                  child: Container(
-                    alignment: Alignment.center,
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
-                      style: TextStyle(
-                        fontSize: isCurrent ? 20 : 14,
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent
-                            ? theme.colorScheme.primary
-                            : isPast
-                                ? theme.colorScheme.onSurface.withValues(alpha: 0.35)
-                                : theme.colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      child: Text(
-                        line.text,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                  return GestureDetector(
+                    onTap: () => _controller.seekTo(line.timestamp),
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 350),
+                        curve: Curves.easeOutCubic,
+                        style: TextStyle(
+                          fontSize: isCurrent ? 19 : 14,
+                          fontWeight: isCurrent
+                              ? FontWeight.w700
+                              : FontWeight.normal,
+                          color: isCurrent
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface
+                                  .withValues(alpha: opacity),
+                          shadows: isCurrent
+                              ? [
+                                  Shadow(
+                                    color: theme.colorScheme.primary
+                                        .withValues(alpha: 0.3),
+                                    blurRadius: 12,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Text(
+                          line.text,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           );
 
-          // When user is scrolling, overlay a time indicator at the center
           if (!_isUserScrolling) return listView;
 
-          final centerTimestamp = (_centerLineIndex >= 0 && _centerLineIndex < lines.length)
-              ? lines[_centerLineIndex].timestamp
-              : Duration.zero;
+          final centerTimestamp =
+              (_centerLineIndex >= 0 && _centerLineIndex < lines.length)
+                  ? lines[_centerLineIndex].timestamp
+                  : Duration.zero;
 
           return Stack(
             children: [
               listView,
-              // Rectangular highlight indicator at center
               Center(
                 child: IgnorePointer(
                   ignoring: false,
@@ -226,24 +327,27 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
                       height: _itemExtent,
                       margin: const EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                          width: 1,
+                          color: theme.colorScheme.primary
+                              .withValues(alpha: 0.2),
+                          width: 0.5,
                         ),
                       ),
                       child: Row(
                         children: [
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
+                              horizontal: 7,
+                              vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(4),
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(5),
                             ),
                             child: Text(
                               _formatDuration(centerTimestamp),
@@ -251,16 +355,28 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
                                 fontSize: 11,
                                 color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.w600,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures()
+                                ],
                               ),
                             ),
                           ),
                           const Spacer(),
-                          Icon(
-                            Icons.play_arrow_rounded,
-                            size: 22,
-                            color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.play_arrow_rounded,
+                              size: 18,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 10),
                         ],
                       ),
                     ),

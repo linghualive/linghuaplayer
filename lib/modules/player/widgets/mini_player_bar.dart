@@ -36,12 +36,13 @@ class MiniPlayerBar extends GetView<PlayerController> {
 
   Widget _buildBar(BuildContext context) {
     return Obx(() {
-
+      final theme = Theme.of(context);
       final video = controller.currentVideo.value!;
       final progress = controller.duration.value.inMilliseconds > 0
           ? controller.position.value.inMilliseconds /
               controller.duration.value.inMilliseconds
           : 0.0;
+      final coverColor = controller.coverColor.value;
 
       return GestureDetector(
         key: const ValueKey('mini_player'),
@@ -49,16 +50,17 @@ class MiniPlayerBar extends GetView<PlayerController> {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHigh,
+            color: theme.colorScheme.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.15),
+              color: theme.colorScheme.outlineVariant
+                  .withValues(alpha: 0.12),
               width: 0.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 16,
+                color: (coverColor ?? Colors.black).withValues(alpha: 0.08),
+                blurRadius: 20,
                 offset: const Offset(0, 4),
                 spreadRadius: -2,
               ),
@@ -73,17 +75,30 @@ class MiniPlayerBar extends GetView<PlayerController> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.fromLTRB(10, 8, 4, 6),
+                padding: const EdgeInsets.fromLTRB(10, 8, 4, 6),
                 child: Row(
                   children: [
-                    // Cover art
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedImage(
-                        imageUrl: video.pic,
-                        width: 44,
-                        height: 44,
+                    // Cover art with subtle glow
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: coverColor != null
+                            ? [
+                                BoxShadow(
+                                  color: coverColor.withValues(alpha: 0.2),
+                                  blurRadius: 10,
+                                  spreadRadius: -2,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(9),
+                        child: CachedImage(
+                          imageUrl: video.pic,
+                          width: 44,
+                          height: 44,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -97,23 +112,20 @@ class MiniPlayerBar extends GetView<PlayerController> {
                             video.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: theme.textTheme.bodyMedium
                                 ?.copyWith(fontWeight: FontWeight.w500),
                           ),
-                          const SizedBox(height: 1),
+                          const SizedBox(height: 2),
                           Text(
                             video.author,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .outline,
-                                      fontSize: 12,
-                                    ),
+                                theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -131,11 +143,15 @@ class MiniPlayerBar extends GetView<PlayerController> {
                       )
                     else
                       IconButton(
-                        icon: Icon(
-                          controller.isPlaying.value
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                          size: 28,
+                        icon: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            controller.isPlaying.value
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            key: ValueKey(controller.isPlaying.value),
+                            size: 26,
+                          ),
                         ),
                         onPressed: () {
                           HapticFeedback.lightImpact();
@@ -144,7 +160,7 @@ class MiniPlayerBar extends GetView<PlayerController> {
                         visualDensity: VisualDensity.compact,
                       ),
                     IconButton(
-                      icon: const Icon(Icons.skip_next_rounded, size: 24),
+                      icon: const Icon(Icons.skip_next_rounded, size: 22),
                       onPressed: controller.isLoading.value
                           ? null
                           : () {
@@ -154,9 +170,11 @@ class MiniPlayerBar extends GetView<PlayerController> {
                       visualDensity: VisualDensity.compact,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.queue_music, size: 22),
+                      icon: const Icon(Icons.queue_music_rounded, size: 20),
                       onPressed: PlayQueueSheet.show,
                       visualDensity: VisualDensity.compact,
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.6),
                     ),
                   ],
                 ),
@@ -168,13 +186,11 @@ class MiniPlayerBar extends GetView<PlayerController> {
                   borderRadius: BorderRadius.circular(1.5),
                   child: LinearProgressIndicator(
                     value: progress.clamp(0.0, 1.0),
-                    minHeight: 2.5,
-                    backgroundColor: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.06),
+                    minHeight: 2,
+                    backgroundColor:
+                        theme.colorScheme.onSurface.withValues(alpha: 0.05),
                     valueColor: AlwaysStoppedAnimation(
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.85),
+                      theme.colorScheme.primary.withValues(alpha: 0.8),
                     ),
                   ),
                 ),

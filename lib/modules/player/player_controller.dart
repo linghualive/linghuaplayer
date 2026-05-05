@@ -162,6 +162,14 @@ class PlayerController extends GetxController {
     // Extract dominant color from cover art
     ever(currentVideo, _extractCoverColor);
 
+    // Safety net: auto-resolve cover when video has empty pic
+    // (covers cross-source fallback and any missed explicit calls)
+    ever<SearchVideoModel?>(currentVideo, (video) {
+      if (video != null && video.pic.isEmpty) {
+        _resolveCoverIfNeeded(video, _playGeneration);
+      }
+    });
+
     // MediaSession integration (mobile only)
     _initMediaSession();
   }
@@ -185,6 +193,8 @@ class PlayerController extends GetxController {
           headers: queue[qi].headers,
         );
       }
+    }).catchError((e) {
+      log('Cover resolve failed for "${video.title}": $e');
     });
   }
 

@@ -42,8 +42,10 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
         return;
       }
       if (isSameTrack) return;
-      if (!_isUserSwiping && !_isProgrammaticAnimation &&
-          mounted && _pageController.hasClients) {
+      if (!_isUserSwiping &&
+          !_isProgrammaticAnimation &&
+          mounted &&
+          _pageController.hasClients) {
         final page = _pageController.page?.round() ?? 1;
         if (page == 1) {
           _isProgrammaticAnimation = true;
@@ -159,15 +161,17 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isPrevious ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_up,
-            size: 32,
-            color: theme.colorScheme.outline.withValues(alpha: 0.4),
+            isPrevious
+                ? Icons.keyboard_arrow_down_rounded
+                : Icons.keyboard_arrow_up_rounded,
+            size: 28,
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 8),
           Text(
             isPrevious ? '没有上一首了' : '没有更多了',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.outline.withValues(alpha: 0.5),
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.outline.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -201,21 +205,30 @@ class _SongPreviewCard extends StatelessWidget {
           children: [
             if (isPrevious) ...[
               Icon(
-                Icons.keyboard_arrow_down,
-                size: 28,
-                color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                Icons.keyboard_arrow_down_rounded,
+                size: 24,
+                color: theme.colorScheme.outline.withValues(alpha: 0.35),
               ),
-              const SizedBox(height: 12),
+              Text(
+                '上一首',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.35),
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 16),
             ],
             Container(
-              constraints: const BoxConstraints(maxWidth: 240, maxHeight: 240),
+              constraints:
+                  const BoxConstraints(maxWidth: 220, maxHeight: 220),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 28,
+                    offset: const Offset(0, 10),
+                    spreadRadius: -4,
                   ),
                 ],
               ),
@@ -240,22 +253,29 @@ class _SongPreviewCard extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               artist,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.outline,
+                color: theme.colorScheme.outline.withValues(alpha: 0.7),
               ),
             ),
             if (!isPrevious) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              Text(
+                '下一首',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.35),
+                  fontSize: 10,
+                ),
+              ),
               Icon(
-                Icons.keyboard_arrow_up,
-                size: 28,
-                color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                Icons.keyboard_arrow_up_rounded,
+                size: 24,
+                color: theme.colorScheme.outline.withValues(alpha: 0.35),
               ),
             ],
           ],

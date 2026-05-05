@@ -42,16 +42,22 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
 
   void _toggleDrawer() {
     if (_drawerOpen) {
-      _drawerCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+      _drawerCtrl.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic);
     } else {
-      _drawerCtrl.animateTo(1, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+      _drawerCtrl.animateTo(1,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic);
     }
     _drawerOpen = !_drawerOpen;
   }
 
   void _closeDrawer() {
     if (_drawerOpen) {
-      _drawerCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOutCubic);
+      _drawerCtrl.animateTo(0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic);
       _drawerOpen = false;
     }
   }
@@ -94,42 +100,43 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
           onHorizontalDragEnd: _handleDragEnd,
           behavior: HitTestBehavior.translucent,
           child: Stack(
-          children: [
-            Transform.translate(
-              offset: Offset(drawerTx, 0),
-              child: drawerChild,
-            ),
-            Transform.translate(
-              offset: Offset(mainTx, 0),
-              child: GestureDetector(
-                onTap: _drawerOpen ? _closeDrawer : null,
-                child: AbsorbPointer(
-                  absorbing: _drawerOpen && t > 0.5,
-                  child: cachedMain!,
+            children: [
+              Transform.translate(
+                offset: Offset(drawerTx, 0),
+                child: drawerChild,
+              ),
+              Transform.translate(
+                offset: Offset(mainTx, 0),
+                child: GestureDetector(
+                  onTap: _drawerOpen ? _closeDrawer : null,
+                  child: AbsorbPointer(
+                    absorbing: _drawerOpen && t > 0.5,
+                    child: cachedMain!,
+                  ),
                 ),
               ),
-            ),
-            if (t > 0)
-              Positioned(
-                left: mainTx - 10,
-                top: 0,
-                bottom: 0,
-                width: 10,
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.black.withValues(alpha: 0.0),
-                          Colors.black.withValues(alpha: 0.04 * t),
-                        ],
+              if (t > 0)
+                Positioned(
+                  left: mainTx - 16,
+                  top: 0,
+                  bottom: 0,
+                  width: 16,
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.black.withValues(alpha: 0.0),
+                            Colors.black.withValues(alpha: 0.06 * t),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
-        ));
+            ],
+          ),
+        );
       },
     );
   }
@@ -182,13 +189,13 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu),
+          icon: const Icon(Icons.menu_rounded),
           tooltip: '模式',
           onPressed: _toggleDrawer,
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search_rounded),
             tooltip: '搜索音乐',
             onPressed: () => Get.toNamed(AppRoutes.search),
           ),
@@ -238,10 +245,11 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
     return Container(
       width: 260,
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface.withValues(alpha: 0.7),
+        color: theme.colorScheme.surface.withValues(alpha: 0.65),
         border: Border(
           right: BorderSide(
-            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.2),
+            color:
+                theme.colorScheme.outlineVariant.withValues(alpha: 0.12),
           ),
         ),
       ),
@@ -257,7 +265,7 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
         children: [
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search_rounded),
             tooltip: '搜索音乐',
             onPressed: () => Get.toNamed(AppRoutes.search),
           ),
@@ -271,25 +279,23 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
       {required Widget child, required PlayerController playerCtrl}) {
     return Obx(() {
       final dynamicColor = playerCtrl.coverColor.value;
-      final topColor = dynamicColor?.withValues(alpha: 0.6) ??
-          Theme.of(context)
-              .colorScheme
-              .primaryContainer
-              .withValues(alpha: 0.4);
+      final theme = Theme.of(context);
+      final topColor = dynamicColor?.withValues(alpha: 0.55) ??
+          theme.colorScheme.primaryContainer.withValues(alpha: 0.4);
       final midColor =
-          (dynamicColor ?? Theme.of(context).colorScheme.primaryContainer)
-              .withValues(alpha: 0.15);
-      final bottomColor = Theme.of(context).colorScheme.surface;
+          (dynamicColor ?? theme.colorScheme.primaryContainer)
+              .withValues(alpha: 0.12);
+      final bottomColor = theme.colorScheme.surface;
 
       return AnimatedContainer(
-        duration: const Duration(milliseconds: 800),
+        duration: const Duration(milliseconds: 1000),
         curve: Curves.easeInOut,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [topColor, midColor, bottomColor],
-            stops: const [0.0, 0.5, 1.0],
+            stops: const [0.0, 0.45, 1.0],
           ),
         ),
         child: child,
@@ -304,7 +310,7 @@ class _PlayerHomeTabState extends State<PlayerHomeTab>
         final video = playerCtrl.currentVideo.value;
         if (video == null) return const SizedBox.shrink();
         return IconButton(
-          icon: const Icon(Icons.favorite_border),
+          icon: const Icon(Icons.favorite_border_rounded),
           tooltip: '收藏到歌单',
           onPressed: () => FavPanel.show(context, video),
         );

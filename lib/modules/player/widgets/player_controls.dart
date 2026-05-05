@@ -33,7 +33,7 @@ class PlayerControls extends GetView<PlayerController> {
                 textAlign: TextAlign.center,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  letterSpacing: 0.2,
+                  letterSpacing: 0.15,
                 ),
               ),
             ),
@@ -65,7 +65,8 @@ class PlayerControls extends GetView<PlayerController> {
                             duration: const Duration(milliseconds: 400),
                             child: Text(
                               controller.currentVideo.value?.author ?? '',
-                              key: ValueKey(controller.currentVideo.value?.author),
+                              key: ValueKey(
+                                  controller.currentVideo.value?.author),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
@@ -103,20 +104,21 @@ class PlayerControls extends GetView<PlayerController> {
             padding: const EdgeInsets.symmetric(horizontal: 28),
             child: SliderTheme(
               data: SliderThemeData(
-                trackHeight: 3.5,
-                thumbShape:
-                    const RoundSliderThumbShape(
-                      enabledThumbRadius: 7,
-                      elevation: 3,
-                      pressedElevation: 6,
-                    ),
+                trackHeight: 3,
+                trackShape: const RoundedRectSliderTrackShape(),
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 6,
+                  elevation: 2,
+                  pressedElevation: 4,
+                ),
                 overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 18),
+                    const RoundSliderOverlayShape(overlayRadius: 16),
                 activeTrackColor: theme.colorScheme.primary,
                 inactiveTrackColor:
-                    theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                    theme.colorScheme.onSurface.withValues(alpha: 0.06),
                 thumbColor: theme.colorScheme.primary,
-                overlayColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                overlayColor:
+                    theme.colorScheme.primary.withValues(alpha: 0.1),
               ),
               child: Slider(
                 value: controller.position.value.inMilliseconds
@@ -145,15 +147,19 @@ class PlayerControls extends GetView<PlayerController> {
                 Text(
                   _formatDuration(controller.position.value),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.7),
                     fontSize: 11,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 Text(
                   _formatDuration(controller.duration.value),
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.7),
                     fontSize: 11,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
@@ -162,20 +168,18 @@ class PlayerControls extends GetView<PlayerController> {
           const SizedBox(height: 20),
           // Main controls
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
-              mainAxisAlignment: PlatformUtils.isDesktop
-                  ? MainAxisAlignment.spaceBetween
-                  : MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                IconButton(
-                  iconSize: 22,
-                  icon: Icon(
-                    _outputIcon(controller.audioOutput.activeType),
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                // Output
+                _ControlIcon(
+                  icon: _outputIcon(controller.audioOutput.activeType),
+                  size: 21,
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.6),
                   tooltip: '输出',
-                  onPressed: () async {
+                  onTap: () async {
                     await controller.audioOutput.showOutputPicker();
                     if (!controller.audioOutput.usesSystemPicker &&
                         controller.audioOutput.devices.isNotEmpty) {
@@ -183,66 +187,44 @@ class PlayerControls extends GetView<PlayerController> {
                     }
                   },
                 ),
-                if (PlatformUtils.isDesktop)
-                  IconButton(
-                    iconSize: 28,
-                    icon: const Icon(Icons.skip_previous_rounded),
-                    onPressed: () => controller.skipPrevious(),
+                if (PlatformUtils.isDesktop) ...[
+                  const SizedBox(width: 20),
+                  _ControlIcon(
+                    icon: Icons.skip_previous_rounded,
+                    size: 30,
+                    onTap: () => controller.skipPrevious(),
                   ),
-                if (!PlatformUtils.isDesktop) const SizedBox(width: 32),
-                SizedBox(
-                  width: 68,
-                  height: 68,
-                  child: controller.isLoading.value
-                      ? FilledButton(
-                          onPressed: null,
-                          style: FilledButton.styleFrom(
-                            shape: const CircleBorder(),
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: const SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.5,
-                              color: Colors.white,
-                            ),
-                          ),
-                        )
-                      : FilledButton(
-                          onPressed: () {
-                            HapticFeedback.lightImpact();
-                            controller.togglePlay();
-                          },
-                          style: FilledButton.styleFrom(
-                            shape: const CircleBorder(),
-                            padding: EdgeInsets.zero,
-                          ),
-                          child: Icon(
-                            controller.isPlaying.value
-                                ? Icons.pause_rounded
-                                : Icons.play_arrow_rounded,
-                            size: 38,
-                          ),
-                        ),
+                ] else
+                  const SizedBox(width: 28),
+                // Play/Pause button
+                _PlayButton(
+                  isPlaying: controller.isPlaying.value,
+                  isLoading: controller.isLoading.value,
+                  primaryColor: theme.colorScheme.primary,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    controller.togglePlay();
+                  },
                 ),
-                if (PlatformUtils.isDesktop)
-                  IconButton(
-                    iconSize: 28,
-                    icon: const Icon(Icons.skip_next_rounded),
-                    onPressed: () => controller.skipNext(),
+                if (PlatformUtils.isDesktop) ...[
+                  const SizedBox(width: 20),
+                  _ControlIcon(
+                    icon: Icons.skip_next_rounded,
+                    size: 30,
+                    onTap: () => controller.skipNext(),
                   ),
-                if (!PlatformUtils.isDesktop) const SizedBox(width: 32),
-                IconButton(
-                  iconSize: 22,
-                  icon: Icon(
-                    _playModeIcon(controller.playMode.value),
-                    color: controller.playMode.value == PlayMode.sequential
-                        ? theme.colorScheme.onSurfaceVariant
-                        : theme.colorScheme.primary,
-                  ),
+                ] else
+                  const SizedBox(width: 28),
+                // Play mode
+                _ControlIcon(
+                  icon: _playModeIcon(controller.playMode.value),
+                  size: 21,
+                  color: controller.playMode.value == PlayMode.sequential
+                      ? theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.6)
+                      : theme.colorScheme.primary,
                   tooltip: _playModeLabel(controller.playMode.value),
-                  onPressed: () {
+                  onTap: () {
                     HapticFeedback.lightImpact();
                     controller.togglePlayMode();
                   },
@@ -250,18 +232,11 @@ class PlayerControls extends GetView<PlayerController> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           // Queue button
-          TextButton.icon(
-            onPressed: PlayQueueSheet.show,
-            icon: const Icon(Icons.queue_music_rounded, size: 18),
-            label: Text(
-              '播放队列 (${controller.queue.length})',
-              style: theme.textTheme.labelSmall,
-            ),
-            style: TextButton.styleFrom(
-              foregroundColor: theme.colorScheme.onSurfaceVariant,
-            ),
+          _QueueButton(
+            count: controller.queue.length,
+            onTap: PlayQueueSheet.show,
           ),
         ],
       );
@@ -318,7 +293,8 @@ class PlayerControls extends GetView<PlayerController> {
       decoration: BoxDecoration(
         color: isPremium
             ? theme.colorScheme.primaryContainer.withValues(alpha: 0.8)
-            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+            : theme.colorScheme.surfaceContainerHighest
+                .withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: isPremium
@@ -345,5 +321,169 @@ class PlayerControls extends GetView<PlayerController> {
     final minutes = d.inMinutes;
     final seconds = d.inSeconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+}
+
+class _PlayButton extends StatelessWidget {
+  final bool isPlaying;
+  final bool isLoading;
+  final Color primaryColor;
+  final VoidCallback onTap;
+
+  const _PlayButton({
+    required this.isPlaying,
+    required this.isLoading,
+    required this.primaryColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 68,
+      height: 68,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.3),
+            blurRadius: 16,
+            spreadRadius: -2,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: isLoading
+          ? FilledButton(
+              onPressed: null,
+              style: FilledButton.styleFrom(
+                shape: const CircleBorder(),
+                padding: EdgeInsets.zero,
+              ),
+              child: const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
+              ),
+            )
+          : FilledButton(
+              onPressed: onTap,
+              style: FilledButton.styleFrom(
+                shape: const CircleBorder(),
+                padding: EdgeInsets.zero,
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                  key: ValueKey(isPlaying),
+                  size: 36,
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _ControlIcon extends StatelessWidget {
+  final IconData icon;
+  final double size;
+  final Color? color;
+  final String? tooltip;
+  final VoidCallback onTap;
+
+  const _ControlIcon({
+    required this.icon,
+    required this.size,
+    this.color,
+    this.tooltip,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        splashColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+        child: Tooltip(
+          message: tooltip ?? '',
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Icon(icon, size: size, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _QueueButton extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _QueueButton({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.25),
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        splashColor: theme.colorScheme.primary.withValues(alpha: 0.06),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.queue_music_rounded,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                '播放队列',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color:
+                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$count',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -87,17 +87,21 @@ class GdStudioRepository {
   /// (format: "source:trackId:lyricId:picId").
   Future<String> getCoverUrl(SearchVideoModel track, {int size = 300}) async {
     final parts = track.bvid.split(':');
-    if (parts.length < 4) return '';
+    if (parts.length < 2) return '';
 
     final source = parts[0];
-    final picId = parts[3];
-    if (picId.isEmpty) return '';
+    final trackId = parts[1];
+    final picId = parts.length >= 4 ? parts[3] : '';
+
+    // Use picId if available, otherwise fall back to trackId
+    final id = picId.isNotEmpty ? picId : trackId;
+    if (id.isEmpty) return '';
 
     try {
-      final res = await _provider.getPic(source: source, id: picId, size: size);
+      final res = await _provider.getPic(source: source, id: id, size: size);
       return res.data?['url'] as String? ?? '';
     } catch (e) {
-      log('GdStudioRepository: pic fetch failed for $picId: $e');
+      log('GdStudioRepository: pic fetch failed for $id (source=$source): $e');
       return '';
     }
   }
