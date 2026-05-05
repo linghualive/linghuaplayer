@@ -149,47 +149,71 @@ class UpdateService {
     try {
       final urls = _buildDownloadUrls(info.downloadUrl);
       final tokens = <CancelToken>[];
-      final completer = Completer<bool>();
+      final completer = Completer<String>();
+      var failedCount = 0;
+      final totalCount = urls.length;
+      String? winnerUrl;
 
-      for (final url in urls) {
+      for (var i = 0; i < urls.length; i++) {
+        final url = urls[i];
+        final tempPath = '${dir.path}/update_mirror_$i.apk';
         final token = CancelToken();
         tokens.add(token);
+
         final dio = Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 15),
           receiveTimeout: const Duration(minutes: 10),
           followRedirects: true,
           maxRedirects: 5,
         ));
+
         dio.download(
           url,
-          savePath,
+          tempPath,
           cancelToken: token,
           onReceiveProgress: (received, total) {
-            if (total > 0) progress.value = received / total;
+            if (total > 0 && winnerUrl == null) {
+              final p = received / total;
+              if (p > progress.value) progress.value = p;
+            }
           },
         ).then((_) {
           if (!completer.isCompleted) {
+            winnerUrl = url;
             log('Download succeeded from: $url');
-            completer.complete(true);
-            for (final t in tokens) {
-              if (t != token && !t.isCancelled) t.cancel();
+            completer.complete(tempPath);
+            for (var j = 0; j < tokens.length; j++) {
+              if (j != i && !tokens[j].isCancelled) tokens[j].cancel();
             }
+          } else {
+            File(tempPath).delete().ignore();
           }
         }).catchError((e) {
-          if (e is DioException && e.type == DioExceptionType.cancel) return;
+          if (e is DioException && e.type == DioExceptionType.cancel) {
+            File(tempPath).delete().ignore();
+            return;
+          }
           log('Download failed from $url: $e');
-          tokens.remove(token);
-          if (tokens.isEmpty && !completer.isCompleted) {
-            completer.complete(false);
+          File(tempPath).delete().ignore();
+          failedCount++;
+          if (failedCount >= totalCount && !completer.isCompleted) {
+            completer.completeError('All mirrors failed');
           }
         });
       }
 
-      final downloaded = await completer.future;
-      if (!downloaded) {
+      late final String downloadedPath;
+      try {
+        downloadedPath = await completer.future;
+      } catch (_) {
         status.value = _DownloadStatus.failed;
         return;
       }
+
+      final tempFile = File(downloadedPath);
+      final targetFile = File(savePath);
+      if (await targetFile.exists()) await targetFile.delete();
+      await tempFile.rename(savePath);
 
       status.value = _DownloadStatus.installing;
 
@@ -197,8 +221,6 @@ class UpdateService {
         await _updateChannel.invokeMethod('installApk', {
           'filePath': savePath,
         });
-        // System installer has been launched; close the progress sheet
-        // since installation is now handled by the OS.
         Get.back();
       } catch (e) {
         log('Install APK failed: $e');
