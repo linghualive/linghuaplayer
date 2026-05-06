@@ -30,6 +30,14 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
       _controller.currentLyricsIndex,
       _autoScrollToIndex,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final index = _controller.currentLyricsIndex.value;
+      if (index >= 0 && _scrollController.hasClients) {
+        final offset = index * _itemExtent;
+        _scrollController
+            .jumpTo(offset.clamp(0.0, _scrollController.position.maxScrollExtent));
+      }
+    });
   }
 
   @override
@@ -53,15 +61,8 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
 
   void _onScrollStart(ScrollStartNotification notification) {
     if (notification.dragDetails != null) {
-      if (_scrollController.hasClients) {
-        final lines = _controller.lyrics.value?.lines;
-        if (lines != null && lines.isNotEmpty) {
-          final index = (_scrollController.offset / _itemExtent).round();
-          _centerLineIndex = index.clamp(0, lines.length - 1);
-        }
-      }
-      setState(() => _isUserScrolling = true);
       _resumeTimer?.cancel();
+      setState(() => _isUserScrolling = true);
     }
   }
 
@@ -82,9 +83,8 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
     _resumeTimer?.cancel();
     _resumeTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        _isUserScrolling = false;
+        setState(() => _isUserScrolling = false);
         _autoScrollToIndex(_controller.currentLyricsIndex.value);
-        setState(() {});
       }
     });
   }
@@ -98,9 +98,8 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
     }
     _controller.seekTo(lines[_centerLineIndex].timestamp);
     _resumeTimer?.cancel();
-    _isUserScrolling = false;
     _controller.currentLyricsIndex.value = _centerLineIndex;
-    setState(() {});
+    setState(() => _isUserScrolling = false);
   }
 
   String _formatDuration(Duration d) {
@@ -223,148 +222,126 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
           final viewportHeight = constraints.maxHeight;
           final verticalPadding = viewportHeight / 2 - _itemExtent / 2;
 
-          final listView = ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.white,
-                Colors.white,
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.12, 0.88, 1.0],
-            ).createShader(bounds),
-            blendMode: BlendMode.dstIn,
-            child: NotificationListener<ScrollNotification>(
-              onNotification: (notification) {
-                if (notification is ScrollStartNotification) {
-                  _onScrollStart(notification);
-                } else if (notification is ScrollUpdateNotification) {
-                  _onScrollUpdate(notification);
-                } else if (notification is ScrollEndNotification) {
-                  _onScrollEnd(notification);
-                }
-                return false;
-              },
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: verticalPadding,
-                ),
-                itemCount: lines.length,
-                itemExtent: _itemExtent,
-                itemBuilder: (context, index) {
-                  final line = lines[index];
-                  final isCurrent = index == currentIndex;
-                  final isPast = index < currentIndex;
-                  final distance = (index - currentIndex).abs();
-
-                  final opacity = isCurrent
-                      ? 1.0
-                      : isPast
-                          ? (0.3 - distance * 0.03).clamp(0.12, 0.3)
-                          : (0.65 - distance * 0.06).clamp(0.15, 0.65);
-
-                  return GestureDetector(
-                    onTap: () => _controller.seekTo(line.timestamp),
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 350),
-                        curve: Curves.easeOutCubic,
-                        style: TextStyle(
-                          fontSize: isCurrent ? 19 : 14,
-                          fontWeight: isCurrent
-                              ? FontWeight.w700
-                              : FontWeight.normal,
-                          color: isCurrent
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurface
-                                  .withValues(alpha: opacity),
-                          shadows: isCurrent
-                              ? [
-                                  Shadow(
-                                    color: theme.colorScheme.primary
-                                        .withValues(alpha: 0.3),
-                                    blurRadius: 12,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: Text(
-                          line.text,
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          );
-
-          if (!_isUserScrolling) return listView;
-
           final centerTimestamp =
-              (_centerLineIndex >= 0 && _centerLineIndex < lines.length)
+              (_isUserScrolling &&
+                      _centerLineIndex >= 0 &&
+                      _centerLineIndex < lines.length)
                   ? lines[_centerLineIndex].timestamp
-                  : Duration.zero;
+                  : null;
 
           return Stack(
             children: [
-              listView,
-              Center(
-                child: IgnorePointer(
-                  ignoring: false,
-                  child: GestureDetector(
-                    onTap: _seekToCenterLine,
-                    child: Container(
-                      width: double.infinity,
-                      height: _itemExtent,
-                      margin: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color:
-                            theme.colorScheme.primary.withValues(alpha: 0.06),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: theme.colorScheme.primary
-                              .withValues(alpha: 0.2),
-                          width: 0.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const SizedBox(width: 10),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            child: Text(
-                              _formatDuration(centerTimestamp),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures()
-                                ],
-                              ),
-                            ),
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.white,
+                    Colors.white,
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.12, 0.88, 1.0],
+                ).createShader(bounds),
+                blendMode: BlendMode.dstIn,
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is ScrollStartNotification) {
+                      _onScrollStart(notification);
+                    } else if (notification is ScrollUpdateNotification) {
+                      _onScrollUpdate(notification);
+                    } else if (notification is ScrollEndNotification) {
+                      _onScrollEnd(notification);
+                    }
+                    return false;
+                  },
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: verticalPadding,
+                    ),
+                    itemCount: lines.length,
+                    itemExtent: _itemExtent,
+                    itemBuilder: (context, index) {
+                      final line = lines[index];
+                      final isCurrent = index == currentIndex;
+                      final isPast = index < currentIndex;
+                      final distance = (index - currentIndex).abs();
+
+                      final opacity = isCurrent
+                          ? 1.0
+                          : isPast
+                              ? (0.3 - distance * 0.03).clamp(0.12, 0.3)
+                              : (0.65 - distance * 0.06).clamp(0.15, 0.65);
+
+                      return Container(
+                        alignment: Alignment.center,
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 350),
+                          curve: Curves.easeOutCubic,
+                          style: TextStyle(
+                            fontSize: isCurrent ? 19 : 14,
+                            fontWeight:
+                                isCurrent ? FontWeight.w700 : FontWeight.normal,
+                            color: isCurrent
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface
+                                    .withValues(alpha: opacity),
+                            shadows: isCurrent
+                                ? [
+                                    Shadow(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.3),
+                                      blurRadius: 12,
+                                    ),
+                                  ]
+                                : null,
                           ),
-                          const Spacer(),
-                          Container(
-                            width: 28,
-                            height: 28,
+                          child: Text(
+                            line.text,
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              if (_isUserScrolling && centerTimestamp != null)
+                Center(
+                  child: SizedBox(
+                    height: _itemExtent,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 8),
+                        Text(
+                          _formatDuration(centerTimestamp),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures()
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Divider(
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.3),
+                            thickness: 0.5,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        GestureDetector(
+                          onTap: _seekToCenterLine,
+                          child: Container(
+                            width: 32,
+                            height: 32,
                             decoration: BoxDecoration(
                               color: theme.colorScheme.primary
                                   .withValues(alpha: 0.12),
@@ -372,17 +349,16 @@ class _PlayerLyricsState extends State<PlayerLyrics> {
                             ),
                             child: Icon(
                               Icons.play_arrow_rounded,
-                              size: 18,
+                              size: 20,
                               color: theme.colorScheme.primary,
                             ),
                           ),
-                          const SizedBox(width: 10),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                     ),
                   ),
                 ),
-              ),
             ],
           );
         },

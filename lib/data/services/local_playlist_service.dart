@@ -10,6 +10,7 @@ import '../models/search/search_video_model.dart';
 
 class LocalPlaylistService {
   static const _storageKey = 'local_playlists';
+  static const _currentPresetsVersion = 2;
 
   late final GetStorage _box;
   final playlists = <LocalPlaylist>[].obs;
@@ -22,15 +23,20 @@ class LocalPlaylistService {
 
   Future<void> _initPresetsIfNeeded() async {
     final storage = Get.find<StorageService>();
-    if (storage.presetsInitialized) return;
+    final savedVersion = storage.presetsVersion;
+    if (savedVersion >= _currentPresetsVersion) return;
 
     try {
       final jsonStr =
           await rootBundle.loadString('assets/data/preset_modes.json');
       final List<dynamic> modes = json.decode(jsonStr);
 
+      final existingNames = playlists.map((p) => p.name).toSet();
+
       for (final mode in modes) {
         final name = mode['name'] as String;
+        if (existingNames.contains(name)) continue;
+
         final tracksList = mode['tracks'] as List<dynamic>;
         final tracksJson = tracksList
             .map((t) => Map<String, dynamic>.from(t as Map))
@@ -48,6 +54,7 @@ class LocalPlaylistService {
     } catch (_) {}
 
     storage.presetsInitialized = true;
+    storage.presetsVersion = _currentPresetsVersion;
   }
 
   void _loadFromStorage() {

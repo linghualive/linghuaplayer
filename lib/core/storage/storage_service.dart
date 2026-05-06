@@ -47,6 +47,9 @@ class StorageService extends GetxService {
   bool get presetsInitialized => _box.read<bool>('presets_initialized') ?? false;
   set presetsInitialized(bool v) => _box.write('presets_initialized', v);
 
+  int get presetsVersion => _box.read<int>('presets_version') ?? 0;
+  set presetsVersion(int v) => _box.write('presets_version', v);
+
   bool get isLoggedIn => _box.read<bool>('is_logged_in') ?? false;
 
   set isLoggedIn(bool value) => _box.write('is_logged_in', value);
