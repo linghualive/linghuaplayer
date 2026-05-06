@@ -118,15 +118,6 @@ class UpdateService {
     _showUpdateDialog(info);
   }
 
-  static List<String> _buildDownloadUrls(String url) {
-    if (!url.startsWith('https://github.com/')) return [url];
-    return [
-      'https://ghfast.top/$url',
-      'https://gh.llkk.cc/$url',
-      url,
-    ];
-  }
-
   static bool get _isAndroid {
     try {
       return Platform.isAndroid;
@@ -135,85 +126,44 @@ class UpdateService {
     }
   }
 
+  static const _threadCount = 4;
+
   static Future<void> _downloadAndInstall(UpdateInfo info) async {
     final dir = await getTemporaryDirectory();
     final savePath = '${dir.path}/update.apk';
 
     final progress = ValueNotifier<double>(0);
+    final speedText = ValueNotifier<String>('');
     final status = ValueNotifier<_DownloadStatus>(_DownloadStatus.downloading);
 
-    _showDownloadProgress(progress, status, () {
+    _showDownloadProgress(progress, speedText, status, () {
       _downloadAndInstall(info);
     });
 
     try {
-      final urls = _buildDownloadUrls(info.downloadUrl);
-      final tokens = <CancelToken>[];
-      final completer = Completer<String>();
-      var failedCount = 0;
-      final totalCount = urls.length;
-      String? winnerUrl;
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(minutes: 10),
+        followRedirects: true,
+        maxRedirects: 5,
+      ));
 
-      for (var i = 0; i < urls.length; i++) {
-        final url = urls[i];
-        final tempPath = '${dir.path}/update_mirror_$i.apk';
-        final token = CancelToken();
-        tokens.add(token);
+      final headRes = await dio.head<void>(info.downloadUrl);
+      final contentLength = int.tryParse(
+            headRes.headers.value(HttpHeaders.contentLengthHeader) ?? '',
+          ) ??
+          -1;
+      final acceptRanges =
+          headRes.headers.value(HttpHeaders.acceptRangesHeader) ?? '';
+      final supportsRange = acceptRanges == 'bytes' && contentLength > 0;
 
-        final dio = Dio(BaseOptions(
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(minutes: 10),
-          followRedirects: true,
-          maxRedirects: 5,
-        ));
-
-        dio.download(
-          url,
-          tempPath,
-          cancelToken: token,
-          onReceiveProgress: (received, total) {
-            if (total > 0 && winnerUrl == null) {
-              final p = received / total;
-              if (p > progress.value) progress.value = p;
-            }
-          },
-        ).then((_) {
-          if (!completer.isCompleted) {
-            winnerUrl = url;
-            log('Download succeeded from: $url');
-            completer.complete(tempPath);
-            for (var j = 0; j < tokens.length; j++) {
-              if (j != i && !tokens[j].isCancelled) tokens[j].cancel();
-            }
-          } else {
-            File(tempPath).delete().ignore();
-          }
-        }).catchError((e) {
-          if (e is DioException && e.type == DioExceptionType.cancel) {
-            File(tempPath).delete().ignore();
-            return;
-          }
-          log('Download failed from $url: $e');
-          File(tempPath).delete().ignore();
-          failedCount++;
-          if (failedCount >= totalCount && !completer.isCompleted) {
-            completer.completeError('All mirrors failed');
-          }
-        });
+      if (!supportsRange) {
+        await _singleThreadDownload(
+            dio, info.downloadUrl, savePath, contentLength, progress, speedText);
+      } else {
+        await _multiThreadDownload(
+            dio, info.downloadUrl, savePath, contentLength, dir, progress, speedText);
       }
-
-      late final String downloadedPath;
-      try {
-        downloadedPath = await completer.future;
-      } catch (_) {
-        status.value = _DownloadStatus.failed;
-        return;
-      }
-
-      final tempFile = File(downloadedPath);
-      final targetFile = File(savePath);
-      if (await targetFile.exists()) await targetFile.delete();
-      await tempFile.rename(savePath);
 
       status.value = _DownloadStatus.installing;
 
@@ -232,49 +182,144 @@ class UpdateService {
     }
   }
 
+  static Future<void> _singleThreadDownload(
+    Dio dio,
+    String url,
+    String savePath,
+    int totalBytes,
+    ValueNotifier<double> progress,
+    ValueNotifier<String> speedText,
+  ) async {
+    var lastReceived = 0;
+    var lastTime = DateTime.now();
+
+    await dio.download(
+      url,
+      savePath,
+      onReceiveProgress: (received, total) {
+        final t = total > 0 ? total : totalBytes;
+        if (t > 0) progress.value = received / t;
+
+        final now = DateTime.now();
+        final elapsed = now.difference(lastTime).inMilliseconds;
+        if (elapsed >= 500) {
+          final bytes = received - lastReceived;
+          speedText.value = _formatSpeed(bytes / elapsed * 1000);
+          lastReceived = received;
+          lastTime = now;
+        }
+      },
+    );
+  }
+
+  static Future<void> _multiThreadDownload(
+    Dio dio,
+    String url,
+    String savePath,
+    int totalBytes,
+    Directory tmpDir,
+    ValueNotifier<double> progress,
+    ValueNotifier<String> speedText,
+  ) async {
+    final chunkSize = (totalBytes / _threadCount).ceil();
+    final chunkReceived = List<int>.filled(_threadCount, 0);
+    var lastTotal = 0;
+    var lastTime = DateTime.now();
+
+    void updateProgress() {
+      final received = chunkReceived.fold<int>(0, (a, b) => a + b);
+      progress.value = received / totalBytes;
+
+      final now = DateTime.now();
+      final elapsed = now.difference(lastTime).inMilliseconds;
+      if (elapsed >= 500) {
+        final bytes = received - lastTotal;
+        speedText.value = _formatSpeed(bytes / elapsed * 1000);
+        lastTotal = received;
+        lastTime = now;
+      }
+    }
+
+    final chunkPaths = <String>[];
+    final futures = <Future<void>>[];
+
+    for (var i = 0; i < _threadCount; i++) {
+      final start = i * chunkSize;
+      final end = (i == _threadCount - 1) ? totalBytes - 1 : start + chunkSize - 1;
+      final chunkPath = '${tmpDir.path}/update_chunk_$i';
+      chunkPaths.add(chunkPath);
+
+      futures.add(
+        dio.download(
+          url,
+          chunkPath,
+          options: Options(
+            headers: {HttpHeaders.rangeHeader: 'bytes=$start-$end'},
+          ),
+          onReceiveProgress: (received, _) {
+            chunkReceived[i] = received;
+            updateProgress();
+          },
+        ),
+      );
+    }
+
+    await Future.wait(futures);
+
+    final outFile = File(savePath).openWrite();
+    try {
+      for (final path in chunkPaths) {
+        await outFile.addStream(File(path).openRead());
+      }
+    } finally {
+      await outFile.close();
+    }
+
+    for (final path in chunkPaths) {
+      File(path).delete().ignore();
+    }
+  }
+
+  static String _formatSpeed(double bytesPerSec) {
+    if (bytesPerSec >= 1024 * 1024) {
+      return '${(bytesPerSec / 1024 / 1024).toStringAsFixed(1)} MB/s';
+    } else if (bytesPerSec >= 1024) {
+      return '${(bytesPerSec / 1024).toStringAsFixed(0)} KB/s';
+    }
+    return '${bytesPerSec.toStringAsFixed(0)} B/s';
+  }
+
   static void _showDownloadProgress(
     ValueNotifier<double> progress,
+    ValueNotifier<String> speedText,
     ValueNotifier<_DownloadStatus> status,
     VoidCallback onRetry,
   ) {
-    Get.bottomSheet(
+    Get.dialog(
       PopScope(
         canPop: false,
         child: ValueListenableBuilder<_DownloadStatus>(
           valueListenable: status,
           builder: (context, currentStatus, _) {
-            return Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+            return AlertDialog(
+              icon: Icon(
+                currentStatus == _DownloadStatus.failed
+                    ? Icons.error_outline
+                    : Icons.system_update,
+                color: currentStatus == _DownloadStatus.failed
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.primary,
               ),
-              child: Column(
+              title: Text(
+                currentStatus == _DownloadStatus.downloading
+                    ? '正在下载更新...'
+                    : currentStatus == _DownloadStatus.installing
+                        ? '下载完成，正在安装...'
+                        : '下载失败',
+              ),
+              content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        currentStatus == _DownloadStatus.failed
-                            ? Icons.error_outline
-                            : Icons.system_update,
-                        color: currentStatus == _DownloadStatus.failed
-                            ? Theme.of(context).colorScheme.error
-                            : Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        currentStatus == _DownloadStatus.downloading
-                            ? '正在下载更新...'
-                            : currentStatus == _DownloadStatus.installing
-                                ? '下载完成，正在安装...'
-                                : '下载失败',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
                   if (currentStatus == _DownloadStatus.downloading)
                     ValueListenableBuilder<double>(
                       valueListenable: progress,
@@ -289,9 +334,19 @@ class UpdateService {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            Text(
-                              '${(value * 100).toStringAsFixed(1)}%',
-                              style: Theme.of(context).textTheme.bodySmall,
+                            ValueListenableBuilder<String>(
+                              valueListenable: speedText,
+                              builder: (context, speed, _) {
+                                final percent =
+                                    '${(value * 100).toStringAsFixed(1)}%';
+                                return Text(
+                                  speed.isEmpty
+                                      ? percent
+                                      : '$percent  ·  $speed',
+                                  style:
+                                      Theme.of(context).textTheme.bodySmall,
+                                );
+                              },
                             ),
                           ],
                         );
@@ -299,25 +354,29 @@ class UpdateService {
                     ),
                   if (currentStatus == _DownloadStatus.installing)
                     const LinearProgressIndicator(),
-                  if (currentStatus == _DownloadStatus.failed) ...[
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
-                      onPressed: () {
-                        Get.back();
-                        onRetry();
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('重试'),
-                    ),
-                  ],
                 ],
               ),
+              actions: currentStatus == _DownloadStatus.failed
+                  ? [
+                      TextButton(
+                        onPressed: () => Get.back(),
+                        child: const Text('取消'),
+                      ),
+                      FilledButton.icon(
+                        onPressed: () {
+                          Get.back();
+                          onRetry();
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('重试'),
+                      ),
+                    ]
+                  : null,
             );
           },
         ),
       ),
-      isDismissible: false,
-      enableDrag: false,
+      barrierDismissible: false,
     );
   }
 

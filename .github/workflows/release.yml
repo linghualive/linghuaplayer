@@ -80,6 +80,33 @@ jobs:
             linghuaplayer-linux-x64.deb
             linghuaplayer-linux-x64.pkg.tar.zst
 
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Rename APK
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | head -1 | awk '{print $2}' | cut -d'+' -f1)
+          cp build/app/outputs/flutter-apk/app-release.apk "linghuaplayer-v${VERSION}.apk"
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: linghuaplayer-v*.apk
+
   build-windows:
     runs-on: windows-latest
     steps:
