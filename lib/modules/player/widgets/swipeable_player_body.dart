@@ -27,6 +27,8 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
   bool _isFirstChange = true;
   String? _lastTrackId;
   Worker? _trackChangeWorker;
+  DateTime _lastSwipeTime = DateTime(0);
+  static const _swipeCooldown = Duration(milliseconds: 800);
 
   @override
   void initState() {
@@ -42,6 +44,7 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
         return;
       }
       if (isSameTrack) return;
+      if (DateTime.now().difference(_lastSwipeTime) < _swipeCooldown) return;
       if (!_isUserSwiping &&
           !_isProgrammaticAnimation &&
           mounted &&
@@ -76,6 +79,7 @@ class _SwipeablePlayerBodyState extends State<SwipeablePlayerBody> {
     if (_isProgrammaticAnimation) return;
 
     _isUserSwiping = true;
+    _lastSwipeTime = DateTime.now();
     HapticFeedback.mediumImpact();
 
     if (index == 0) {

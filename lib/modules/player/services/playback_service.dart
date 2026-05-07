@@ -34,6 +34,10 @@ class PlaybackService {
   // Callbacks
   void Function()? onTrackCompleted;
   void Function(Duration pos)? onPositionUpdate;
+  void Function()? onPlaybackStalled;
+
+  // Stall detection: fires if no position update arrives for 5s while playing
+  Timer? _stallWatchdog;
 
   /// Expose the mpv NativePlayer for AudioOutputService (desktop only).
   mk.NativePlayer? get nativePlayerRef =>
@@ -50,6 +54,7 @@ class PlaybackService {
   }
 
   void dispose() {
+    _stallWatchdog?.cancel();
     audioPlayer.dispose();
     _mediaKitPlayer?.dispose();
   }
@@ -60,8 +65,12 @@ class PlaybackService {
     audioPlayer.playerStateStream.listen((state) {
       if (!_useMediaKit) {
         isPlaying.value = state.playing;
+        if (!state.playing) {
+          _stallWatchdog?.cancel();
+        }
       }
       if (state.processingState == ProcessingState.completed) {
+        _stallWatchdog?.cancel();
         if (!_useMediaKit && !_isSwitchingTrack) {
           onTrackCompleted?.call();
         }
@@ -72,6 +81,7 @@ class PlaybackService {
       if (!_useMediaKit) {
         position.value = pos;
         onPositionUpdate?.call(pos);
+        _resetStallWatchdog();
       }
     });
 
@@ -83,6 +93,17 @@ class PlaybackService {
 
     audioPlayer.bufferedPositionStream.listen((buf) {
       if (!_useMediaKit) buffered.value = buf;
+    });
+  }
+
+  void _resetStallWatchdog() {
+    _stallWatchdog?.cancel();
+    if (!isPlaying.value || _isSwitchingTrack) return;
+    _stallWatchdog = Timer(const Duration(seconds: 5), () {
+      if (isPlaying.value && !_isSwitchingTrack) {
+        log('Playback stall: no position update for 5s');
+        onPlaybackStalled?.call();
+      }
     });
   }
 
@@ -103,6 +124,9 @@ class PlaybackService {
     _mediaKitPlayer!.stream.playing.listen((playing) {
       if (_useMediaKit) {
         isPlaying.value = playing;
+        if (!playing) {
+          _stallWatchdog?.cancel();
+        }
       }
     });
 
@@ -110,6 +134,7 @@ class PlaybackService {
       if (_useMediaKit) {
         position.value = pos;
         onPositionUpdate?.call(pos);
+        _resetStallWatchdog();
       }
     });
 
@@ -126,8 +151,11 @@ class PlaybackService {
     });
 
     _mediaKitPlayer!.stream.completed.listen((completed) {
-      if (completed && !_isSwitchingTrack && _useMediaKit) {
-        onTrackCompleted?.call();
+      if (completed) {
+        _stallWatchdog?.cancel();
+        if (!_isSwitchingTrack && _useMediaKit) {
+          onTrackCompleted?.call();
+        }
       }
     });
   }
@@ -147,6 +175,7 @@ class PlaybackService {
   }
 
   void seekTo(Duration pos) {
+    _stallWatchdog?.cancel();
     if (_useMediaKit && _mediaKitPlayer != null) {
       _mediaKitPlayer!.seek(pos);
     } else {
@@ -155,6 +184,7 @@ class PlaybackService {
   }
 
   void stop() {
+    _stallWatchdog?.cancel();
     _isSwitchingTrack = true; // 阻止 stop 后的 completed 事件
     if (_useMediaKit) {
       _mediaKitPlayer?.stop();
@@ -179,6 +209,7 @@ class PlaybackService {
   }
 
   void pause() {
+    _stallWatchdog?.cancel();
     if (_useMediaKit) {
       _mediaKitPlayer?.pause();
     } else {

@@ -147,6 +147,7 @@ class PlayerController extends GetxController {
     super.onInit();
     _playback.onTrackCompleted = _playNext;
     _playback.onPositionUpdate = _updateLyricsIndex;
+    _playback.onPlaybackStalled = _handlePlaybackStall;
     // Track listen duration across play/pause transitions
     ever(isPlaying, (bool playing) {
       if (playing) {
@@ -718,6 +719,16 @@ class PlayerController extends GetxController {
         _advanceNext().catchError((e) => log('Advance next error: $e'));
         break;
     }
+  }
+
+  void _handlePlaybackStall() {
+    if (_manualStop || queue.isEmpty || isLoading.value) return;
+    log('Playback stall detected, advancing to next track');
+    _saveListenDuration();
+    ++_playGeneration;
+    _manualStop = true;
+    _playback.stop();
+    _advanceOrStop().catchError((e) => log('Advance after stall error: $e'));
   }
 
   Future<void> skipNext() async {

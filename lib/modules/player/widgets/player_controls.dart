@@ -16,231 +16,237 @@ class PlayerControls extends GetView<PlayerController> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Obx(() {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Title
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: Text(
-                controller.currentVideo.value?.title ?? '',
-                key: ValueKey(controller.currentVideo.value?.title),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.15,
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Title
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Obx(() => AnimatedSwitcher(
+                duration: const Duration(milliseconds: 400),
+                child: Text(
+                  controller.currentVideo.value?.title ?? '',
+                  key: ValueKey(controller.currentVideo.value?.title),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.15,
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          // Artist + quality
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () {
-                      final video = controller.currentVideo.value;
-                      if (video != null &&
-                          video.author.isNotEmpty &&
-                          controller.uploaderMid.value > 0) {
-                        UploaderWorksSheet.show();
-                      }
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            child: Text(
-                              controller.currentVideo.value?.author ?? '',
-                              key: ValueKey(
-                                  controller.currentVideo.value?.author),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant,
+              )),
+        ),
+        const SizedBox(height: 6),
+        // Artist + quality
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Obx(() => Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        final video = controller.currentVideo.value;
+                        if (video != null &&
+                            video.author.isNotEmpty &&
+                            controller.uploaderMid.value > 0) {
+                          UploaderWorksSheet.show();
+                        }
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: Text(
+                                controller.currentVideo.value?.author ?? '',
+                                key: ValueKey(
+                                    controller.currentVideo.value?.author),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        if (controller.currentVideo.value != null &&
-                            controller.uploaderMid.value > 0 &&
-                            controller.currentVideo.value!.author.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 2),
-                            child: Icon(
-                              Icons.chevron_right,
-                              size: 14,
-                              color: theme.colorScheme.onSurfaceVariant,
+                          if (controller.currentVideo.value != null &&
+                              controller.uploaderMid.value > 0 &&
+                              controller.currentVideo.value!.author
+                                  .isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 2),
+                              child: Icon(
+                                Icons.chevron_right,
+                                size: 14,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (controller.audioQualityLabel.value.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  _buildQualityBadge(
-                      context, controller.audioQualityLabel.value),
+                  if (controller.audioQualityLabel.value.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    _buildQualityBadge(
+                        context, controller.audioQualityLabel.value),
+                  ],
                 ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-          // Slider
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 28),
-            child: SliderTheme(
-              data: SliderThemeData(
-                trackHeight: 3,
-                trackShape: const RoundedRectSliderTrackShape(),
-                thumbShape: const RoundSliderThumbShape(
-                  enabledThumbRadius: 6,
-                  elevation: 2,
-                  pressedElevation: 4,
-                ),
-                overlayShape:
-                    const RoundSliderOverlayShape(overlayRadius: 16),
-                activeTrackColor: theme.colorScheme.primary,
-                inactiveTrackColor:
-                    theme.colorScheme.onSurface.withValues(alpha: 0.06),
-                thumbColor: theme.colorScheme.primary,
-                overlayColor:
-                    theme.colorScheme.primary.withValues(alpha: 0.1),
-              ),
-              child: Slider(
-                value: controller.position.value.inMilliseconds
-                    .toDouble()
-                    .clamp(
-                      0,
-                      controller.duration.value.inMilliseconds
-                          .toDouble()
-                          .clamp(1, double.infinity),
+              )),
+        ),
+        const SizedBox(height: 28),
+        // Slider + Time labels (high-frequency: position/duration updates)
+        Obx(() {
+          final pos = controller.position.value;
+          final dur = controller.duration.value;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28),
+                child: SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 3,
+                    trackShape: const RoundedRectSliderTrackShape(),
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6,
+                      elevation: 2,
+                      pressedElevation: 4,
                     ),
-                max: controller.duration.value.inMilliseconds
-                    .toDouble()
-                    .clamp(1, double.infinity),
-                onChanged: (value) {
-                  controller.seekTo(Duration(milliseconds: value.toInt()));
-                },
+                    overlayShape:
+                        const RoundSliderOverlayShape(overlayRadius: 16),
+                    activeTrackColor: theme.colorScheme.primary,
+                    inactiveTrackColor:
+                        theme.colorScheme.onSurface.withValues(alpha: 0.06),
+                    thumbColor: theme.colorScheme.primary,
+                    overlayColor:
+                        theme.colorScheme.primary.withValues(alpha: 0.1),
+                  ),
+                  child: Slider(
+                    value: pos.inMilliseconds.toDouble().clamp(
+                          0,
+                          dur.inMilliseconds
+                              .toDouble()
+                              .clamp(1, double.infinity),
+                        ),
+                    max: dur.inMilliseconds
+                        .toDouble()
+                        .clamp(1, double.infinity),
+                    onChanged: (value) {
+                      controller
+                          .seekTo(Duration(milliseconds: value.toInt()));
+                    },
+                  ),
+                ),
               ),
-            ),
-          ),
-          // Time labels
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 36),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _formatDuration(controller.position.value),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                        .withValues(alpha: 0.7),
-                    fontSize: 11,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 36),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      _formatDuration(pos),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.7),
+                        fontSize: 11,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    Text(
+                      _formatDuration(dur),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.7),
+                        fontSize: 11,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  _formatDuration(controller.duration.value),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant
-                        .withValues(alpha: 0.7),
-                    fontSize: 11,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Main controls
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Output
-                _ControlIcon(
-                  icon: _outputIcon(controller.audioOutput.activeType),
-                  size: 21,
-                  color: theme.colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.6),
-                  tooltip: '输出',
-                  onTap: () async {
-                    await controller.audioOutput.showOutputPicker();
-                    if (!controller.audioOutput.usesSystemPicker &&
-                        controller.audioOutput.devices.isNotEmpty) {
-                      AudioOutputSheet.show();
-                    }
-                  },
-                ),
-                if (PlatformUtils.isDesktop) ...[
-                  const SizedBox(width: 20),
+              ),
+            ],
+          );
+        }),
+        const SizedBox(height: 20),
+        // Main controls
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Obx(() => Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Output
                   _ControlIcon(
-                    icon: Icons.skip_previous_rounded,
-                    size: 30,
-                    onTap: () => controller.skipPrevious(),
+                    icon: _outputIcon(controller.audioOutput.activeType),
+                    size: 21,
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.6),
+                    tooltip: '输出',
+                    onTap: () async {
+                      await controller.audioOutput.showOutputPicker();
+                      if (!controller.audioOutput.usesSystemPicker &&
+                          controller.audioOutput.devices.isNotEmpty) {
+                        AudioOutputSheet.show();
+                      }
+                    },
                   ),
-                ] else
-                  const SizedBox(width: 28),
-                // Play/Pause button
-                _PlayButton(
-                  isPlaying: controller.isPlaying.value,
-                  isLoading: controller.isLoading.value,
-                  primaryColor: theme.colorScheme.primary,
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    controller.togglePlay();
-                  },
-                ),
-                if (PlatformUtils.isDesktop) ...[
-                  const SizedBox(width: 20),
+                  if (PlatformUtils.isDesktop) ...[
+                    const SizedBox(width: 20),
+                    _ControlIcon(
+                      icon: Icons.skip_previous_rounded,
+                      size: 30,
+                      onTap: () => controller.skipPrevious(),
+                    ),
+                  ] else
+                    const SizedBox(width: 28),
+                  // Play/Pause button
+                  _PlayButton(
+                    isPlaying: controller.isPlaying.value,
+                    isLoading: controller.isLoading.value,
+                    primaryColor: theme.colorScheme.primary,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      controller.togglePlay();
+                    },
+                  ),
+                  if (PlatformUtils.isDesktop) ...[
+                    const SizedBox(width: 20),
+                    _ControlIcon(
+                      icon: Icons.skip_next_rounded,
+                      size: 30,
+                      onTap: () => controller.skipNext(),
+                    ),
+                  ] else
+                    const SizedBox(width: 28),
+                  // Play mode
                   _ControlIcon(
-                    icon: Icons.skip_next_rounded,
-                    size: 30,
-                    onTap: () => controller.skipNext(),
+                    icon: _playModeIcon(controller.playMode.value),
+                    size: 21,
+                    color: controller.playMode.value == PlayMode.sequential
+                        ? theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.6)
+                        : theme.colorScheme.primary,
+                    tooltip: _playModeLabel(controller.playMode.value),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      controller.togglePlayMode();
+                    },
                   ),
-                ] else
-                  const SizedBox(width: 28),
-                // Play mode
-                _ControlIcon(
-                  icon: _playModeIcon(controller.playMode.value),
-                  size: 21,
-                  color: controller.playMode.value == PlayMode.sequential
-                      ? theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.6)
-                      : theme.colorScheme.primary,
-                  tooltip: _playModeLabel(controller.playMode.value),
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    controller.togglePlayMode();
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Queue button
-          _QueueButton(
-            count: controller.queue.length,
-            onTap: PlayQueueSheet.show,
-          ),
-        ],
-      );
-    });
+                ],
+              )),
+        ),
+        const SizedBox(height: 12),
+        // Queue button
+        Obx(() => _QueueButton(
+              count: controller.queue.length,
+              onTap: PlayQueueSheet.show,
+            )),
+      ],
+    );
   }
 
   IconData _playModeIcon(PlayMode mode) {
